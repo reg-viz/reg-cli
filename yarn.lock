@@ -4,6 +4,14 @@ abbrev@1:
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.0.9.tgz#91b4792588a7738c25f35dd6f63752a2f8776135"
 
+aglob@^1.0.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/aglob/-/aglob-1.1.1.tgz#f952692aadbd9d528775e914b695e07631f9f08a"
+  dependencies:
+    babel-runtime "^6.11.6"
+    co "^4.6.0"
+    glob "^7.0.5"
+
 ansi-align@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/ansi-align/-/ansi-align-1.1.0.tgz#2f0c1658829739add5ebb15e6b0c6e3423f016ba"
@@ -39,6 +47,12 @@ are-we-there-yet@~1.1.2:
   dependencies:
     delegates "^1.0.0"
     readable-stream "^2.0.0 || ^1.1.13"
+
+argx@^3.0.0:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/argx/-/argx-3.0.2.tgz#1baa88d160ab6f546b6ece0e07596cc2bb3424a9"
+  dependencies:
+    iftype "^3.0.0"
 
 arr-diff@^2.0.0:
   version "2.0.0"
@@ -87,6 +101,13 @@ array-unique@^0.2.1:
 arrify@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/arrify/-/arrify-1.0.1.tgz#898508da2226f380df904728456849c1501a4b0d"
+
+asfs@^1.0.5:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/asfs/-/asfs-1.1.1.tgz#5f2a345fc92bfb66a875e105f27402625d66fb7f"
+  dependencies:
+    co "^4.6.0"
+    mkdirp "^0.5.1"
 
 asn1@~0.2.3:
   version "0.2.3"
@@ -1065,6 +1086,10 @@ co-with-promise@^4.6.0:
   dependencies:
     pinkie-promise "^1.0.0"
 
+co@^4.6.0:
+  version "4.6.0"
+  resolved "https://registry.yarnpkg.com/co/-/co-4.6.0.tgz#6ea6bdf3d853ae54ccb8e47bfa0bf3f9031fb184"
+
 code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
@@ -1320,6 +1345,16 @@ figures@^1.4.0:
   dependencies:
     escape-string-regexp "^1.0.5"
     object-assign "^4.1.0"
+
+filecopy:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/filecopy/-/filecopy-2.1.2.tgz#b040a243712594fa3556a94b575c59f28b34eac4"
+  dependencies:
+    aglob "^1.0.1"
+    argx "^3.0.0"
+    asfs "^1.0.5"
+    babel-runtime "^6.11.6"
+    co "^4.6.0"
 
 filename-regex@^2.0.0:
   version "2.0.0"
@@ -1634,6 +1669,12 @@ husky@^0.11.9:
   dependencies:
     is-ci "^1.0.9"
     normalize-path "^1.0.0"
+
+iftype@^3.0.0:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/iftype/-/iftype-3.0.2.tgz#5771261e64fb35a680d320d3668c7529f925ab74"
+  dependencies:
+    babel-runtime "^6.11.6"
 
 ignore-by-default@^1.0.0, ignore-by-default@^1.0.1:
   version "1.0.1"
