@@ -9,8 +9,8 @@
     "watch": "babel src --watch -d dist",
     "flow": "flow",
     "reg": "reg-cli ./sample/expected ./sample/temp -D ./diff -R ./report/report3.html",
-    "test": "npm run build && ava",
-    "prepush": "npm run flow"
+    "test": "npm run build && chmod +x dist/cli.js && ava",
+    "prepush": "npm run flow && npm t"
   },
   "repository": {
     "type": "git",

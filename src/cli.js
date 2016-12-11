@@ -2,6 +2,7 @@
 
 /* @flow */
 
+
 const meow = require('meow');
 const compare = require('./');
 const log = require('./log');
@@ -40,5 +41,3 @@ compare({
   update: !!cli.flags.update,
   reportPath,
 });
-
-
