@@ -42,17 +42,21 @@ module.exports = ({
           .map(path => path.replace(actualDir, ''));
   const deletedImages = difference(expectedImages, actualImages);
   const newImages = difference(actualImages, expectedImages);
+
+  mkdirp.sync(path.dirname(expectedDir));
+  mkdirp.sync(path.dirname(diffDir));
+
   const compareAndGenerateDiff = (
     actualDir: string,
     expectedDir: string,
-    distDir: string,
+    diffDir: string,
     image: string,
   ): Promise<CompareResult> => {
     return new Promise((resolve, reject) => {
       imageDiff({
         actualImage: `${actualDir}${image}`,
         expectedImage: `${expectedDir}${image}`,
-        diffImage: `${distDir}${image}`,
+        diffImage: `${diffDir}${image}`,
         shadow: true,
       }, (err, imagesAreSame) => {
         if (err) reject(err);

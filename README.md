@@ -38,7 +38,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 
 ### script
 
-```
+``` javascript
 const reg = require('reg-cli');
 
 reg({
