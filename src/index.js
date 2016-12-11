@@ -43,8 +43,8 @@ module.exports = ({
   const deletedImages = difference(expectedImages, actualImages);
   const newImages = difference(actualImages, expectedImages);
 
-  mkdirp.sync(path.dirname(expectedDir));
-  mkdirp.sync(path.dirname(diffDir));
+  mkdirp.sync(expectedDir);
+  mkdirp.sync(diffDir);
 
   const compareAndGenerateDiff = (
     actualDir: string,
@@ -81,9 +81,7 @@ module.exports = ({
   };
 
   const cleanupExpectedDir = () => {
-    expectedImages.forEach((image) => {
-      fs.unlinkSync(`${expectedDir}${image}`);
-    });
+    expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
   };
 
   const copyImages = () => {
