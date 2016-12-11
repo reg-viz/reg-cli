@@ -200,6 +200,16 @@
                     {{/failedItems}}
                 </ul>
 
+                {{#hasNew}}<h4>New</h4>{{/hasNew}}
+                <ul class="results warn">
+                    {{#newItems}}
+                    <li id="{{.}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</li>
+                    <div class="image-wrapper">
+                      <div class="single-image"><span class="tag">New</span><div class="image-inner"><img src="{{expectedDir}}{{.}}" /></div></div>
+                    </div>
+                    {{/newItems}}
+                </ul>
+
                 {{#hasDeleted}}<h4>Deleted</h4>{{/hasDeleted}}
                 <ul class="results warn">
                     {{#deletedItems}}
