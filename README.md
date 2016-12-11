@@ -45,10 +45,17 @@ reg({
   actualDir: '/path/to/actual-dir',
   expectedDir: '/path/to/expected-dir',
   diffDir: '/path/to/diff-dir',
-  update: true,
+  update: true, // Set true, If you update expected images.
   reportPath: '/path/to/report.html',
 });
 ```
+
+### html report
+
+If `-R` option set, output html report to specfied directory.
+
+![screenshot](https://github.com/bokuweb/reg-cli/blob/master/docs/screenshot.png?raw=true)
+
 
 ## Test
 
