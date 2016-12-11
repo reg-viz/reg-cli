@@ -140,19 +140,20 @@ module.exports = ({
       if (failed.length > 0) {
         log.fail(`\n\u2718 ${failed.length} test failed.`);
         failed.forEach((image) => log.fail(`  \u2718 ${actualDir}${image}`));
+      }
 
-        if (!update) {
+      if (!update) {
+        if (failed.length > 0 || newImages.length > 0 || deletedImages.length > 0) {
           log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
           process.exit(1);
         }
-        spinner.start();
-        cleanupExpectedDir();
-        copyImages();
-        log.success(`\nAll images are updated. `);
-        spinner.stop(true);
       }
 
-      if (newImages.length > 0 || deletedImages.length > 0) log.warn(`\nInspect your code changes, re-run with \`-U\` to update them. `);
+      spinner.start();
+      cleanupExpectedDir();
+      copyImages();
+      log.success(`\nAll images are updated. `);
+      spinner.stop(true);
     })
     .catch(err => {
       log.fail(err);
