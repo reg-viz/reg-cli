@@ -50,7 +50,7 @@ test('should genearate report', async t => {
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
       '-R',
-      '${WORKSPACE}/report.html'
+      `${WORKSPACE}/report.html`
     ], (error, stdout) => resolve(stdout));
   });
 
