@@ -34,11 +34,10 @@
     "babel-preset-es2015": "^6.18.0",
     "babel-preset-es2016": "^6.16.0",
     "babel-preset-stage-2": "^6.18.0",
-    "filecopy": "^2.1.2",
+    "copyfiles": "^1.0.0",
     "flow-bin": "^0.36.0",
     "flow-typed": "^2.0.0",
-    "husky": "^0.11.9",
-    "pify": "^2.3.0"
+    "husky": "^0.11.9"
   },
   "files": [
     "dist",

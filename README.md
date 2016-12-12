@@ -2,6 +2,7 @@
 
 Visual regression test tool.
 
+[![Build Status](https://img.shields.io/travis/bokuweb/reg-cli.svg?style=flat-square)](https://travis-ci.org/bokuweb/reg-cli)
 [![Version](https://img.shields.io/npm/v/reg-cli.svg?style=flat-square)](https://www.npmjs.com/package/reg-cli)
 
 ## Table of Contents
