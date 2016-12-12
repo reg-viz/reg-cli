@@ -5,7 +5,7 @@ import glob from 'glob';
 import copyfiles from 'copyfiles';
 
 const IMAGE_FILES= '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
-const TEST_WORKSPACE= './test/__workspace__';
+const WORKSPACE= './test/__workspace__';
 const RESORCE = './resource';
 
 test('should display error message when passing only 1 argument', async t => {
@@ -22,27 +22,70 @@ test('should display error message when passing only 2 argument', async t => {
   t.true(stdout.indexOf('please specify actual, expected and diff images directrory') !== -1);
 });
 
-test('should genearate image diff', async t => {
-  await new Promise((resolve) => copyfiles([`${RESORCE}${IMAGE_FILES}`, TEST_WORKSPACE], resolve));
+test('should genearate image diff and output fail message', async t => {
+  await new Promise((resolve) => copyfiles([`${RESORCE}${IMAGE_FILES}`, WORKSPACE], resolve));
   const stdout = await new Promise((resolve) => {
     execFile('./dist/cli.js', [
-      `./test/__workspace__/resource/actual`,
-      `./test/__workspace__/resource/expected`,
-      `./test/__workspace__/diff`
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`
     ], (error, stdout) => resolve(stdout));
   });
 
+  t.true(stdout.indexOf('test failed.') !== -1);
+
   try {
-    fs.readFileSync(`./test/__workspace__/diff/sample.jpg`);
+    fs.readFileSync(`${WORKSPACE}/diff/sample.jpg`);
     t.pass();
   } catch (e) {
     t.fail();
   }
 });
 
+test('should genearate report', async t => {
+  await new Promise((resolve) => copyfiles([`${RESORCE}${IMAGE_FILES}`, WORKSPACE], resolve));
+  const stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      '-R',
+      '${WORKSPACE}/report.html'
+    ], (error, stdout) => resolve(stdout));
+  });
+
+  try {
+    fs.readFileSync(`${WORKSPACE}/report.html`);
+    t.pass();
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test('should update images with -U option', async t => {
+  await new Promise((resolve) => copyfiles([`${RESORCE}${IMAGE_FILES}`, WORKSPACE], resolve));
+  let stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      '-U'
+    ], (error, stdout) => resolve(stdout));
+  });
+  t.true(stdout.indexOf('test failed.') !== -1);
+  stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      '-U'
+    ], (error, stdout) => resolve(stdout));
+  });
+  t.true(stdout.indexOf('test succeeded.') !== -1);
+});
 
 test.after(t => {
-  const images = glob.sync(`${TEST_WORKSPACE}${IMAGE_FILES}`);
+  const images = glob.sync(`${WORKSPACE}${IMAGE_FILES}`);
   images.forEach((image) => {
     try {
       fs.unlinkSync(image);
