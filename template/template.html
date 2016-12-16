@@ -250,7 +250,7 @@
         <script type="text/javascript" src="//cdn.jsdelivr.net/blazy/latest/blazy.min.js"></script>
         <script>
            ;(function() {
-             // Initialize
+            if (!Blazy) return;
              var bLazy = new Blazy({ selector: 'img' });
            })();
         </script>
