@@ -232,6 +232,13 @@
             </div>
             <div class="overlay"><div class="image-viewer"><img src="" /></div></div>
         </div>
+        <script type="text/javascript" src="//cdn.jsdelivr.net/blazy/latest/blazy.min.js"></script>
+        <script>
+           ;(function() {
+             // Initialize
+             var bLazy = new Blazy({ selector: 'img' });
+           })();
+        </script>
         <script>
           const overlay = document.querySelector('.overlay');
           const viewer = document.querySelector('.image-viewer');
