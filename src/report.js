@@ -6,6 +6,23 @@ const path = require('path');
 module.exports = (params) => {
   const file = path.join(__dirname, '../template/template.html');
   const template = fs.readFileSync(file);
+
+  const passedItemsD = {};
+
+  params.passedItems.forEach(item => {
+    const dirName = path.dirname(item);
+    const splitedDirName = dirName.split('/');
+    if (passedItemsD[dirName]) {
+      return passedItemsD[dirName].items.push(item);
+    }
+    passedItemsD[dirName] = {
+      splitedDirName: splitedDirName,
+      items: [item],
+    };
+  });
+
+  console.log(passedItemsD);
+
   const view = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
     hasNew: params.newItems.length > 0,
