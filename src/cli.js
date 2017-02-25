@@ -25,6 +25,7 @@ const cli = meow(`
     alias: {
       U: 'update',
       D: 'dist',
+      I: 'ignoreError',
     },
   });
 
@@ -35,5 +36,6 @@ compare({
   expectedDir: process.argv[3],
   diffDir: process.argv[4],
   update: !!cli.flags.update,
+  ignoreError: !!cli.flags.ignoreError,
   dist,
 });

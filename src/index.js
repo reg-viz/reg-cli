@@ -23,6 +23,7 @@ type Props = {
   expectedDir: string;
   diffDir: string;
   update: ?boolean;
+  ignoreError: ?boolean;
   dist: string;
 };
 
@@ -32,6 +33,7 @@ module.exports = ({
   diffDir,
   update,
   dist,
+  ignoreError,
 }: Props) => new Promise((resolve, reject) => {
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
@@ -143,7 +145,7 @@ module.exports = ({
       if (!update) {
         if (failed.length > 0 || newImages.length > 0 || deletedImages.length > 0) {
           log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
-          process.exit(1);
+          if (!ignoreError) process.exit(1);
         }
       }
 
