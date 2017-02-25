@@ -13,8 +13,6 @@ module.exports = (params) => {
     diffDir: path.relative(path.dirname(params.dist), params.diffDir),
   });
 
-  console.log(result)
-
   try {
     mkdirp.sync(path.dirname(params.dist));
     fs.writeFileSync(params.dist, result);
