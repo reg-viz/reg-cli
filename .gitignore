@@ -1,1 +1,4 @@
 /node_modules/*
+reg.json
+/dist/*
+/test/__workspace__/*

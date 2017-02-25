@@ -9,7 +9,7 @@ const path = require('path');
 const log = require('./log');
 const report = require('./report');
 
-const IMAGE_FILES= '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
+const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 
 const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
 
@@ -23,7 +23,7 @@ type Props = {
   expectedDir: string;
   diffDir: string;
   update: ?boolean;
-  reportPath: ?string | boolean;
+  dist: string;
 };
 
 module.exports = ({
@@ -31,15 +31,15 @@ module.exports = ({
   expectedDir,
   diffDir,
   update,
-  reportPath,
+  dist,
 }: Props) => new Promise((resolve, reject) => {
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
   spinner.start();
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`)
-          .map(path => path.replace(expectedDir, ''));
+    .map(path => path.replace(expectedDir, ''));
   const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`)
-          .map(path => path.replace(actualDir, ''));
+    .map(path => path.replace(actualDir, ''));
   const deletedImages = difference(expectedImages, actualImages);
   const newImages = difference(actualImages, expectedImages);
 
@@ -90,7 +90,7 @@ module.exports = ({
         mkdirp.sync(path.dirname(`${expectedDir}${image}`));
         fs.createReadStream(`${actualDir}${image}`)
           .pipe(fs.createWriteStream(`${expectedDir}${image}`));
-      } catch(err) {
+      } catch (err) {
         log.fail(err);
       }
     })
@@ -111,18 +111,16 @@ module.exports = ({
       const passed = results.filter(r => r.passed).map((r) => r.image);
       const failed = results.filter(r => !r.passed).map((r) => r.image);
 
-      if (reportPath) {
-        report({
-          passedItems: passed,
-          failedItems: failed,
-          newItems: newImages,
-          deletedItems: deletedImages,
-          reportPath,
-          actualDir,
-          expectedDir,
-          diffDir,
-        });
-      }
+      report({
+        passedItems: passed,
+        failedItems: failed,
+        newItems: newImages,
+        deletedItems: deletedImages,
+        dist,
+        actualDir,
+        expectedDir,
+        diffDir,
+      });
 
       spinner.stop(true);
       if (passed.length > 0) {
@@ -130,7 +128,7 @@ module.exports = ({
         passed.forEach((image) => {
           try {
             fs.unlinkSync(`${diffDir}${image}`);
-          } catch(err) {
+          } catch (err) {
             // noop
           }
           log.success(`  \u2714 ${actualDir}${image}`);
