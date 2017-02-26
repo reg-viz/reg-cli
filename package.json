@@ -2,7 +2,7 @@
   "name": "reg-cli",
   "version": "0.3.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "start": "node ./dist/cli.js",
   "scripts": {
     "build": "babel src -d dist",

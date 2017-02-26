@@ -118,7 +118,7 @@ module.exports = ({
         failedItems: failed,
         newItems: newImages,
         deletedItems: deletedImages,
-        dist,
+        dist: dist || './reg.json',
         actualDir,
         expectedDir,
         diffDir,
