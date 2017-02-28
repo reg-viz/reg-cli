@@ -154,6 +154,7 @@ module.exports = ({
       copyImages();
       log.success(`\nAll images are updated. `);
       spinner.stop(true);
+      resolve();
     })
     .catch(err => {
       log.fail(err);
