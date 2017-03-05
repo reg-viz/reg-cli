@@ -87,15 +87,20 @@ module.exports = ({
     };
 
     const copyImages = () => {
-      actualImages.forEach((image) => {
+      return Promise.all(actualImages.map((image) => new Promise((resolve, reject) => {
         try {
           mkdirp.sync(path.dirname(`${expectedDir}${image}`));
-          fs.createReadStream(`${actualDir}${image}`)
-            .pipe(fs.createWriteStream(`${expectedDir}${image}`));
+          const writeStream = fs.createWriteStream(`${expectedDir}${image}`);
+          fs.createReadStream(`${actualDir}${image}`).pipe(writeStream);
+          writeStream.on('finish', (err) => {
+            if (err) reject(err);
+            resolve();
+          })
         } catch (err) {
           log.fail(err);
+          reject(err);
         }
-      })
+      })))
     };
 
     if (deletedImages.length > 0) {
@@ -119,6 +124,8 @@ module.exports = ({
           newItems: newImages,
           deletedItems: deletedImages,
           expectedItems: expectedImages,
+          actualItems: actualImages,
+          diffItems: failed,
           dist: dist || './reg.json',
           actualDir,
           expectedDir,
@@ -152,10 +159,11 @@ module.exports = ({
 
         spinner.start();
         cleanupExpectedDir();
-        copyImages();
-        log.success(`\nAll images are updated. `);
-        spinner.stop(true);
-        resolve(result);
+        copyImages().then(() => {
+          log.success(`\nAll images are updated. `);
+          spinner.stop(true);
+          resolve(result);
+        })
       })
       .catch(err => {
         log.fail(err);

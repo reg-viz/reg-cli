@@ -9,6 +9,8 @@ module.exports = (params) => {
     deletedItems: params.deletedItems,
     passedItems: params.passedItems,
     expectedItems: params.expectedItems,
+    actualItems: params.actualItems,
+    diffItems: params.diffItems,
     actualDir: path.relative(path.dirname(params.dist), params.actualDir),
     expectedDir: path.relative(path.dirname(params.dist), params.expectedDir),
     diffDir: path.relative(path.dirname(params.dist), params.diffDir),
