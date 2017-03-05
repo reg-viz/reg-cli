@@ -113,7 +113,7 @@ module.exports = ({
         const passed = results.filter(r => r.passed).map((r) => r.image);
         const failed = results.filter(r => !r.passed).map((r) => r.image);
 
-        report({
+        const result = report({
           passedItems: passed,
           failedItems: failed,
           newItems: newImages,
@@ -155,7 +155,7 @@ module.exports = ({
         copyImages();
         log.success(`\nAll images are updated. `);
         spinner.stop(true);
-        resolve();
+        resolve(result);
       })
       .catch(err => {
         log.fail(err);
