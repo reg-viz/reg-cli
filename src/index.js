@@ -108,7 +108,7 @@ module.exports = ({
       newImages.forEach((image) => log.info(`  \u271A ${actualDir}${image}`));
     }
 
-    compareImages(expectedImages, actualImages)
+    return compareImages(expectedImages, actualImages)
       .then((results) => {
         const passed = results.filter(r => r.passed).map((r) => r.image);
         const failed = results.filter(r => !r.passed).map((r) => r.image);
