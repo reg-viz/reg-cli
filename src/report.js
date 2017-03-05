@@ -3,7 +3,7 @@ const mkdirp = require('mkdirp');
 const path = require('path');
 
 module.exports = (params) => {
-  const result = JSON.stringify({
+  const result = {
     failedItems: params.failedItems,
     newItems: params.newItems,
     deletedItems: params.deletedItems,
@@ -12,12 +12,14 @@ module.exports = (params) => {
     actualDir: path.relative(path.dirname(params.dist), params.actualDir),
     expectedDir: path.relative(path.dirname(params.dist), params.expectedDir),
     diffDir: path.relative(path.dirname(params.dist), params.diffDir),
-  });
+  };
 
   try {
     mkdirp.sync(path.dirname(params.dist));
-    fs.writeFileSync(params.dist, result);
+    fs.writeFileSync(params.dist, JSON.stringify(result));
   } catch (err) {
     log.fail(err);
   };
+
+  return result;
 }
