@@ -51,7 +51,7 @@ module.exports = ({
 
     mkdirp.sync(expectedDir);
     mkdirp.sync(diffDir);
-    
+
     const compareAndGenerateDiff = (
       actualDir: string,
       expectedDir: string,
@@ -113,7 +113,7 @@ module.exports = ({
     }
 
     if (newImages.length > 0) {
-      log.info(`\n${TEARDROP} ${newImages.length} new images detected.`);
+      log.warn(`\n${TEARDROP} ${newImages.length} new images detected.`);
       newImages.forEach((image) => log.info(`  ${GREEK_CROSS} ${actualDir}${image}`));
     }
 
