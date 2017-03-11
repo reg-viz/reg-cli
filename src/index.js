@@ -11,6 +11,12 @@ const report = require('./report');
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 
+const BALLOT_X = '\u2718';
+const CHECK_MARK = '\u2714';
+const TEARDROP = '\u274B';
+const MULTIPLICATION_X = '\u2716';
+const GREEK_CROSS = '\u271A';
+
 const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
 
 type CompareResult = {
@@ -38,16 +44,14 @@ module.exports = ({
     let spinner = new Spinner('[Processing].. %s');
     spinner.setSpinnerString('|/-\\');
     spinner.start();
-    const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`)
-      .map(path => path.replace(expectedDir, ''));
-    const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`)
-      .map(path => path.replace(actualDir, ''));
+    const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
+    const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`).map(path => path.replace(actualDir, ''));
     const deletedImages = difference(expectedImages, actualImages);
     const newImages = difference(actualImages, expectedImages);
 
     mkdirp.sync(expectedDir);
     mkdirp.sync(diffDir);
-
+    
     const compareAndGenerateDiff = (
       actualDir: string,
       expectedDir: string,
@@ -104,13 +108,13 @@ module.exports = ({
     };
 
     if (deletedImages.length > 0) {
-      log.warn(`\n\u274B ${deletedImages.length} deleted images detected.`);
-      deletedImages.forEach((image) => log.warn(`  \u2716 ${actualDir}${image}`));
+      log.warn(`\n${TEARDROP} ${deletedImages.length} deleted images detected.`);
+      deletedImages.forEach((image) => log.warn(`  ${MULTIPLICATION_X} ${actualDir}${image}`));
     }
 
     if (newImages.length > 0) {
-      log.info(`\n\u274B ${newImages.length} new images detected.`);
-      newImages.forEach((image) => log.info(`  \u271A ${actualDir}${image}`));
+      log.info(`\n${TEARDROP} ${newImages.length} new images detected.`);
+      newImages.forEach((image) => log.info(`  ${GREEK_CROSS} ${actualDir}${image}`));
     }
 
     return compareImages(expectedImages, actualImages)
@@ -123,7 +127,7 @@ module.exports = ({
           failedItems: failed,
           newItems: newImages,
           deletedItems: deletedImages,
-          expectedItems: expectedImages,
+          expectedItems: update ? actualImages : expectedImages,
           actualItems: actualImages,
           diffItems: failed,
           dist: dist || './reg.json',
@@ -134,24 +138,25 @@ module.exports = ({
 
         spinner.stop(true);
         if (passed.length > 0) {
-          log.success(`\n\u2714 ${passed.length} test succeeded.`);
+          log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
           passed.forEach((image) => {
             try {
               fs.unlinkSync(`${diffDir}${image}`);
             } catch (err) {
               // noop
             }
-            log.success(`  \u2714 ${actualDir}${image}`);
+            log.success(`  ${CHECK_MARK} ${actualDir}${image}`);
           });
         }
 
         if (failed.length > 0) {
-          log.fail(`\n\u2718 ${failed.length} test failed.`);
-          failed.forEach((image) => log.fail(`  \u2718 ${actualDir}${image}`));
+          log.fail(`\n${BALLOT_X} ${failed.length} test failed.`);
+          failed.forEach((image) => log.fail(`  ${BALLOT_X} ${actualDir}${image}`));
         }
 
         if (!update) {
-          if (failed.length > 0 || newImages.length > 0 || deletedImages.length > 0) {
+          // TODO: add fail option
+          if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
             log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
             if (!ignoreError) process.exit(1);
           }
