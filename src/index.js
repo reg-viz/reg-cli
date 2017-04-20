@@ -33,6 +33,13 @@ type Props = {
   dist: string;
 };
 
+type DiffCreatorParams = {
+  actualDir: string;
+  expectedDir: string;
+  diffDir: string;
+  image: string;
+}
+
 module.exports = ({
   actualDir,
   expectedDir,
@@ -41,7 +48,6 @@ module.exports = ({
   dist,
   ignoreError,
 }: Props) => new Promise((resolve, reject) => {
-  console.log(update)
     let spinner = new Spinner('[Processing].. %s');
     spinner.setSpinnerString('|/-\\');
     spinner.start();
@@ -53,12 +59,7 @@ module.exports = ({
     mkdirp.sync(expectedDir);
     mkdirp.sync(diffDir);
 
-    const compareAndGenerateDiff = (
-      actualDir: string,
-      expectedDir: string,
-      diffDir: string,
-      image: string,
-    ): Promise<CompareResult> => {
+    const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image }: DiffCreatorParams): Promise<CompareResult> => {
       return new Promise((resolve, reject) => {
         imageDiff({
           actualImage: `${actualDir}${image}`,
@@ -80,12 +81,12 @@ module.exports = ({
     ): Promise<$TupleMap<CompareResult[], typeof $await>> => {
       return Promise.all(actualImages.map((actualImage) => {
         if (!expectedImages.includes(actualImage)) return;
-        return compareAndGenerateDiff(
+        return compareAndCreateDiff({
           actualDir,
           expectedDir,
           diffDir,
-          actualImage,
-        )
+          image: actualImage,
+        })
       }).filter(p => !!p))
     };
 
@@ -132,6 +133,7 @@ module.exports = ({
           newItems: newImages,
           deletedItems: deletedImages,
           expectedItems: update ? actualImages : expectedImages,
+          previousExpectedImages: expectedImages,
           actualItems: actualImages,
           diffItems: failed,
           dist: dist || './reg.json',
@@ -139,7 +141,6 @@ module.exports = ({
           expectedDir,
           diffDir,
         });
-        console.log("aaaa")
         spinner.stop(true);
         if (passed.length > 0) {
           log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
@@ -147,7 +148,7 @@ module.exports = ({
             try {
               fs.unlinkSync(`${diffDir}${image}`);
             } catch (err) {
-              // noop
+              // NOP
             }
             log.success(`  ${CHECK_MARK} ${actualDir}${image}`);
           });

@@ -2,9 +2,9 @@ const Mustache = require('mustache');
 const fs = require('fs');
 const mkdirp = require('mkdirp');
 const path = require('path');
+const log = require('./log');
 
-module.exports = (params) => {
-  const file = path.join(__dirname, '../template/template.html');
+const createJSONReport = (params) => {
   const result = {
     failedItems: params.failedItems,
     newItems: params.newItems,
@@ -17,9 +17,18 @@ module.exports = (params) => {
     expectedDir: path.relative(path.dirname(params.dist), params.expectedDir),
     diffDir: path.relative(path.dirname(params.dist), params.diffDir),
   };
+  try {
+    mkdirp.sync(path.dirname(params.dist));
+    fs.writeFileSync(params.dist, JSON.stringify(result));
+  } catch (err) {
+    log.fail(err);
+  };
+  return result;
+};
 
+const createHTMLReport = (params) => {
+  const file = path.join(__dirname, '../template/template.html');
   const template = fs.readFileSync(file);
-
   const view = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
     hasNew: params.newItems.length > 0,
@@ -35,16 +44,16 @@ module.exports = (params) => {
     diffDir: path.relative(path.dirname('./report.html'), params.diffDir),
   };
   const output = Mustache.render(template.toString(), view);
-
-  console.log(output)
-
   try {
     mkdirp.sync(path.dirname(params.dist));
-    fs.writeFileSync(params.dist, JSON.stringify(result));
     fs.writeFileSync('./report.html', output);
   } catch (err) {
     log.fail(err);
   };
+};
 
-  return result;
+module.exports = (params) => {
+  createHTMLReport(params);
+  const report = createJSONReport(params);
+  return report;
 }
