@@ -58,6 +58,7 @@ module.exports = ({
       diffDir: string,
       image: string,
     ): Promise<CompareResult> => {
+      console.log(actualDir, expectedDir, diffDir)
       return new Promise((resolve, reject) => {
         imageDiff({
           actualImage: `${actualDir}${image}`,
@@ -65,7 +66,10 @@ module.exports = ({
           diffImage: `${diffDir}${image}`,
           shadow: true,
         }, (err, imagesAreSame) => {
-          if (err) reject(err);
+          if (err) {
+            console.log(err)
+            reject(err);
+          }
           resolve({ passed: imagesAreSame, image });
         })
       })
@@ -119,6 +123,7 @@ module.exports = ({
 
     return compareImages(expectedImages, actualImages)
       .then((results) => {
+        console.log(results)
         const passed = results.filter(r => r.passed).map((r) => r.image);
         const failed = results.filter(r => !r.passed).map((r) => r.image);
 
@@ -135,7 +140,7 @@ module.exports = ({
           expectedDir,
           diffDir,
         });
-
+        console.log("aaaa")
         spinner.stop(true);
         if (passed.length > 0) {
           log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);

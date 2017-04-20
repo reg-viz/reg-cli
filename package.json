@@ -8,7 +8,7 @@
     "build": "babel src -d dist",
     "watch": "babel src --watch -d dist",
     "flow": "flow",
-    "reg": "reg-cli ./sample/expected ./sample/temp -D ./diff",
+    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./diff",
     "test": "npm run build && chmod +x dist/cli.js && ava test/test.js"
   },
   "repository": {
@@ -24,7 +24,8 @@
     "image-diff": "^1.6.3",
     "lodash": "^4.17.4",
     "meow": "^3.7.0",
-    "mkdirp": "^0.5.1"
+    "mkdirp": "^0.5.1",
+    "mustache": "^2.3.0"
   },
   "devDependencies": {
     "ava": "^0.19.1",
