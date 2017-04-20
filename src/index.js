@@ -41,6 +41,7 @@ module.exports = ({
   dist,
   ignoreError,
 }: Props) => new Promise((resolve, reject) => {
+  console.log(update)
     let spinner = new Spinner('[Processing].. %s');
     spinner.setSpinnerString('|/-\\');
     spinner.start();
@@ -58,7 +59,6 @@ module.exports = ({
       diffDir: string,
       image: string,
     ): Promise<CompareResult> => {
-      console.log(actualDir, expectedDir, diffDir)
       return new Promise((resolve, reject) => {
         imageDiff({
           actualImage: `${actualDir}${image}`,
@@ -67,7 +67,6 @@ module.exports = ({
           shadow: true,
         }, (err, imagesAreSame) => {
           if (err) {
-            console.log(err)
             reject(err);
           }
           resolve({ passed: imagesAreSame, image });
@@ -77,7 +76,7 @@ module.exports = ({
 
     const compareImages = (
       expectedImages: string[],
-      actualImages: string[]
+      actualImages: string[],
     ): Promise<$TupleMap<CompareResult[], typeof $await>> => {
       return Promise.all(actualImages.map((actualImage) => {
         if (!expectedImages.includes(actualImage)) return;
@@ -164,6 +163,7 @@ module.exports = ({
           if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
             log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
             if (!ignoreError) process.exit(1);
+            return;
           }
         }
 
