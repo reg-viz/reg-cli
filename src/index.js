@@ -1,7 +1,7 @@
 /* @flow */
 
 const imageDiff = require('image-diff');
-const Spinner = require('cli-spinner').Spinner;
+const { Spinner } = require('cli-spinner');
 const glob = require('glob');
 const mkdirp = require('mkdirp');
 const fs = require('fs');
