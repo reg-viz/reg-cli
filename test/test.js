@@ -33,7 +33,9 @@ test.serial('should generate image diff and output fail message', async t => {
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`
-    ], (error, stdout) => resolve(stdout));
+    ], (error, stdout) => {
+      resolve(stdout)
+    });
   });
 
   t.true(stdout.indexOf('test failed.') !== -1);
@@ -45,6 +47,7 @@ test.serial('should generate image diff and output fail message', async t => {
     t.fail();
   }
 });
+
 
 test.serial('should generate report json to `./reg.json` when not specified dist path', async t => {
   const stdout = await new Promise((resolve) => {
@@ -94,6 +97,9 @@ test.serial('should generate fail report', async t => {
   try {
     const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
     const expected = {
+      actualItems: ['/sample.jpg'],
+      expectedItems: ['/sample.jpg'],
+      diffItems: ['/sample.jpg'],
       failedItems: ['/sample.jpg'],
       newItems: [],
       deletedItems: [],
@@ -141,6 +147,9 @@ test.serial('should generate success report', async t => {
   try {
     const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
     const expected = {
+      actualItems: ['/sample.jpg'],
+      expectedItems: ['/sample.jpg'],
+      diffItems: [],
       failedItems: [],
       newItems: [],
       deletedItems: [],
