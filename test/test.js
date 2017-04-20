@@ -6,8 +6,9 @@ import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
-const WORKSPACE = './test/__workspace__';
-const RESOURCE = './resource';
+const WORKSPACE = 'test/__workspace__';
+const RESOURCE = 'resource';
+const SAMPLE_IMAGE = 'sample.jpg';
 
 test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
@@ -41,11 +42,25 @@ test.serial('should generate image diff and output fail message', async t => {
   t.true(stdout.indexOf('test failed.') !== -1);
 
   try {
-    fs.readFileSync(`${WORKSPACE}/diff/sample.jpg`);
+    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_IMAGE}`);
     t.pass();
   } catch (e) {
     t.fail();
   }
+});
+
+test.serial('should exit process without error when ignore error option set', async t => {
+  const error = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      '-I'
+    ], (error, stdout) => {
+      resolve(error)
+    });
+  });
+  t.true(!error);
 });
 
 
@@ -97,16 +112,16 @@ test.serial('should generate fail report', async t => {
   try {
     const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
     const expected = {
-      actualItems: ['/sample.jpg'],
-      expectedItems: ['/sample.jpg'],
-      diffItems: ['/sample.jpg'],
-      failedItems: ['/sample.jpg'],
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [`/${SAMPLE_IMAGE}`],
+      failedItems: [`/${SAMPLE_IMAGE}`],
       newItems: [],
       deletedItems: [],
       passedItems: [],
-      actualDir: 'test/__workspace__/resource/actual',
-      expectedDir: 'test/__workspace__/resource/expected',
-      diffDir: 'test/__workspace__/diff',
+      actualDir: `${WORKSPACE}/resource/actual`,
+      expectedDir: `${WORKSPACE}/resource/expected`,
+      diffDir: `${WORKSPACE}/diff`,
     };
     t.deepEqual(report, expected);
   } catch (e) {
@@ -147,16 +162,16 @@ test.serial('should generate success report', async t => {
   try {
     const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
     const expected = {
-      actualItems: ['/sample.jpg'],
-      expectedItems: ['/sample.jpg'],
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
       diffItems: [],
       failedItems: [],
       newItems: [],
       deletedItems: [],
-      passedItems: ['/sample.jpg'],
-      actualDir: 'test/__workspace__/resource/expected',
-      expectedDir: 'test/__workspace__/resource/expected',
-      diffDir: 'test/__workspace__/diff',
+      passedItems: [`/${SAMPLE_IMAGE}`],
+      actualDir: `${WORKSPACE}/resource/expected`,
+      expectedDir: `${WORKSPACE}/resource/expected`,
+      diffDir: `${WORKSPACE}/diff`,
     };
     t.deepEqual(report, expected);
   } catch (e) {

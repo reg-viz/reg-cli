@@ -39,21 +39,23 @@ const createHTMLReport = (params) => {
     passedItems: params.passedItems,
     hasFailed: params.failedItems.length > 0,
     failedItems: params.failedItems,
-    actualDir: path.relative(path.dirname('./report.html'), params.actualDir),
-    expectedDir: path.relative(path.dirname('./report.html'), params.expectedDir),
-    diffDir: path.relative(path.dirname('./report.html'), params.diffDir),
+    actualDir: path.relative(path.dirname(params.report), params.actualDir),
+    expectedDir: path.relative(path.dirname(params.report), params.expectedDir),
+    diffDir: path.relative(path.dirname(params.report), params.diffDir),
   };
   const output = Mustache.render(template.toString(), view);
   try {
     mkdirp.sync(path.dirname(params.dist));
-    fs.writeFileSync('./report.html', output);
+    fs.writeFileSync(params.report, output);
   } catch (err) {
     log.fail(err);
   };
 };
 
 module.exports = (params) => {
-  createHTMLReport(params);
+  if (params.report) {
+    createHTMLReport(params);
+  }
   const report = createJSONReport(params);
   return report;
 }
