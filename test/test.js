@@ -139,9 +139,9 @@ test.serial('should generate fail report', async t => {
       newItems: [],
       deletedItems: [],
       passedItems: [],
-      actualDir: `${WORKSPACE}/resource/actual`,
-      expectedDir: `${WORKSPACE}/resource/expected`,
-      diffDir: `${WORKSPACE}/diff`,
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
     };
     t.deepEqual(report, expected);
   } catch (e) {
@@ -189,9 +189,9 @@ test.serial('should generate success report', async t => {
       newItems: [],
       deletedItems: [],
       passedItems: [`/${SAMPLE_IMAGE}`],
-      actualDir: `${WORKSPACE}/resource/expected`,
-      expectedDir: `${WORKSPACE}/resource/expected`,
-      diffDir: `${WORKSPACE}/diff`,
+      actualDir: `./${WORKSPACE}/resource/expected`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
     };
     t.deepEqual(report, expected);
   } catch (e) {
