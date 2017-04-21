@@ -2,3 +2,5 @@
 reg.json
 /dist/*
 /test/__workspace__/*
+.DS_Store
+report.html
