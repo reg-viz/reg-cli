@@ -41,7 +41,9 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 ####  Options
 
   * `-U`, `--update` Update expected images.(Copy \`actual images\` to \`expected images\`).
-  * `-R`, `--report` Output html report to specfied directory.
+  * `-R`, `--report` Output html report to specified directory.
+  * `-J`, `--json` Specified json report path. If omitted `./reg.json`
+  * `-I`, `--ignoreError` If set, process.exit(1) is not called when compare test failed.
 
 ### script
 
@@ -53,7 +55,9 @@ reg({
   expectedDir: '/path/to/expected-dir',
   diffDir: '/path/to/diff-dir',
   update: true, // Set true, If you update expected images.
-  reportPath: '/path/to/report.html',
+  report: '/path/to/report.html',
+  json: 'path/to/report.json',
+  ignoreError: true;
 });
 ```
 
@@ -78,7 +82,7 @@ PRs welcome.
 
 The MIT License (MIT)
 
-Copyright (c) 2016 @Bokuweb
+Copyright (c) 2017 @Bokuweb
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
