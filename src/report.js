@@ -5,7 +5,7 @@ const path = require('path');
 const log = require('./log');
 
 const createJSONReport = (params) => {
-  const result = {
+  return {
     failedItems: params.failedItems,
     newItems: params.newItems,
     deletedItems: params.deletedItems,
@@ -13,17 +13,10 @@ const createJSONReport = (params) => {
     expectedItems: params.expectedItems,
     actualItems: params.actualItems,
     diffItems: params.diffItems,
-    actualDir: path.relative(path.dirname(params.dist), params.actualDir),
-    expectedDir: path.relative(path.dirname(params.dist), params.expectedDir),
-    diffDir: path.relative(path.dirname(params.dist), params.diffDir),
+    actualDir: path.relative(path.dirname(params.json), params.actualDir),
+    expectedDir: path.relative(path.dirname(params.json), params.expectedDir),
+    diffDir: path.relative(path.dirname(params.json), params.diffDir),
   };
-  try {
-    mkdirp.sync(path.dirname(params.dist));
-    fs.writeFileSync(params.dist, JSON.stringify(result));
-  } catch (err) {
-    log.fail(err);
-  };
-  return result;
 };
 
 const createHTMLReport = (params) => {
@@ -43,19 +36,25 @@ const createHTMLReport = (params) => {
     expectedDir: path.relative(path.dirname(params.report), params.expectedDir),
     diffDir: path.relative(path.dirname(params.report), params.diffDir),
   };
-  const output = Mustache.render(template.toString(), view);
-  try {
-    mkdirp.sync(path.dirname(params.dist));
-    fs.writeFileSync(params.report, output);
-  } catch (err) {
-    log.fail(err);
-  };
+  return Mustache.render(template.toString(), view);
 };
 
 module.exports = (params) => {
   if (params.report) {
-    createHTMLReport(params);
+    const html = createHTMLReport(params);
+    try {
+      mkdirp.sync(path.dirname(params.report));
+      fs.writeFileSync(params.report, html);
+    } catch (err) {
+      log.fail(err);
+    };
   }
-  const report = createJSONReport(params);
-  return report;
+  const json = createJSONReport(params);
+  try {
+    mkdirp.sync(path.dirname(params.json));
+    fs.writeFileSync(params.json, JSON.stringify(json));
+  } catch (err) {
+    log.fail(err);
+  };
+  return json;
 }

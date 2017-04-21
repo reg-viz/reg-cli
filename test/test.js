@@ -100,6 +100,26 @@ test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when di
   }
 });
 
+test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when `-R` option enabled', async t => {
+  const stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-R`,
+      `${WORKSPACE}/dist/report.html`,
+    ], (error, stdout) => resolve(stdout));
+  });
+
+  try {
+    fs.readFileSync(`${WORKSPACE}/dist/report.html`);
+    t.pass();
+  } catch (e) {
+    console.error(e);
+    t.fail();
+  }
+});
+
 test.serial('should generate fail report', async t => {
   const stdout = await new Promise((resolve) => {
     execFile('./dist/cli.js', [

@@ -24,13 +24,17 @@ const cli = meow(`
 `, {
     alias: {
       U: 'update',
-      D: 'dist',
+      J: 'json',
       I: 'ignoreError',
       R: 'report',
     },
   });
 
-const dist = cli.flags.dist ? cli.flags.dist.toString() : './reg.json'; // default output path
+const json = cli.flags.json ? cli.flags.json.toString() : './reg.json'; // default output path
+
+const report = typeof cli.flags.report === 'string'
+  ? cli.flags.report
+  : !!cli.flags.report && './report.html';
 
 compare({
   actualDir: process.argv[2],
@@ -38,6 +42,6 @@ compare({
   diffDir: process.argv[4],
   update: !!cli.flags.update,
   ignoreError: !!cli.flags.ignoreError,
-  report: cli.flags.report,
-  dist,
+  report,
+  json,
 });

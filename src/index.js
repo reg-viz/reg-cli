@@ -30,8 +30,8 @@ type Params = {
   diffDir: string;
   update: boolean;
   ignoreError: boolean;
-  report: ?string;
-  dist: string;
+  report: string | boolean;
+  json: string;
 };
 
 type DiffCreatorParams = {
@@ -42,7 +42,7 @@ type DiffCreatorParams = {
 }
 
 module.exports = (params: Params) => new Promise((resolve, reject) => {
-  const { actualDir, expectedDir, diffDir, update, dist, ignoreError, report } = params;
+  const { actualDir, expectedDir, diffDir, update, json, ignoreError, report } = params;
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
   spinner.start();
@@ -70,10 +70,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
     })
   };
 
-  const compareImages = (
-    expectedImages: string[],
-    actualImages: string[],
-  ): Promise<$TupleMap<CompareResult[], typeof $await>> => {
+  const compareImages = (expectedImages: string[], actualImages: string[]): Promise<$TupleMap<CompareResult[], typeof $await>> => {
     return Promise.all(actualImages.map((actualImage) => {
       if (!expectedImages.includes(actualImage)) return;
       return compareAndCreateDiff({
@@ -130,7 +127,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         previousExpectedImages: expectedImages,
         actualItems: actualImages,
         diffItems: failed,
-        dist: dist || './reg.json',
+        json,
         actualDir,
         expectedDir,
         diffDir,

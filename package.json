@@ -8,7 +8,7 @@
     "build": "babel src -d dist",
     "watch": "babel src --watch -d dist",
     "flow": "flow",
-    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./diff -I -R ./report.html",
+    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./diff -I -R",
     "test": "npm run build && chmod +x dist/cli.js && ava test/test.js"
   },
   "repository": {
