@@ -151,7 +151,15 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         failed.forEach((image) => log.fail(`  ${BALLOT_X} ${actualDir}${image}`));
       }
 
-      if (!update) {
+      if (update) {
+        spinner.start();
+        cleanupExpectedDir();
+        copyImages().then(() => {
+          log.success(`\nAll images are updated. `);
+          spinner.stop(true);
+          resolve(result);
+        })
+      } else {
         // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
           log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
@@ -159,14 +167,6 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
           return;
         }
       }
-
-      spinner.start();
-      cleanupExpectedDir();
-      copyImages().then(() => {
-        log.success(`\nAll images are updated. `);
-        spinner.stop(true);
-        resolve(result);
-      })
     })
     .catch(err => {
       log.fail(err);
