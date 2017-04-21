@@ -33,7 +33,7 @@ const cli = meow(`
 
 const json = cli.flags.json ? cli.flags.json.toString() : './reg.json'; // default output path
 
-const urlPrefix = cli.flags.urlPrefix ? cli.flags.urlPrefix.toString() : './';
+const urlPrefix = typeof cli.flags.urlPrefix === 'string' ? cli.flags.urlPrefix : './';
 
 const report = typeof cli.flags.report === 'string'
   ? cli.flags.report

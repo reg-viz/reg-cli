@@ -13,9 +13,9 @@ const createJSONReport = (params) => {
     expectedItems: params.expectedItems,
     actualItems: params.actualItems,
     diffItems: params.diffItems,
-    actualDir: `${urlPrefix}${path.relative(path.dirname(params.json), params.actualDir)}`,
-    expectedDir: `${urlPrefix}${path.relative(path.dirname(params.json), params.expectedDir)}`,
-    diffDir: `${urlPrefix}${path.relative(path.dirname(params.json), params.diffDir)}`,
+    actualDir: `${params.urlPrefix}${path.relative(path.dirname(params.json), params.actualDir)}`,
+    expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.json), params.expectedDir)}`,
+    diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.json), params.diffDir)}`,
   };
 };
 
@@ -32,9 +32,9 @@ const createHTMLReport = (params) => {
     passedItems: params.passedItems,
     hasFailed: params.failedItems.length > 0,
     failedItems: params.failedItems,
-    actualDir: `${urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
-    expectedDir: `${urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
-    diffDir: `${urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
+    actualDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
+    expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
+    diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
   };
   return Mustache.render(template.toString(), view);
 };
