@@ -87,7 +87,7 @@ test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when di
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      `-D`,
+      `-J`,
       `${WORKSPACE}/dist/reg.json`,
     ], (error, stdout) => resolve(stdout));
   });
