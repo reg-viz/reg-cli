@@ -27,10 +27,13 @@ const cli = meow(`
       J: 'json',
       I: 'ignoreError',
       R: 'report',
+      P: 'urlPrefix',
     },
   });
 
 const json = cli.flags.json ? cli.flags.json.toString() : './reg.json'; // default output path
+
+const urlPrefix = cli.flags.urlPrefix ? cli.flags.urlPrefix.toString() : './';
 
 const report = typeof cli.flags.report === 'string'
   ? cli.flags.report
@@ -44,4 +47,5 @@ compare({
   ignoreError: !!cli.flags.ignoreError,
   report,
   json,
+  urlPrefix,
 });

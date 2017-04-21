@@ -32,6 +32,7 @@ type Params = {
   ignoreError: boolean;
   report: string | boolean;
   json: string;
+  urlPrefix: string;
 };
 
 type DiffCreatorParams = {
@@ -42,7 +43,7 @@ type DiffCreatorParams = {
 }
 
 module.exports = (params: Params) => new Promise((resolve, reject) => {
-  const { actualDir, expectedDir, diffDir, update, json, ignoreError, report } = params;
+  const { actualDir, expectedDir, diffDir, update, json, ignoreError, report, urlPrefix } = params;
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
   spinner.start();
@@ -132,6 +133,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         expectedDir,
         diffDir,
         report,
+        urlPrefix,
       });
       spinner.stop(true);
       if (passed.length > 0) {
