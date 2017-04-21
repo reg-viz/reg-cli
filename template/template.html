@@ -207,13 +207,13 @@
                 <li id="{{.}}"><i class="fa fa-close" aria-hidden="true"></i>{{.}}</li>
                 <div class="image-wrapper">
                     <div><span class="tag">Diff</span>
-                        <div class="image-inner"><img src="{{diffDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{diffDir}}{{.}}" /></div>
                     </div>
                     <div><span class="tag">After</span>
-                        <div class="image-inner"><img src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{actualDir}}{{.}}" /></div>
                     </div>
                     <div><span class="tag">Before</span>
-                        <div class="image-inner"><img src="{{expectedDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{expectedDir}}{{.}}" /></div>
                     </div>
                 </div>
                 {{/failedItems}}
@@ -226,7 +226,7 @@
                 <li id="{{.}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">New</span>
-                        <div class="image-inner"><img src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{actualDir}}{{.}}" /></div>
                     </div>
                 </div>
                 {{/newItems}}
@@ -239,7 +239,7 @@
                 <li id="{{.}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Deleted</span>
-                        <div class="image-inner"><img src="{{expectedDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{expectedDir}}{{.}}" /></div>
                     </div>
                 </div>
                 {{/deletedItems}}
@@ -252,7 +252,7 @@
                 <li id="{{.}}"><i class="fa fa-check" aria-hidden="true"></i>{{.}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Passed</span>
-                        <div class="image-inner"><img src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" data-src="{{actualDir}}{{.}}" /></div>
                     </div>
                 </div>
                 {{/passedItems}}
