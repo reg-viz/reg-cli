@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.3.14",
+  "version": "0.3.16",
   "description": "",
   "main": "./dist/index.js",
   "start": "node ./dist/cli.js",
