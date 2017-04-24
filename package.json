@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "",
   "main": "./dist/index.js",
   "start": "node ./dist/cli.js",
@@ -8,6 +8,7 @@
     "build": "babel src -d dist",
     "watch": "babel src --watch -d dist",
     "flow": "flow",
+    "prepublish": "npm run build",
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./diff -I -R",
     "test": "npm run build && chmod +x dist/cli.js && ava test/test.js"
   },
