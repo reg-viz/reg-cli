@@ -155,7 +155,7 @@
                     </div>
                     <div class="nav-right nav-menu">
                         <span class="nav-item">
-                                <a href="https://github.com/bokuweb/reg-cli" class="button is-{{type}} is-inverted">
+                            <a href="https://github.com/bokuweb/reg-cli" class="button is-{{type}} is-inverted">
                                     <span class="icon">
                                         <i class="fa fa-github"></i>
                                     </span>
@@ -174,28 +174,28 @@
             <h4>Failed</h4>{{/hasFailed}}
             <ul class="results fail">
                 {{#failedItems}}
-                <li><a href="#{{.}}" class="link"><i class="fa fa-close" aria-hidden="true"></i>{{.}}</a></li>
+                <li><a href="#{{encoded}}" class="link"><i class="fa fa-close" aria-hidden="true"></i>{{raw}}</a></li>
                 {{/failedItems}}
             </ul>
             {{#hasNew}}
             <h4>New</h4>{{/hasNew}}
             <ul class="results warn">
                 {{#newItems}}
-                <li><a href="#{{.}}" class="link"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</a></li>
+                <li><a href="#{{encoded}}" class="link"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</a></li>
                 {{/newItems}}
             </ul>
             {{#hasDeleted}}
             <h4>Deleted</h4>{{/hasDeleted}}
             <ul class="results warn">
                 {{#deletedItems}}
-                <li><a href="#{{.}}" class="link"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</a></li>
+                <li><a href="#{{encoded}}" class="link"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</a></li>
                 {{/deletedItems}}
             </ul>
             {{#hasPassed}}
             <h4>Passed</h4>{{/hasPassed}}
             <ul class="results success">
                 {{#passedItems}}
-                <li><a href="#{{.}}" class="link"><i class="fa fa-check" aria-hidden="true"></i>{{.}}</a></li>
+                <li><a href="#{{encoded}}" class="link"><i class="fa fa-check" aria-hidden="true"></i>{{raw}}</a></li>
                 {{/passedItems}}
             </ul>
 
@@ -204,16 +204,19 @@
             <h4>Failed</h4>{{/hasFailed}}
             <ul class="results fail">
                 {{#failedItems}}
-                <li id="{{.}}"><i class="fa fa-close" aria-hidden="true"></i>{{.}}</li>
+                <li id="{{encoded}}"><i class="fa fa-close" aria-hidden="true"></i>{{raw}}</li>
                 <div class="image-wrapper">
                     <div><span class="tag">Diff</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{diffDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{diffDir}}{{raw}}" /></div>
                     </div>
                     <div><span class="tag">After</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                     <div><span class="tag">Before</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{expectedDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{expectedDir}}{{raw}}" /></div>
                     </div>
                 </div>
                 {{/failedItems}}
@@ -223,10 +226,11 @@
             <h4>New</h4>{{/hasNew}}
             <ul class="results warn">
                 {{#newItems}}
-                <li id="{{.}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</li>
+                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">New</span>
-                        <div class="image-inner"><img class="b-lazy"  src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                 </div>
                 {{/newItems}}
@@ -236,10 +240,11 @@
             <h4>Deleted</h4>{{/hasDeleted}}
             <ul class="results warn">
                 {{#deletedItems}}
-                <li id="{{.}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{.}}</li>
+                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Deleted</span>
-                        <div class="image-inner"><img class="b-lazy"  src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{expectedDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{expectedDir}}{{raw}}" /></div>
                     </div>
                 </div>
                 {{/deletedItems}}
@@ -249,10 +254,11 @@
             <h4>passed</h4>{{/hasPassed}}
             <ul class="results success">
                 {{#passedItems}}
-                <li id="{{.}}"><i class="fa fa-check" aria-hidden="true"></i>{{.}}</li>
+                <li id="{{encoded}}"><i class="fa fa-check" aria-hidden="true"></i>{{raw}}</li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Passed</span>
-                        <div class="image-inner"><img class="b-lazy"  src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-src="{{actualDir}}{{.}}" /></div>
+                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                                data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                 </div>
                 {{/passedItems}}
