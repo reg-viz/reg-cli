@@ -4,3 +4,4 @@ reg.json
 /test/__workspace__/*
 .DS_Store
 report.html
+/diff/*
