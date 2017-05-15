@@ -3,7 +3,7 @@ node_js:
   - '7'
   - '6'
 
-before_install:
-  - sudo add-apt-repository -y ppa:moti-p/cc
-  - sudo apt-get update
-  - sudo apt-get -y --reinstall install imagemagick
+# before_install:
+#   - sudo add-apt-repository -y ppa:moti-p/cc
+#   - sudo apt-get update
+#   - sudo apt-get -y --reinstall --fix-missinginstall imagemagick
