@@ -49,4 +49,5 @@ compare({
   report,
   json,
   urlPrefix,
+  threshold: cli.flags.threshold || 0,
 });

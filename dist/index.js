@@ -47,7 +47,8 @@ var compareAndCreateDiff = function compareAndCreateDiff(_ref) {
   var actualDir = _ref.actualDir,
       expectedDir = _ref.expectedDir,
       diffDir = _ref.diffDir,
-      image = _ref.image;
+      image = _ref.image,
+      threshold = _ref.threshold;
 
   return Promise.all([getMD5('' + actualDir + image), getMD5('' + expectedDir + image)]).then(function (_ref2) {
     var _ref3 = _slicedToArray(_ref2, 2),
@@ -58,25 +59,48 @@ var compareAndCreateDiff = function compareAndCreateDiff(_ref) {
       return Promise.resolve({ passed: true, image: image });
     }
     return new Promise(function (resolve, reject) {
-      imageDiff({
+      imageDiff.getFullResult({
         actualImage: '' + actualDir + image,
         expectedImage: '' + expectedDir + image,
         diffImage: '' + diffDir + image,
         shadow: true
-      }, function (err, imagesAreSame) {
+      }, function (err, result) {
         if (err) {
           reject(err);
         }
-        resolve({ passed: imagesAreSame, image: image });
+        var passed = result.percentage <= threshold;
+        resolve({ passed: passed, image: image });
       });
     });
   });
 };
 
-var compareImages = function compareImages(expectedImages, actualImages, dirs) {
+var copyImages = function copyImages(actualImages, _ref4) {
+  var expectedDir = _ref4.expectedDir,
+      actualDir = _ref4.actualDir;
+
+  return Promise.all(actualImages.map(function (image) {
+    return new Promise(function (resolve, reject) {
+      try {
+        mkdirp.sync(path.dirname('' + expectedDir + image));
+        var writeStream = fs.createWriteStream('' + expectedDir + image);
+        fs.createReadStream('' + actualDir + image).pipe(writeStream);
+        writeStream.on('finish', function (err) {
+          if (err) reject(err);
+          resolve();
+        });
+      } catch (err) {
+        log.fail(err);
+        reject(err);
+      }
+    });
+  }));
+};
+
+var compareImages = function compareImages(expectedImages, actualImages, dirs, threshold) {
   return Promise.all(actualImages.map(function (actualImage) {
     if (!expectedImages.includes(actualImage)) return;
-    return compareAndCreateDiff(_extends({}, dirs, { image: actualImage }));
+    return compareAndCreateDiff(_extends({}, dirs, { image: actualImage, threshold: threshold }));
   }).filter(function (p) {
     return !!p;
   }));
@@ -97,7 +121,8 @@ module.exports = function (params) {
         json = params.json,
         ignoreError = params.ignoreError,
         report = params.report,
-        urlPrefix = params.urlPrefix;
+        urlPrefix = params.urlPrefix,
+        threshold = params.threshold;
 
     var dirs = { actualDir: actualDir, expectedDir: expectedDir, diffDir: diffDir };
     var spinner = new Spinner('[Processing].. %s');
@@ -115,25 +140,6 @@ module.exports = function (params) {
     mkdirp.sync(expectedDir);
     mkdirp.sync(diffDir);
 
-    var copyImages = function copyImages() {
-      return Promise.all(actualImages.map(function (image) {
-        return new Promise(function (resolve, reject) {
-          try {
-            mkdirp.sync(path.dirname('' + expectedDir + image));
-            var writeStream = fs.createWriteStream('' + expectedDir + image);
-            fs.createReadStream('' + actualDir + image).pipe(writeStream);
-            writeStream.on('finish', function (err) {
-              if (err) reject(err);
-              resolve();
-            });
-          } catch (err) {
-            log.fail(err);
-            reject(err);
-          }
-        });
-      }));
-    };
-
     if (deletedImages.length > 0) {
       log.warn('\n' + TEARDROP + ' ' + deletedImages.length + ' deleted images detected.');
       deletedImages.forEach(function (image) {
@@ -148,7 +154,7 @@ module.exports = function (params) {
       });
     }
 
-    return compareImages(expectedImages, actualImages, dirs).then(function (results) {
+    return compareImages(expectedImages, actualImages, dirs, threshold).then(function (results) {
       var passed = results.filter(function (r) {
         return r.passed;
       }).map(function (r) {
@@ -176,15 +182,16 @@ module.exports = function (params) {
         report: report,
         urlPrefix: urlPrefix
       });
+
       spinner.stop(true);
       if (passed.length > 0) {
         log.success('\n' + CHECK_MARK + ' ' + passed.length + ' test succeeded.');
         passed.forEach(function (image) {
-          try {
-            fs.unlinkSync('' + diffDir + image);
-          } catch (err) {
-            // NOP
-          }
+          // try {
+          //   fs.unlinkSync(`${dirs.diffDir}${image}`);
+          // } catch (err) {
+          //   // NOP
+          // }
           log.success('  ' + CHECK_MARK + ' ' + actualDir + image);
         });
       }
@@ -199,7 +206,7 @@ module.exports = function (params) {
       if (update) {
         spinner.start();
         cleanupExpectedDir(expectedImages, expectedDir);
-        copyImages().then(function () {
+        copyImages(actualImages, dirs).then(function () {
           log.success('\nAll images are updated. ');
           spinner.stop(true);
           resolve(result);

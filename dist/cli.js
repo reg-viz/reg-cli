@@ -38,5 +38,6 @@ compare({
   ignoreError: !!cli.flags.ignoreError,
   report: report,
   json: json,
-  urlPrefix: urlPrefix
+  urlPrefix: urlPrefix,
+  threshold: cli.flags.threshold || 0
 });
