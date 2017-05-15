@@ -44,7 +44,7 @@ type DiffCreatorParams = {
 }
 
 const getMD5 = (file) => new Promise((resolve, reject) => {
-  md5File('LICENSE.md', (err, hash) => {
+  md5File(file, (err, hash) => {
     if (err) reject(err);
     resolve(hash);
   })
