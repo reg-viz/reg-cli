@@ -3,7 +3,7 @@
 const imageDiff = require('image-diff');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob');
-const mkdirp = require('mkdirp');
+const mkdirp = require('make-dir');
 const fs = require('fs');
 const path = require('path');
 const log = require('./log');
