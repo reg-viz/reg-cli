@@ -4,6 +4,7 @@ const imageDiff = require('image-diff');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob');
 const mkdirp = require('make-dir');
+const md5File = require('md5-file');
 const fs = require('fs');
 const path = require('path');
 const log = require('./log');
@@ -42,6 +43,13 @@ type DiffCreatorParams = {
   image: string;
 }
 
+const getMD5 = (file) => new Promise((resolve, reject) => {
+  md5File('LICENSE.md', (err, hash) => {
+    if (err) reject(err);
+    resolve(hash);
+  })
+});
+
 module.exports = (params: Params) => new Promise((resolve, reject) => {
   const { actualDir, expectedDir, diffDir, update, json, ignoreError, report, urlPrefix } = params;
   let spinner = new Spinner('[Processing].. %s');
@@ -56,17 +64,25 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
   mkdirp.sync(diffDir);
 
   const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image }: DiffCreatorParams): Promise<CompareResult> => {
-    return new Promise((resolve, reject) => {
-      imageDiff({
-        actualImage: `${actualDir}${image}`,
-        expectedImage: `${expectedDir}${image}`,
-        diffImage: `${diffDir}${image}`,
-        shadow: true,
-      }, (err, imagesAreSame) => {
-        if (err) {
-          reject(err);
-        }
-        resolve({ passed: imagesAreSame, image });
+    return Promise.all([
+      getMD5(`${actualDir}${image}`),
+      getMD5(`${expectedDir}${image}`),
+    ]).then(([actualHash, expectedHash]) => {
+      if (actualHash === expectedHash) {
+        return Promise.resolve({ passed: true, image });
+      }
+      return new Promise((resolve, reject) => {
+        imageDiff({
+          actualImage: `${actualDir}${image}`,
+          expectedImage: `${expectedDir}${image}`,
+          diffImage: `${diffDir}${image}`,
+          shadow: true,
+        }, (err, imagesAreSame) => {
+          if (err) {
+            reject(err);
+          }
+          resolve({ passed: imagesAreSame, image });
+        })
       })
     })
   };

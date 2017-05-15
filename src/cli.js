@@ -28,6 +28,7 @@ const cli = meow(`
       I: 'ignoreError',
       R: 'report',
       P: 'urlPrefix',
+      T: 'threshold',
     },
   });
 
