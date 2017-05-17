@@ -19,6 +19,11 @@ const cli = meow(`
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir
   Options
     -U, --update Update expected images.(Copy \`actual images\` to \`expected images\`).
+    -J, --json Specified json report path. If omitted ./reg.json.
+    -I, --ignoreChange If true, error will not be thrown when image change detected.
+    -R, --report Output html report to specified directory.
+    -P, --urlPrefix Add prefix to all image src.
+    -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `, {
@@ -47,7 +52,7 @@ compare({
   expectedDir: process.argv[3],
   diffDir: process.argv[4],
   update: !!cli.flags.update,
-  ignoreError: !!cli.flags.ignoreError,
+  ignoreChange: !!cli.flags.ignoreChange,
   report,
   json,
   urlPrefix,

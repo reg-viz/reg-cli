@@ -44,8 +44,11 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-U`, `--update` Update expected images.(Copy \`actual images\` to \`expected images\`).
   * `-R`, `--report` Output html report to specified directory.
   * `-J`, `--json` Specified json report path. If omitted `./reg.json`
-  * `-I`, `--ignoreError` If set, process.exit(1) is not called when compare test failed.
-
+  * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
+  * `-R`, `--report` Output html report to specified directory.
+  * `-P`, `--urlPrefix` Add prefix to all image src.
+  * `-T`, `--threshold` Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
+  
 ### script
 
 ``` javascript
@@ -58,7 +61,8 @@ reg({
   update: true, // Set true, If you update expected images.
   report: '/path/to/report.html',
   json: 'path/to/report.json',
-  ignoreError: true;
+  ignoreChange: true;
+  threshold: 0.01; // If the change amount of the image is 1% or less, it succeeds
 });
 ```
 
@@ -83,7 +87,7 @@ PRs welcome.
 
 The MIT License (MIT)
 
-Copyright (c) 2017 @Bokuweb
+Copyright (c) 2017 bokuweb
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

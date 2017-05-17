@@ -30,6 +30,8 @@ var urlPrefix = typeof cli.flags.urlPrefix === 'string' ? cli.flags.urlPrefix : 
 
 var report = typeof cli.flags.report === 'string' ? cli.flags.report : !!cli.flags.report && './report.html';
 
+var threshold = Number(cli.flags.threshold) || 0;
+
 compare({
   actualDir: process.argv[2],
   expectedDir: process.argv[3],
@@ -39,5 +41,5 @@ compare({
   report: report,
   json: json,
   urlPrefix: urlPrefix,
-  threshold: cli.flags.threshold || 0
+  threshold: threshold
 });

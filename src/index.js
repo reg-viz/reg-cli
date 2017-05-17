@@ -24,7 +24,7 @@ type Params = {
   expectedDir: string;
   diffDir: string;
   update: boolean;
-  ignoreError: boolean;
+  ignoreChange: boolean;
   report: string | boolean;
   json: string;
   urlPrefix: string;
