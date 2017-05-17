@@ -2,10 +2,8 @@
 
 const imageDiff = require('image-diff');
 const { Spinner } = require('cli-spinner');
-const glob = require('glob');
-// $FlowIgnore
-const mkdirp = require('make-dir');
-// $FlowIgnore
+const glob = require('glob'); // $FlowIgnore
+const mkdirp = require('make-dir');// $FlowIgnore
 const md5File = require('md5-file');
 const fs = require('fs');
 const path = require('path');
@@ -154,6 +152,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
       });
 
       spinner.stop(true);
+  
       if (passed.length > 0) {
         log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
         passed.forEach((image) => {
@@ -172,11 +171,9 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
       }
 
       if (update) {
-        spinner.start();
         cleanupExpectedDir(expectedImages, expectedDir);
         copyImages(actualImages, dirs).then(() => {
           log.success(`\nAll images are updated. `);
-          spinner.stop(true);
           resolve(result);
         })
       } else {
