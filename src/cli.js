@@ -30,7 +30,7 @@ const cli = meow(`
     alias: {
       U: 'update',
       J: 'json',
-      I: 'ignoreError',
+      I: 'ignoreChange',
       R: 'report',
       P: 'urlPrefix',
       T: 'threshold',

@@ -3,7 +3,7 @@
 const imageDiff = require('image-diff');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob'); // $FlowIgnore
-const mkdirp = require('make-dir');// $FlowIgnore
+const mkdirp = require('make-dir'); // $FlowIgnore
 const md5File = require('md5-file');
 const fs = require('fs');
 const path = require('path');

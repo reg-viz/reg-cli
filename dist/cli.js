@@ -13,11 +13,11 @@ if (!process.argv[2] || !process.argv[3] || !process.argv[4]) {
   process.exit(1);
 }
 
-var cli = meow('\n  Usage\n    $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir\n  Options\n    -U, --update Update expected images.(Copy `actual images` to `expected images`).\n  Examples\n    $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json\n', {
+var cli = meow('\n  Usage\n    $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir\n  Options\n    -U, --update Update expected images.(Copy `actual images` to `expected images`).\n    -J, --json Specified json report path. If omitted ./reg.json.\n    -I, --ignoreChange If true, error will not be thrown when image change detected.\n    -R, --report Output html report to specified directory.\n    -P, --urlPrefix Add prefix to all image src.\n    -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)\n  Examples\n    $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json\n', {
   alias: {
     U: 'update',
     J: 'json',
-    I: 'ignoreError',
+    I: 'ignoreChange',
     R: 'report',
     P: 'urlPrefix',
     T: 'threshold'
@@ -37,7 +37,7 @@ compare({
   expectedDir: process.argv[3],
   diffDir: process.argv[4],
   update: !!cli.flags.update,
-  ignoreError: !!cli.flags.ignoreError,
+  ignoreChange: !!cli.flags.ignoreChange,
   report: report,
   json: json,
   urlPrefix: urlPrefix,

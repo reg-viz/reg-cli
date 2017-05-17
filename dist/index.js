@@ -9,10 +9,8 @@ var imageDiff = require('image-diff');
 var _require = require('cli-spinner'),
     Spinner = _require.Spinner;
 
-var glob = require('glob');
-// $FlowIgnore
-var mkdirp = require('make-dir');
-// $FlowIgnore
+var glob = require('glob'); // $FlowIgnore
+var mkdirp = require('make-dir'); // $FlowIgnore
 var md5File = require('md5-file');
 var fs = require('fs');
 var path = require('path');
@@ -119,7 +117,7 @@ module.exports = function (params) {
         diffDir = params.diffDir,
         update = params.update,
         json = params.json,
-        ignoreError = params.ignoreError,
+        ignoreChange = params.ignoreChange,
         report = params.report,
         urlPrefix = params.urlPrefix,
         threshold = params.threshold;
@@ -184,6 +182,7 @@ module.exports = function (params) {
       });
 
       spinner.stop(true);
+
       if (passed.length > 0) {
         log.success('\n' + CHECK_MARK + ' ' + passed.length + ' test succeeded.');
         passed.forEach(function (image) {
@@ -204,18 +203,16 @@ module.exports = function (params) {
       }
 
       if (update) {
-        spinner.start();
         cleanupExpectedDir(expectedImages, expectedDir);
         copyImages(actualImages, dirs).then(function () {
           log.success('\nAll images are updated. ');
-          spinner.stop(true);
           resolve(result);
         });
       } else {
         // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
             log.fail('\nInspect your code changes, re-run with `-U` to update them. ');
-            if (!ignoreError) process.exit(1);
+            if (!ignoreChange) process.exit(1);
             return;
           }
       }
