@@ -49,7 +49,7 @@ test.serial('should generate image diff and output fail message', async t => {
   }
 });
 
-test.serial('should exit process without error when ignore error option set', async t => {
+test.serial('should exit process without error when ignore change option set', async t => {
   const error = await new Promise((resolve) => {
     execFile('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,

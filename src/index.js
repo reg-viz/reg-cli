@@ -108,7 +108,7 @@ const cleanupExpectedDir = (expectedImages, expectedDir) => {
 
 module.exports = (params: Params) => new Promise((resolve, reject) => {
   const { actualDir, expectedDir, diffDir, update, json,
-    ignoreError, report, urlPrefix, threshold } = params;
+    ignoreChange, report, urlPrefix, threshold } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
@@ -183,7 +183,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
           log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
-          if (!ignoreError) process.exit(1);
+          if (!ignoreChange) process.exit(1);
           return;
         }
       }
