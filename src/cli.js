@@ -28,6 +28,7 @@ const cli = meow(`
       I: 'ignoreError',
       R: 'report',
       P: 'urlPrefix',
+      T: 'threshold',
     },
   });
 
@@ -39,6 +40,8 @@ const report = typeof cli.flags.report === 'string'
   ? cli.flags.report
   : !!cli.flags.report && './report.html';
 
+const threshold = Number(cli.flags.threshold) || 0;
+
 compare({
   actualDir: process.argv[2],
   expectedDir: process.argv[3],
@@ -48,4 +51,5 @@ compare({
   report,
   json,
   urlPrefix,
+  threshold,
 });

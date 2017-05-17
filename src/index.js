@@ -3,21 +3,16 @@
 const imageDiff = require('image-diff');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob');
-const mkdirp = require('mkdirp');
+// $FlowIgnore
+const mkdirp = require('make-dir');
+// $FlowIgnore
+const md5File = require('md5-file');
 const fs = require('fs');
 const path = require('path');
 const log = require('./log');
 const output = require('./report');
-
+const { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } = require('./icon');
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
-
-const BALLOT_X = '\u2718';
-const CHECK_MARK = '\u2714';
-const TEARDROP = '\u274B';
-const MULTIPLICATION_X = '\u2716';
-const GREEK_CROSS = '\u271A';
-
-const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
 
 type CompareResult = {
   passed: boolean;
@@ -33,6 +28,7 @@ type Params = {
   report: string | boolean;
   json: string;
   urlPrefix: string;
+  threshold: number;
 };
 
 type DiffCreatorParams = {
@@ -40,10 +36,80 @@ type DiffCreatorParams = {
   expectedDir: string;
   diffDir: string;
   image: string;
+  threshold: number;
 }
 
+const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
+
+const getMD5 = (file) => new Promise((resolve, reject) => {
+  md5File(file, (err, hash) => {
+    if (err) reject(err);
+    resolve(hash);
+  })
+});
+
+const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams): Promise<CompareResult> => {
+  return Promise.all([
+    getMD5(`${actualDir}${image}`),
+    getMD5(`${expectedDir}${image}`),
+  ]).then(([actualHash, expectedHash]) => {
+    if (actualHash === expectedHash) {
+      return Promise.resolve({ passed: true, image });
+    }
+    return new Promise((resolve, reject) => {
+      imageDiff.getFullResult({
+        actualImage: `${actualDir}${image}`,
+        expectedImage: `${expectedDir}${image}`,
+        diffImage: `${diffDir}${image}`,
+        shadow: true,
+      }, (err, result) => {
+        if (err) {
+          reject(err);
+        }
+        const passed = result.percentage <= threshold;
+        resolve({ passed, image });
+      })
+    })
+  })
+};
+
+const copyImages = (actualImages, { expectedDir, actualDir }) => {
+  return Promise.all(actualImages.map((image) => new Promise((resolve, reject) => {
+    try {
+      mkdirp.sync(path.dirname(`${expectedDir}${image}`));
+      const writeStream = fs.createWriteStream(`${expectedDir}${image}`);
+      fs.createReadStream(`${actualDir}${image}`).pipe(writeStream);
+      writeStream.on('finish', (err) => {
+        if (err) reject(err);
+        resolve();
+      })
+    } catch (err) {
+      log.fail(err);
+      reject(err);
+    }
+  })))
+};
+
+const compareImages = (
+  expectedImages: string[],
+  actualImages: string[],
+  dirs,
+  threshold,
+): Promise<$TupleMap<CompareResult[], typeof $await>> => {
+  return Promise.all(actualImages.map((actualImage) => {
+    if (!expectedImages.includes(actualImage)) return;
+    return compareAndCreateDiff({ ...dirs, image: actualImage, threshold })
+  }).filter(p => !!p))
+};
+
+const cleanupExpectedDir = (expectedImages, expectedDir) => {
+  expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
+};
+
 module.exports = (params: Params) => new Promise((resolve, reject) => {
-  const { actualDir, expectedDir, diffDir, update, json, ignoreError, report, urlPrefix } = params;
+  const { actualDir, expectedDir, diffDir, update, json,
+    ignoreError, report, urlPrefix, threshold } = params;
+  const dirs = { actualDir, expectedDir, diffDir };
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
   spinner.start();
@@ -55,55 +121,6 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
 
-  const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image }: DiffCreatorParams): Promise<CompareResult> => {
-    return new Promise((resolve, reject) => {
-      imageDiff({
-        actualImage: `${actualDir}${image}`,
-        expectedImage: `${expectedDir}${image}`,
-        diffImage: `${diffDir}${image}`,
-        shadow: true,
-      }, (err, imagesAreSame) => {
-        if (err) {
-          reject(err);
-        }
-        resolve({ passed: imagesAreSame, image });
-      })
-    })
-  };
-
-  const compareImages = (expectedImages: string[], actualImages: string[]): Promise<$TupleMap<CompareResult[], typeof $await>> => {
-    return Promise.all(actualImages.map((actualImage) => {
-      if (!expectedImages.includes(actualImage)) return;
-      return compareAndCreateDiff({
-        actualDir,
-        expectedDir,
-        diffDir,
-        image: actualImage,
-      })
-    }).filter(p => !!p))
-  };
-
-  const cleanupExpectedDir = () => {
-    expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
-  };
-
-  const copyImages = () => {
-    return Promise.all(actualImages.map((image) => new Promise((resolve, reject) => {
-      try {
-        mkdirp.sync(path.dirname(`${expectedDir}${image}`));
-        const writeStream = fs.createWriteStream(`${expectedDir}${image}`);
-        fs.createReadStream(`${actualDir}${image}`).pipe(writeStream);
-        writeStream.on('finish', (err) => {
-          if (err) reject(err);
-          resolve();
-        })
-      } catch (err) {
-        log.fail(err);
-        reject(err);
-      }
-    })))
-  };
-
   if (deletedImages.length > 0) {
     log.warn(`\n${TEARDROP} ${deletedImages.length} deleted images detected.`);
     deletedImages.forEach((image) => log.warn(`  ${MULTIPLICATION_X} ${actualDir}${image}`));
@@ -114,7 +131,7 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
     newImages.forEach((image) => log.info(`  ${GREEK_CROSS} ${actualDir}${image}`));
   }
 
-  return compareImages(expectedImages, actualImages)
+  return compareImages(expectedImages, actualImages, dirs, threshold)
     .then((results) => {
       const passed = results.filter(r => r.passed).map((r) => r.image);
       const failed = results.filter(r => !r.passed).map((r) => r.image);
@@ -135,15 +152,16 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         report,
         urlPrefix,
       });
+
       spinner.stop(true);
       if (passed.length > 0) {
         log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
         passed.forEach((image) => {
-          try {
-            fs.unlinkSync(`${diffDir}${image}`);
-          } catch (err) {
-            // NOP
-          }
+          // try {
+          //   fs.unlinkSync(`${dirs.diffDir}${image}`);
+          // } catch (err) {
+          //   // NOP
+          // }
           log.success(`  ${CHECK_MARK} ${actualDir}${image}`);
         });
       }
@@ -155,8 +173,8 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
 
       if (update) {
         spinner.start();
-        cleanupExpectedDir();
-        copyImages().then(() => {
+        cleanupExpectedDir(expectedImages, expectedDir);
+        copyImages(actualImages, dirs).then(() => {
           log.success(`\nAll images are updated. `);
           spinner.stop(true);
           resolve(result);
