@@ -45,27 +45,9 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-R`, `--report` Output html report to specified directory.
   * `-J`, `--json` Specified json report path. If omitted `./reg.json`
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
-  * `-R`, `--report` Output html report to specified directory.
   * `-P`, `--urlPrefix` Add prefix to all image src.
   * `-T`, `--threshold` Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
   
-### script
-
-``` javascript
-const reg = require('reg-cli');
-
-reg({
-  actualDir: '/path/to/actual-dir',
-  expectedDir: '/path/to/expected-dir',
-  diffDir: '/path/to/diff-dir',
-  update: true, // Set true, If you update expected images.
-  report: '/path/to/report.html',
-  json: 'path/to/report.json',
-  ignoreChange: true;
-  threshold: 0.01; // If the change amount of the image is 1% or less, it succeeds
-});
-```
-
 ### html report
 
 If `-R` option set, output html report to specfied directory.
