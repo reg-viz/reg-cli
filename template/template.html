@@ -93,6 +93,7 @@
 
         .single-image {
             width: 33%;
+            heigh: auto;
         }
 
         .image-inner {
@@ -171,7 +172,7 @@
         <div class="content">
             <h2>Summary</h2>
             {{#hasFailed}}
-            <h4>Failed</h4>{{/hasFailed}}
+            <h4>Changed</h4>{{/hasFailed}}
             <ul class="results fail">
                 {{#failedItems}}
                 <li><a href="#{{encoded}}" class="link"><i class="fa fa-close" aria-hidden="true"></i>{{raw}}</a></li>
@@ -201,21 +202,23 @@
 
             <h2>Detail</h2>
             {{#hasFailed}}
-            <h4>Failed</h4>{{/hasFailed}}
+            <h4>Changed</h4>{{/hasFailed}}
             <ul class="results fail">
                 {{#failedItems}}
-                <li id="{{encoded}}"><i class="fa fa-close" aria-hidden="true"></i>{{raw}}</li>
+                <li id="{{encoded}}"><i class="fa fa-close" aria-hidden="true"></i>
+                    <a href="#{{encoded}}">{{raw}}</a>
+                </li>
                 <div class="image-wrapper">
                     <div><span class="tag">Diff</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{diffDir}}{{raw}}" /></div>
                     </div>
                     <div><span class="tag">After</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                     <div><span class="tag">Before</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{expectedDir}}{{raw}}" /></div>
                     </div>
                 </div>
@@ -226,10 +229,12 @@
             <h4>New</h4>{{/hasNew}}
             <ul class="results warn">
                 {{#newItems}}
-                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</li>
+                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>
+                    <a href="#{{encoded}}">{{raw}}</a>
+                </li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">New</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                 </div>
@@ -240,10 +245,12 @@
             <h4>Deleted</h4>{{/hasDeleted}}
             <ul class="results warn">
                 {{#deletedItems}}
-                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>{{raw}}</li>
+                <li id="{{encoded}}"><i class="fa fa-exclamation" aria-hidden="true"></i>
+                    <a href="#{{encoded}}">{{raw}}</a>
+                </li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Deleted</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{expectedDir}}{{raw}}" /></div>
                     </div>
                 </div>
@@ -254,10 +261,12 @@
             <h4>passed</h4>{{/hasPassed}}
             <ul class="results success">
                 {{#passedItems}}
-                <li id="{{encoded}}"><i class="fa fa-check" aria-hidden="true"></i>{{raw}}</li>
+                <li id="{{encoded}}"><i class="fa fa-check" aria-hidden="true"></i>
+                    <a href="#{{encoded}}">{{raw}}</a>
+                </li>
                 <div class="image-wrapper">
                     <div class="single-image"><span class="tag">Passed</span>
-                        <div class="image-inner"><img class="b-lazy" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                        <div class="image-inner"><img class="b-lazy" src="https://bokuweb.github.io/reg-cli/image.png"
                                 data-src="{{actualDir}}{{raw}}" /></div>
                     </div>
                 </div>
