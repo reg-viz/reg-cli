@@ -6,3 +6,4 @@ reg.json
 report.html
 /diff/*
 /report/dist/*
+/dist/*
