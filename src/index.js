@@ -152,17 +152,10 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
       });
 
       spinner.stop(true);
-  
+
       if (passed.length > 0) {
         log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
-        passed.forEach((image) => {
-          // try {
-          //   fs.unlinkSync(`${dirs.diffDir}${image}`);
-          // } catch (err) {
-          //   // NOP
-          // }
-          log.success(`  ${CHECK_MARK} ${actualDir}${image}`);
-        });
+        passed.forEach((image) => log.success(`  ${CHECK_MARK} ${actualDir}${image}`));
       }
 
       if (failed.length > 0) {
