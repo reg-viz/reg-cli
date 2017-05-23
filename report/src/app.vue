@@ -4,8 +4,8 @@
     <sample-comp></sample-comp>
   </div>
 </template>
-<script>
 
+<script>
 const SampleComp = require('./views/SampleComp.vue');
 
 module.exports = {
@@ -13,11 +13,7 @@ module.exports = {
   components: {
     'sample-comp': SampleComp,
   },
-  data: function () {
-    return {
-      page: 'about'
-    }
-  }
+  data: () => ({ page: 'about' }),
 }
 </script>
 

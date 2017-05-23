@@ -22,7 +22,7 @@ const createJSONReport = (params) => {
 const createHTMLReport = (params) => {
   const file = path.join(__dirname, '../template/template.html');
   const template = fs.readFileSync(file);
-  const view = {
+  const json = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
     hasNew: params.newItems.length > 0,
     newItems: params.newItems.map(item => ({ raw: item, encoded: encodeURIComponent(item) })),
@@ -36,6 +36,10 @@ const createHTMLReport = (params) => {
     expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
     diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
   };
+  const view = {
+    report: JSON.stringify(json),
+  };
+  console.log(JSON.stringify(json))
   return Mustache.render(template.toString(), view);
 };
 
