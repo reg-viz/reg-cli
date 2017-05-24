@@ -23,7 +23,7 @@
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
         <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
-          {{failedItems.length}} chaged items.
+          {{failedItems.length}} changed items.
           <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
