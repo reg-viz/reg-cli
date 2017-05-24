@@ -23,8 +23,9 @@ var createJSONReport = function createJSONReport(params) {
 
 var createHTMLReport = function createHTMLReport(params) {
   var file = path.join(__dirname, '../template/template.html');
+  var js = fs.readFileSync(path.join(__dirname, '../report/dist/build.js'));
   var template = fs.readFileSync(file);
-  var view = {
+  var json = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
     hasNew: params.newItems.length > 0,
     newItems: params.newItems.map(function (item) {
@@ -45,6 +46,9 @@ var createHTMLReport = function createHTMLReport(params) {
     actualDir: '' + params.urlPrefix + path.relative(path.dirname(params.report), params.actualDir),
     expectedDir: '' + params.urlPrefix + path.relative(path.dirname(params.report), params.expectedDir),
     diffDir: '' + params.urlPrefix + path.relative(path.dirname(params.report), params.diffDir)
+  };
+  var view = {
+    js: js, report: JSON.stringify(json)
   };
   return Mustache.render(template.toString(), view);
 };

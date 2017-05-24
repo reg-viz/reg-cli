@@ -186,12 +186,7 @@ module.exports = function (params) {
       if (passed.length > 0) {
         log.success('\n' + CHECK_MARK + ' ' + passed.length + ' test succeeded.');
         passed.forEach(function (image) {
-          // try {
-          //   fs.unlinkSync(`${dirs.diffDir}${image}`);
-          // } catch (err) {
-          //   // NOP
-          // }
-          log.success('  ' + CHECK_MARK + ' ' + actualDir + image);
+          return log.success('  ' + CHECK_MARK + ' ' + actualDir + image);
         });
       }
 
