@@ -49,19 +49,19 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header green" v-if="failedItems.length">
+      <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
         <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
-          {{failedItems.length}} passed items.
+          {{passedItems.length}} passed items.
           <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
       <div class="summary" v-if="showPassedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link green" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
           <i class="ui icon Checkmark"></i>{{item.raw}}
         </a>
       </div>
-      <div class="items" v-for="item in failedItems">
+      <div class="items" v-for="item in passedItems">
         <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link green">
           <i class="ui icon Checkmark"></i>{{item.raw}}
         </a>
@@ -72,19 +72,19 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header grey" v-if="failedItems.length">
+      <h3 class="ui header items-header grey" v-if="newItems.length">
         New items
         <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
-          {{failedItems.length}} new items.
+          {{newItems.length}} new items.
           <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
       <div class="summary" v-if="showNewItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems">
           <i class="ui icon File Outline"></i>{{item.raw}}
         </a>
       </div>
-      <div class="items" v-for="item in failedItems">
+      <div class="items" v-for="item in newItems">
         <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
           <i class="ui icon File Outline"></i>{{item.raw}}
         </a>
@@ -95,19 +95,19 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header grey" v-if="failedItems.length">
+      <h3 class="ui header items-header grey" v-if="deletedItems.length">
         Deleted items
         <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
-          {{failedItems.length}} new items.
+          {{deletedItems.length}} new items.
           <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
       <div class="summary" v-if="showDeletedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
       </div>
-      <div class="items" v-for="item in failedItems">
+      <div class="items" v-for="item in deletedItems">
         <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
@@ -185,12 +185,9 @@ module.exports = {
     },
 
     close() {
-      console.log("asdasd")
-
       this.isModalOpen = false;
       this.$modal.pop();
       setTimeout(() => {
-        console.log(this.scrollTop)
         window.scrollTo(0, this.scrollTop);
       }, 60);
     }
