@@ -35,9 +35,15 @@
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
         <div class="captures">
-          <capture-image class="capture" :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
-          <capture-image class="capture" :src="actualDir + item.raw" :kind="'After'"></capture-image>
-          <capture-image class="capture" :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
+          <div class="capture" v-on:click="open(diffDir + item.raw, actualDir + item.raw)">
+            <capture-image :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
+          </div>
+          <div class="capture" v-on:click="open(actualDir + item.raw)">
+            <capture-image :src="actualDir + item.raw" :kind="'After'"></capture-image>
+          </div>
+          <div class="capture" v-on:click="open(expectedDir + item.raw)">
+            <capture-image :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
+          </div>
         </div>
       </div>
       <h3 class="ui header items-header green" v-if="passedItems.length">
@@ -59,17 +65,14 @@
         <capture-image class="capture" :kind="'Before'"></capture-image>
       </div>
     </div>
-    <button type="button" @click="open">Open Modal</button>
-    <modal name="example">
-      <div class="modal">
-        <button class="button" type="button" @click="close">Close Modal</button>
-      </div>
-    </modal>
+    <capture-modal :src="modalSrc" :bg="modalBgSrc">
+    </capture-modal>
   </div>
 </template>
 
 <script>
 const CaptureImage = require('./views/CaptureImage.vue');
+const CaptureModal = require('./views/CaptureModal.vue');
 
 function searchItems(type) {
   return window['__reg__'][type]
@@ -83,6 +86,7 @@ module.exports = {
   name: 'App',
   components: {
     'capture-image': CaptureImage,
+    'capture-modal': CaptureModal,
   },
   data: () => ({
     actualDir: window['__reg__'].actualDir,
@@ -90,6 +94,8 @@ module.exports = {
     diffDir: window['__reg__'].diffDir,
     search: "",
     showChangedItemSummary: false,
+    modalSrc: "",
+    modalBgSrc: null,
   }),
   computed: {
     failedItems: function () {
@@ -109,11 +115,13 @@ module.exports = {
         this.passedItems.length === 0 &&
         this.newItems.length === 0 &&
         this.deletedItems.length === 0;
-    }
+    },
   },
   methods: {
-    open() {
-      this.$modal.push('example')
+    open(src, bg) {
+      this.modalSrc = src;
+      this.modalBgSrc = bg;
+      this.$modal.push('capture')
     },
 
     close() {

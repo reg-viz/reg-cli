@@ -4,7 +4,7 @@
       <div class="ui label mini">{{kind}}</div>
       <div>
         <div class="bg" v-if="bg">
-          <img v-lazy="bg" />
+          <img :src="bg" />
         </div>
         <img v-lazy="src" />
       </div>
@@ -24,6 +24,7 @@ img {
   max-width: 100%;
   border: solid 1px #f0f0f0;
   border-radius: 2px;
+  pointer-events: auto;
 }
 
 .image>div {
@@ -33,6 +34,7 @@ img {
 .bg {
   position: absolute;
   opacity: 0.2;
+  pointer-events: none;
 }
 
 .header {
