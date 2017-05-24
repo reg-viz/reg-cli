@@ -2,7 +2,7 @@
   <div class="wrapper">
     <div class="image">
       <div class="ui label mini">{{kind}}</div>
-      <img :src="src" />
+      <img v-lazy="src" />
     </div>
   </div>
 </template>
