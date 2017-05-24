@@ -33,7 +33,7 @@
         </a>
       </div>
       <div class="items" v-for="item in failedItems">
-        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link red">
+        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link red">
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
         <div class="captures">
@@ -62,7 +62,7 @@
         </a>
       </div>
       <div class="items" v-for="item in passedItems">
-        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link green">
+        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
           <i class="ui icon Checkmark"></i>{{item.raw}}
         </a>
         <div class="captures">
@@ -85,7 +85,7 @@
         </a>
       </div>
       <div class="items" v-for="item in newItems">
-        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
+        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon File Outline"></i>{{item.raw}}
         </a>
         <div class="captures">
@@ -108,7 +108,7 @@
         </a>
       </div>
       <div class="items" v-for="item in deletedItems">
-        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
+        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
         <div class="captures">
@@ -268,6 +268,7 @@ a>i.github {
 
 .link {
   font-size: 15px;
+  display: block;
 }
 
 .red {

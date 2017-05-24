@@ -8369,7 +8369,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, "\n.not-found[data-v-62050c9e] {\n  min-height: calc(100% - 80px);\n  color: #aaa;\n  font-size: 40px;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}\n.backdrop[data-v-62050c9e] {\n  min-height: 100vh;\n  min-width: 100vw;\n  position: fixed;\n  z-index: 2000000;\n  top: 0;\n}\n.main-header[data-v-62050c9e] {\n  width: 100%;\n  height: 50px;\n  padding: 0 30px;\n  border-bottom: solid 1px #F5F2F0;\n  position: fixed;\n  display: flex;\n  align-items: center;\n  background: #fcfcfc;\n  justify-content: space-between;\n  top: 0;\n  z-index: 1000;\n}\na>i.github[data-v-62050c9e] {\n  font-size: 28px;\n  margin: 0 20px 0;\n  color: #333;\n}\n.summary[data-v-62050c9e] {\n  margin: 5px 20px 20px;\n}\n.items-header[data-v-62050c9e] {\n  padding: 30px 0 0;\n  color: #333;\n  font-weight: normal;\n}\n.items-header-sub[data-v-62050c9e] {\n  font-size: 12px;\n  font-weight: normal;\n  margin-left: 15px;\n  color: #666;\n  cursor: pointer;\n}\n.input[data-v-62050c9e] {\n  height: 28px;\n  width: 240px;\n}\n.content[data-v-62050c9e] {\n  margin-top: 50px;\n  padding: 0 30px;\n}\n.capture[data-v-62050c9e] {\n  flex-basis: 30%;\n  cursor: pointer;\n}\n.link[data-v-62050c9e] {\n  font-size: 15px;\n}\n.red[data-v-62050c9e] {\n  color: #DB2828;\n}\n.green[data-v-62050c9e] {\n  color: #21BA45;\n}\n.captures[data-v-62050c9e] {\n  display: flex;\n  justify-content: space-between;\n  margin: 15px 0 40px;\n}\n.logo[data-v-62050c9e] {\n  font-size: 24px;\n  font-family: 'Dosis', sans-serif;\n  font-weight: bold;\n  line-height: 40px;\n  color: #333;\n}\n", ""]);
+exports.push([module.i, "\n.not-found[data-v-62050c9e] {\n  min-height: calc(100% - 80px);\n  color: #aaa;\n  font-size: 40px;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}\n.backdrop[data-v-62050c9e] {\n  min-height: 100vh;\n  min-width: 100vw;\n  position: fixed;\n  z-index: 2000000;\n  top: 0;\n}\n.main-header[data-v-62050c9e] {\n  width: 100%;\n  height: 50px;\n  padding: 0 30px;\n  border-bottom: solid 1px #F5F2F0;\n  position: fixed;\n  display: flex;\n  align-items: center;\n  background: #fcfcfc;\n  justify-content: space-between;\n  top: 0;\n  z-index: 1000;\n}\na>i.github[data-v-62050c9e] {\n  font-size: 28px;\n  margin: 0 20px 0;\n  color: #333;\n}\n.summary[data-v-62050c9e] {\n  margin: 5px 20px 20px;\n}\n.items-header[data-v-62050c9e] {\n  padding: 30px 0 0;\n  color: #333;\n  font-weight: normal;\n}\n.items-header-sub[data-v-62050c9e] {\n  font-size: 12px;\n  font-weight: normal;\n  margin-left: 15px;\n  color: #666;\n  cursor: pointer;\n}\n.input[data-v-62050c9e] {\n  height: 28px;\n  width: 240px;\n}\n.content[data-v-62050c9e] {\n  margin-top: 50px;\n  padding: 0 30px;\n}\n.capture[data-v-62050c9e] {\n  flex-basis: 30%;\n  cursor: pointer;\n}\n.link[data-v-62050c9e] {\n  font-size: 15px;\n  display: block;\n}\n.red[data-v-62050c9e] {\n  color: #DB2828;\n}\n.green[data-v-62050c9e] {\n  color: #21BA45;\n}\n.captures[data-v-62050c9e] {\n  display: flex;\n  justify-content: space-between;\n  margin: 15px 0 40px;\n}\n.logo[data-v-62050c9e] {\n  font-size: 24px;\n  font-family: 'Dosis', sans-serif;\n  font-weight: bold;\n  line-height: 40px;\n  color: #333;\n}\n", ""]);
 
 // exports
 
@@ -8397,7 +8397,7 @@ exports = module.exports = __webpack_require__(0)(undefined);
 
 
 // module
-exports.push([module.i, "\n.wrapper[data-v-c60f09b0] {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  padding: 60px;\n}\n.bg[data-v-c60f09b0] {\n  position: absolute;\n  opacity: 0.2;\n  pointer-events: none;\n}\n", ""]);
+exports.push([module.i, "\n.wrapper[data-v-c60f09b0] {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  padding: 60px;\n}\n.bg[data-v-c60f09b0] {\n  position: absolute;\n  opacity: 0.2;\n  pointer-events: none;\n}\nimg[data-v-c60f09b0] {\n  max-width: 90vw;\n}\n\n", ""]);
 
 // exports
 
@@ -8788,7 +8788,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       staticClass: "ui link red",
       attrs: {
         "href": '#' + item.encoded,
-        "id": '#' + item.encoded
+        "id": item.encoded
       }
     }, [_c('i', {
       staticClass: "ui icon remove"
@@ -8861,7 +8861,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       staticClass: "ui link green",
       attrs: {
         "href": '#' + item.encoded,
-        "id": '#' + item.encoded
+        "id": item.encoded
       }
     }, [_c('i', {
       staticClass: "ui icon Checkmark"
@@ -8909,7 +8909,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       staticClass: "ui link grey",
       attrs: {
         "href": '#' + item.encoded,
-        "id": '#' + item.encoded
+        "id": item.encoded
       }
     }, [_c('i', {
       staticClass: "ui icon File Outline"
@@ -8957,7 +8957,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
       staticClass: "ui link grey",
       attrs: {
         "href": '#' + item.encoded,
-        "id": '#' + item.encoded
+        "id": item.encoded
       }
     }, [_c('i', {
       staticClass: "ui icon Trash Outline"

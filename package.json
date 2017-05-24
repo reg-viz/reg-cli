@@ -54,7 +54,8 @@
   },
   "files": [
     "dist",
-    "template"
+    "template",
+    "report"
   ],
   "bin": {
     "reg-cli": "./dist/cli.js"
