@@ -189,7 +189,7 @@ module.exports = {
       this.$modal.pop();
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
-      }, 60);
+      }, 200);
     }
   }
 }

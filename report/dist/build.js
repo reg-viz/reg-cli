@@ -8249,7 +8249,7 @@ module.exports = {
       this.$modal.pop();
       setTimeout(function () {
         window.scrollTo(0, _this2.scrollTop);
-      }, 60);
+      }, 200);
     }
   }
 };
