@@ -5,5 +5,4 @@ reg.json
 .DS_Store
 report.html
 /diff/*
-/report/dist/*
 /dist/*
