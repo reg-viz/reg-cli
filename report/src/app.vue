@@ -20,11 +20,12 @@
       </div>
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
-        <span class="items-header-sub">{{failedItems.length}} items chaged.
-          <i class="ui icon Plus Square Outline"></i>
+        <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
+          {{failedItems.length}} items chaged.
+          <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
-      <div class="summary">
+      <div class="summary" v-if="showChangedItemSummary">
         <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
@@ -82,6 +83,7 @@ module.exports = {
     expectedDir: window['__reg__'].expectedDir,
     diffDir: window['__reg__'].diffDir,
     search: "",
+    showChangedItemSummary: false,
   }),
   computed: {
     failedItems: function () {
@@ -136,11 +138,11 @@ a>i.github {
 }
 
 .summary {
-  margin: 10px 20px 20px;
+  margin: 5px 20px 20px;
 }
 
 .items-header {
-  padding: 30px 0 10px;
+  padding: 30px 0 0;
   color: #333;
   font-weight: normal;
 }
