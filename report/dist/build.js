@@ -8769,7 +8769,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         _vm.showChangedItemSummary = !_vm.showChangedItemSummary
       }
     }
-  }, [_vm._v("\n        " + _vm._s(_vm.failedItems.length) + " chaged items.\n        "), _c('i', {
+  }, [_vm._v("\n        " + _vm._s(_vm.failedItems.length) + " changed items.\n        "), _c('i', {
     class: _vm.showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
   })])]) : _vm._e(), _vm._v(" "), (_vm.passedItems.length) ? _c('h3', {
     staticClass: "ui header items-header green"
