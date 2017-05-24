@@ -13,12 +13,24 @@
       </div>
     </div>
     <div class="content">
+      <div class="not-found" v-if="isNotFound">
+        <div>
+          Items not found
+        </div>
+      </div>
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
-        <span class="items-header-sub">{{failedItems.length}} items chaged.</span>
+        <span class="items-header-sub">{{failedItems.length}} items chaged.
+          <i class="ui icon Plus Square Outline"></i>
+        </span>
       </h3>
+      <div class="summary">
+        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
+          <i class="ui icon remove"></i>{{item.raw}}
+        </a>
+      </div>
       <div class="items" v-for="item in failedItems">
-        <a :href="item.encoded" class="ui link red">
+        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link red">
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
         <div class="captures">
@@ -84,11 +96,26 @@ module.exports = {
     deletedItems: function () {
       return searchItems.bind(this)('deletedItems');
     },
+    isNotFound: function () {
+      return this.failedItems.length === 0 &&
+        this.passedItems.length === 0 &&
+        this.newItems.length === 0 &&
+        this.deletedItems.length === 0;
+    }
   }
 }
 </script>
 
 <style scoped>
+.not-found {
+  min-height: calc(100% - 80px);
+  color: #aaa;
+  font-size: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .main-header {
   width: 100%;
   height: 50px;
@@ -108,8 +135,12 @@ a>i.github {
   color: #333;
 }
 
+.summary {
+  margin: 10px 20px 20px;
+}
+
 .items-header {
-  padding: 30px 0 20px;
+  padding: 30px 0 10px;
   color: #333;
   font-weight: normal;
 }
@@ -119,6 +150,7 @@ a>i.github {
   font-weight: normal;
   margin-left: 15px;
   color: #666;
+  cursor: pointer;
 }
 
 .input {
