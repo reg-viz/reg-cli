@@ -30,7 +30,8 @@
     "md5-file": "^3.1.1",
     "meow": "^3.7.0",
     "mustache": "^2.3.0",
-    "vue-lazyload": "^1.0.3"
+    "vue-lazyload": "^1.0.3",
+    "vue-thin-modal": "^0.2.0"
   },
   "devDependencies": {
     "ava": "^0.19.1",

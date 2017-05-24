@@ -2,7 +2,12 @@
   <div class="wrapper">
     <div class="image">
       <div class="ui label mini">{{kind}}</div>
-      <img v-lazy="src" />
+      <div>
+        <div class="bg" v-if="bg">
+          <img v-lazy="bg" />
+        </div>
+        <img v-lazy="src" />
+      </div>
     </div>
   </div>
 </template>
@@ -10,7 +15,7 @@
 <script>
 module.exports = {
   name: 'CaptureImage',
-  props: ['kind', 'src'],
+  props: ['bg', 'kind', 'src'],
 }
 </script>
 
@@ -21,8 +26,13 @@ img {
   border-radius: 2px;
 }
 
-.image {
+.image>div {
   position: relative;
+}
+
+.bg {
+  position: absolute;
+  opacity: 0.2;
 }
 
 .header {

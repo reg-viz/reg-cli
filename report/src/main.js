@@ -1,23 +1,14 @@
 import Vue from 'vue';
 import VueLazyload from 'vue-lazyload';
+import VueThinModal from 'vue-thin-modal'
 
-const App = require('./app.vue');
+const App = require('./App.vue');
 
+Vue.use(VueThinModal);
 Vue.use(VueLazyload, {
   preLoad: 1.3,
   loading: 'assets/image.png',
   error: 'assets/image.png',
-  adapter: {
-    loaded({ bindType, el, naturalHeight, naturalWidth, $parent, src, loading, error, Init }) {
-      console.log('loaded')
-    },
-    loading(listender, Init) {
-      console.log('loading')
-    },
-    error(listender, Init) {
-      console.log('error')
-    }
-  }
 });
 
 new Vue({

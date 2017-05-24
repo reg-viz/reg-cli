@@ -35,7 +35,7 @@
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
         <div class="captures">
-          <capture-image class="capture" :src="diffDir + item.raw" :kind="'Diff'"></capture-image>
+          <capture-image class="capture" :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
           <capture-image class="capture" :src="actualDir + item.raw" :kind="'After'"></capture-image>
           <capture-image class="capture" :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
         </div>
@@ -59,6 +59,12 @@
         <capture-image class="capture" :kind="'Before'"></capture-image>
       </div>
     </div>
+    <button type="button" @click="open">Open Modal</button>
+    <modal name="example">
+      <div class="modal">
+        <button class="button" type="button" @click="close">Close Modal</button>
+      </div>
+    </modal>
   </div>
 </template>
 
@@ -103,6 +109,15 @@ module.exports = {
         this.passedItems.length === 0 &&
         this.newItems.length === 0 &&
         this.deletedItems.length === 0;
+    }
+  },
+  methods: {
+    open() {
+      this.$modal.push('example')
+    },
+
+    close() {
+      this.$modal.pop()
     }
   }
 }
