@@ -1,6 +1,6 @@
 <template>
   <div>
-    <modal name="capture">
+    <modal name="capture" disable-backdrop>
       <div class="wrapper">
         <div class="modal">
           <div class="bg" v-if="bg">
@@ -25,7 +25,7 @@ module.exports = {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 100px;
+  padding: 60px;
 }
 
 .bg {
@@ -66,7 +66,7 @@ module.exports = {
 
 .modal-backdrop-enter-active,
 .modal-backdrop-leave-active {
-  transition: opacity 100ms ease-out;
+  transition: opacity 0ms ease-out;
 }
 
 .modal-backdrop-enter,
@@ -94,9 +94,13 @@ module.exports = {
   pointer-events: none;
 }
 
-.modal-content-enter-active,
-.modal-content-leave-active {
+.modal-content-enter-active {
   transition: 200ms cubic-bezier(0.51, 0.21, 0.38, 0.98);
+  transition-property: opacity, transform;
+}
+
+.modal-content-leave-active {
+  transition: 0ms cubic-bezier(0.51, 0.21, 0.38, 0.98);
   transition-property: opacity, transform;
 }
 

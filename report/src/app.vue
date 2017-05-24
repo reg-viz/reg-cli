@@ -12,16 +12,18 @@
         </div>
       </div>
     </div>
+    <div class="backdrop" v-if="isModalOpen" @click="close"></div>
     <div class="content">
       <div class="not-found" v-if="isNotFound">
         <div>
           Items not found
         </div>
       </div>
+  
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
         <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
-          {{failedItems.length}} items chaged.
+          {{failedItems.length}} chaged items.
           <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
@@ -46,23 +48,74 @@
           </div>
         </div>
       </div>
-      <h3 class="ui header items-header green" v-if="passedItems.length">
+  
+      <h3 class="ui header items-header green" v-if="failedItems.length">
         Passed items
+        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
+          {{failedItems.length}} passed items.
+          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
       </h3>
-      <div class="captures" v-for="item in passedItems">
-        <capture-image class="capture" :kind="'After'"></capture-image>
+      <div class="summary" v-if="showPassedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link green" v-for="item in failedItems">
+          <i class="ui icon Checkmark"></i>{{item.raw}}
+        </a>
       </div>
-      <h3 class="ui header items-header grey" v-if="newItems.length">
+      <div class="items" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link green">
+          <i class="ui icon Checkmark"></i>{{item.raw}}
+        </a>
+        <div class="captures">
+          <div class="capture" v-on:click="open(actualDir + item.raw)">
+            <capture-image :src="actualDir + item.raw" :kind="'Passed'"></capture-image>
+          </div>
+        </div>
+      </div>
+  
+      <h3 class="ui header items-header grey" v-if="failedItems.length">
         New items
+        <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
+          {{failedItems.length}} new items.
+          <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
       </h3>
-      <div class="captures" v-for="item in newItems">
-        <capture-image class="capture" :kind="'After'"></capture-image>
+      <div class="summary" v-if="showNewItemSummary">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in failedItems">
+          <i class="ui icon File Outline"></i>{{item.raw}}
+        </a>
       </div>
-      <h3 class="ui header items-header grey" v-if="deletedItems.length">
-        Removed items
+      <div class="items" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
+          <i class="ui icon File Outline"></i>{{item.raw}}
+        </a>
+        <div class="captures">
+          <div class="capture" v-on:click="open(actualDir + item.raw)">
+            <capture-image :src="actualDir + item.raw" :kind="'New'"></capture-image>
+          </div>
+        </div>
+      </div>
+  
+      <h3 class="ui header items-header grey" v-if="failedItems.length">
+        Deleted items
+        <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
+          {{failedItems.length}} new items.
+          <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
       </h3>
-      <div class="captures" v-for="item in deletedItems">
-        <capture-image class="capture" :kind="'Before'"></capture-image>
+      <div class="summary" v-if="showDeletedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in failedItems">
+          <i class="ui icon Trash Outline"></i>{{item.raw}}
+        </a>
+      </div>
+      <div class="items" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" :id="'#' + item.encoded" class="ui link grey">
+          <i class="ui icon Trash Outline"></i>{{item.raw}}
+        </a>
+        <div class="captures">
+          <div class="capture" v-on:click="open(expectedDir + item.raw)">
+            <capture-image :src="expectedDir + item.raw" :kind="'Deleted'"></capture-image>
+          </div>
+        </div>
       </div>
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
@@ -94,8 +147,13 @@ module.exports = {
     diffDir: window['__reg__'].diffDir,
     search: "",
     showChangedItemSummary: false,
+    showPassedItemSummary: false,
+    showNewItemSummary: false,
+    showDeletedItemSummary: false,
     modalSrc: "",
     modalBgSrc: null,
+    isModalOpen: false,
+    scrollTop: 0,
   }),
   computed: {
     failedItems: function () {
@@ -121,11 +179,20 @@ module.exports = {
     open(src, bg) {
       this.modalSrc = src;
       this.modalBgSrc = bg;
+      this.isModalOpen = true;
+      this.scrollTop = window.pageYOffset;
       this.$modal.push('capture')
     },
 
     close() {
-      this.$modal.pop()
+      console.log("asdasd")
+
+      this.isModalOpen = false;
+      this.$modal.pop();
+      setTimeout(() => {
+        console.log(this.scrollTop)
+        window.scrollTo(0, this.scrollTop);
+      }, 60);
     }
   }
 }
@@ -141,6 +208,14 @@ module.exports = {
   align-items: center;
 }
 
+.backdrop {
+  min-height: 100vh;
+  min-width: 100vw;
+  position: fixed;
+  z-index: 2000000;
+  top: 0;
+}
+
 .main-header {
   width: 100%;
   height: 50px;
@@ -152,6 +227,7 @@ module.exports = {
   background: #fcfcfc;
   justify-content: space-between;
   top: 0;
+  z-index: 1000;
 }
 
 a>i.github {
@@ -190,11 +266,19 @@ a>i.github {
 
 .capture {
   flex-basis: 30%;
+  cursor: pointer;
 }
 
 .link {
-  color: #DB2828;
   font-size: 15px;
+}
+
+.red {
+  color: #DB2828;
+}
+
+.green {
+  color: #21BA45;
 }
 
 .captures {
