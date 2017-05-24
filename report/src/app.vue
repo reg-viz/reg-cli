@@ -27,6 +27,28 @@
           <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
+      <h3 class="ui header items-header green" v-if="passedItems.length">
+        Passed items
+        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
+          {{passedItems.length}} passed items.
+          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
+      </h3>
+      <h3 class="ui header items-header grey" v-if="newItems.length">
+        New items
+        <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
+          {{newItems.length}} new items.
+          <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
+      </h3>
+      <h3 class="ui header items-header grey" v-if="deletedItems.length">
+        Deleted items
+        <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
+          {{deletedItems.length}} new items.
+          <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
+      </h3>
+
       <div class="summary" v-if="showChangedItemSummary">
         <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
           <i class="ui icon remove"></i>{{item.raw}}
@@ -49,13 +71,6 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header green" v-if="passedItems.length">
-        Passed items
-        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
-          {{passedItems.length}} passed items.
-          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
       <div class="summary" v-if="showPassedItemSummary">
         <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
           <i class="ui icon Checkmark"></i>{{item.raw}}
@@ -72,13 +87,6 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header grey" v-if="newItems.length">
-        New items
-        <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
-          {{newItems.length}} new items.
-          <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
       <div class="summary" v-if="showNewItemSummary">
         <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems">
           <i class="ui icon File Outline"></i>{{item.raw}}
@@ -95,13 +103,6 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header grey" v-if="deletedItems.length">
-        Deleted items
-        <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
-          {{deletedItems.length}} new items.
-          <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
       <div class="summary" v-if="showDeletedItemSummary">
         <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
@@ -189,7 +190,7 @@ module.exports = {
       this.$modal.pop();
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
-      }, 60);
+      }, 200);
     }
   }
 }
