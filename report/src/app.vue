@@ -9,7 +9,6 @@
         <div class="ui input mini icon">
           <input type="text" placeholder="Search..." v-model="search">
           <i class="ui icon search"></i>
-          {{search}}
         </div>
       </div>
     </div>
@@ -53,18 +52,39 @@
 <script>
 const CaptureImage = require('./views/CaptureImage.vue');
 
+function searchItems(type) {
+  return window['__reg__'][type]
+    .filter(item => {
+      const words = this.search.split(' ');
+      return words.every(w => item.raw.indexOf(w) !== -1);
+    });
+}
+
 module.exports = {
   name: 'App',
   components: {
     'capture-image': CaptureImage,
   },
   data: () => ({
-    ...window['__reg__'],
-    failedItems: window['__reg__'].failedItems.filter(item => {
-      return true;
-    }),
+    actualDir: window['__reg__'].actualDir,
+    expectedDir: window['__reg__'].expectedDir,
+    diffDir: window['__reg__'].diffDir,
     search: "",
   }),
+  computed: {
+    failedItems: function () {
+      return searchItems.bind(this)('failedItems');
+    },
+    passedItems: function () {
+      return searchItems.bind(this)('passedItems');
+    },
+    newItems: function () {
+      return searchItems.bind(this)('newItems');
+    },
+    deletedItems: function () {
+      return searchItems.bind(this)('deletedItems');
+    },
+  }
 }
 </script>
 
