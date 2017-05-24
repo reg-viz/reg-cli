@@ -33,6 +33,11 @@ module.exports = {
   opacity: 0.2;
   pointer-events: none;
 }
+
+img {
+  max-width: 90vw;
+}
+
 </style>
 
 <style>
