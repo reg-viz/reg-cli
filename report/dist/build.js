@@ -8180,6 +8180,7 @@ setTimeout(function () {
 //
 //
 //
+//
 
 var CaptureImage = __webpack_require__(16);
 var CaptureModal = __webpack_require__(17);
@@ -8770,6 +8771,39 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
     }
   }, [_vm._v("\n        " + _vm._s(_vm.failedItems.length) + " chaged items.\n        "), _c('i', {
     class: _vm.showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
+  })])]) : _vm._e(), _vm._v(" "), (_vm.passedItems.length) ? _c('h3', {
+    staticClass: "ui header items-header green"
+  }, [_vm._v("\n      Passed items\n      "), _c('span', {
+    staticClass: "items-header-sub",
+    on: {
+      "click": function($event) {
+        _vm.showPassedItemSummary = !_vm.showPassedItemSummary
+      }
+    }
+  }, [_vm._v("\n        " + _vm._s(_vm.passedItems.length) + " passed items.\n        "), _c('i', {
+    class: _vm.showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
+  })])]) : _vm._e(), _vm._v(" "), (_vm.newItems.length) ? _c('h3', {
+    staticClass: "ui header items-header grey"
+  }, [_vm._v("\n      New items\n      "), _c('span', {
+    staticClass: "items-header-sub",
+    on: {
+      "click": function($event) {
+        _vm.showNewItemSummary = !_vm.showNewItemSummary
+      }
+    }
+  }, [_vm._v("\n        " + _vm._s(_vm.newItems.length) + " new items.\n        "), _c('i', {
+    class: _vm.showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
+  })])]) : _vm._e(), _vm._v(" "), (_vm.deletedItems.length) ? _c('h3', {
+    staticClass: "ui header items-header grey"
+  }, [_vm._v("\n      Deleted items\n      "), _c('span', {
+    staticClass: "items-header-sub",
+    on: {
+      "click": function($event) {
+        _vm.showDeletedItemSummary = !_vm.showDeletedItemSummary
+      }
+    }
+  }, [_vm._v("\n        " + _vm._s(_vm.deletedItems.length) + " new items.\n        "), _c('i', {
+    class: _vm.showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
   })])]) : _vm._e(), _vm._v(" "), (_vm.showChangedItemSummary) ? _c('div', {
     staticClass: "summary"
   }, _vm._l((_vm.failedItems), function(item) {
@@ -8832,18 +8866,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         "kind": 'Before'
       }
     })], 1)])])
-  }), _vm._v(" "), (_vm.passedItems.length) ? _c('h3', {
-    staticClass: "ui header items-header green"
-  }, [_vm._v("\n      Passed items\n      "), _c('span', {
-    staticClass: "items-header-sub",
-    on: {
-      "click": function($event) {
-        _vm.showPassedItemSummary = !_vm.showPassedItemSummary
-      }
-    }
-  }, [_vm._v("\n        " + _vm._s(_vm.passedItems.length) + " passed items.\n        "), _c('i', {
-    class: _vm.showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
-  })])]) : _vm._e(), _vm._v(" "), (_vm.showPassedItemSummary) ? _c('div', {
+  }), _vm._v(" "), (_vm.showPassedItemSummary) ? _c('div', {
     staticClass: "summary"
   }, _vm._l((_vm.passedItems), function(item) {
     return _c('a', {
@@ -8880,18 +8903,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         "kind": 'Passed'
       }
     })], 1)])])
-  }), _vm._v(" "), (_vm.newItems.length) ? _c('h3', {
-    staticClass: "ui header items-header grey"
-  }, [_vm._v("\n      New items\n      "), _c('span', {
-    staticClass: "items-header-sub",
-    on: {
-      "click": function($event) {
-        _vm.showNewItemSummary = !_vm.showNewItemSummary
-      }
-    }
-  }, [_vm._v("\n        " + _vm._s(_vm.newItems.length) + " new items.\n        "), _c('i', {
-    class: _vm.showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
-  })])]) : _vm._e(), _vm._v(" "), (_vm.showNewItemSummary) ? _c('div', {
+  }), _vm._v(" "), (_vm.showNewItemSummary) ? _c('div', {
     staticClass: "summary"
   }, _vm._l((_vm.newItems), function(item) {
     return _c('a', {
@@ -8928,18 +8940,7 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
         "kind": 'New'
       }
     })], 1)])])
-  }), _vm._v(" "), (_vm.deletedItems.length) ? _c('h3', {
-    staticClass: "ui header items-header grey"
-  }, [_vm._v("\n      Deleted items\n      "), _c('span', {
-    staticClass: "items-header-sub",
-    on: {
-      "click": function($event) {
-        _vm.showDeletedItemSummary = !_vm.showDeletedItemSummary
-      }
-    }
-  }, [_vm._v("\n        " + _vm._s(_vm.deletedItems.length) + " new items.\n        "), _c('i', {
-    class: _vm.showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'
-  })])]) : _vm._e(), _vm._v(" "), (_vm.showDeletedItemSummary) ? _c('div', {
+  }), _vm._v(" "), (_vm.showDeletedItemSummary) ? _c('div', {
     staticClass: "summary"
   }, _vm._l((_vm.deletedItems), function(item) {
     return _c('a', {
