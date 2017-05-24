@@ -40,17 +40,18 @@
     "babel-preset-es2016": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
     "copyfiles": "^1.2.0",
+    "css-loader": "^0.28.2",
     "flow-bin": "^0.46.0",
     "flow-typed": "^2.0.0",
     "husky": "^0.13.3",
     "rimraf": "^2.6.1",
     "vue": "^2.3.3",
+    "vue-lazyload": "^1.0.3",
     "vue-loader": "^12.1.0",
     "vue-template-compiler": "^2.3.3",
+    "vue-thin-modal": "^0.2.0",
     "webpack": "^2.6.0",
-    "webpack-dev-server": "^2.4.5",
-    "vue-lazyload": "^1.0.3",
-    "vue-thin-modal": "^0.2.0"
+    "webpack-dev-server": "^2.4.5"
   },
   "files": [
     "dist",
