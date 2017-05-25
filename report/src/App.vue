@@ -7,7 +7,7 @@
           <i class="ui icon github big"></i>
         </a>
         <div class="ui input mini icon">
-          <input type="text" placeholder="Search..." v-model="search">
+          <input type="text" placeholder="Search..." @input="addParams" v-model="search">
           <i class="ui icon search"></i>
         </div>
       </div>
@@ -48,7 +48,7 @@
           <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
-
+  
       <div class="summary" v-if="showChangedItemSummary">
         <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
           <i class="ui icon remove"></i>{{item.raw}}
@@ -136,6 +136,13 @@ function searchItems(type) {
     });
 }
 
+function getSearchParams() {
+  const s = location.search.match(/search=(.*?)(&|$)/);
+  console.log(s)
+  if (!s || !s[1]) return "";
+  return decodeURIComponent(s[1]) || "";
+}
+
 module.exports = {
   name: 'App',
   components: {
@@ -146,7 +153,7 @@ module.exports = {
     actualDir: window['__reg__'].actualDir,
     expectedDir: window['__reg__'].expectedDir,
     diffDir: window['__reg__'].diffDir,
-    search: "",
+    search: getSearchParams(),
     showChangedItemSummary: false,
     showPassedItemSummary: false,
     showNewItemSummary: false,
@@ -191,6 +198,11 @@ module.exports = {
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
       }, 200);
+    },
+
+    addParams(e) {
+      const s = location.search.match(/search=(.*?)(&|$)/);
+      history.pushState('', '', `?search=${e.target.value}`);
     }
   }
 }
