@@ -107,7 +107,7 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header green" v-if="failedItems.length">
+      <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
       </h3>       
       <div class="items" v-for="item in passedItems">
@@ -121,7 +121,7 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header" v-if="failedItems.length">
+      <h3 class="ui header items-header" v-if="newItems.length">
         New items
       </h3>  
       <div class="items" v-for="item in newItems">
@@ -135,7 +135,7 @@
         </div>
       </div>
   
-      <h3 class="ui header items-header" v-if="failedItems.length">
+      <h3 class="ui header items-header" v-if="deletedItems.length">
         Deleted items
       </h3>  
       <div class="items" v-for="item in deletedItems">
