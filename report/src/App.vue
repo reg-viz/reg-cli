@@ -20,7 +20,7 @@
         </div>
       </div>
   
-      <h2 class="ui header items-header" v-if="failedItems.length">
+      <h2 class="ui header items-header" v-if="!isNotFound">
         Summary
       </h2>
       <div class="ui clearing divider"></div>
@@ -81,7 +81,7 @@
         </a>
       </div>
   
-      <h2 class="ui header items-header detail" v-if="failedItems.length">
+      <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
       </h2>
   
