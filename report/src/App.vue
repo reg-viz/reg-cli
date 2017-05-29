@@ -310,7 +310,7 @@ a>i.github {
 }
 
 .link {
-  font-size: 15px;
+  font-size: 13px;
   display: block;
 }
 

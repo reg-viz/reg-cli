@@ -3,9 +3,7 @@
     <div class="image">
       <div class="ui label mini">{{kind}}</div>
       <div>
-        <div class="bg" v-if="bg">
-          <img :src="bg" />
-        </div>
+        <img class="bg" v-lazy="bg" v-if="bg" />
         <img v-lazy="src" />
       </div>
     </div>
@@ -33,8 +31,8 @@ img {
 
 .bg {
   position: absolute;
-  opacity: 0.2;
   pointer-events: none;
+  opacity: 0.2;
 }
 
 .header {
@@ -46,5 +44,21 @@ img {
   border-radius: 2px 2px 0 0 !important;
   margin: 0 0 0 2px !important;
   padding: 5px 10px;
+}
+
+img.bg[lazy=loading]+img {
+  opacity: 0;
+}
+
+.bg>img[lazy=loaded]+img {
+  opacity: 1;
+}
+
+img.bg[lazy=loading] {
+  opacity: 1;
+}
+
+.bg>img[lazy=loaded] {
+  opacity: 0.2;
 }
 </style>
