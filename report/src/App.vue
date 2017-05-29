@@ -27,6 +27,13 @@
           <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
+
+      <div class="summary" v-if="showChangedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
+          <i class="ui icon remove"></i>{{item.raw}}
+        </a>
+      </div>
+
       <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
         <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
@@ -34,6 +41,13 @@
           <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
+
+      <div class="summary" v-if="showPassedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
+          <i class="ui icon Checkmark"></i>{{item.raw}}
+        </a>
+      </div>  
+
       <h3 class="ui header items-header grey" v-if="newItems.length">
         New items
         <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
@@ -41,6 +55,13 @@
           <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
+
+      <div class="summary" v-if="showNewItemSummary">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems">
+          <i class="ui icon File Outline"></i>{{item.raw}}
+        </a>
+      </div>
+
       <h3 class="ui header items-header grey" v-if="deletedItems.length">
         Deleted items
         <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
@@ -48,12 +69,13 @@
           <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
-  
-      <div class="summary" v-if="showChangedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
-          <i class="ui icon remove"></i>{{item.raw}}
+
+      <div class="summary" v-if="showDeletedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems">
+          <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
       </div>
+
       <div class="items" v-for="item in failedItems">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link red">
           <i class="ui icon remove"></i>{{item.raw}}
@@ -71,11 +93,6 @@
         </div>
       </div>
   
-      <div class="summary" v-if="showPassedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
-          <i class="ui icon Checkmark"></i>{{item.raw}}
-        </a>
-      </div>
       <div class="items" v-for="item in passedItems">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
           <i class="ui icon Checkmark"></i>{{item.raw}}
@@ -87,11 +104,6 @@
         </div>
       </div>
   
-      <div class="summary" v-if="showNewItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems">
-          <i class="ui icon File Outline"></i>{{item.raw}}
-        </a>
-      </div>
       <div class="items" v-for="item in newItems">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon File Outline"></i>{{item.raw}}
@@ -103,11 +115,6 @@
         </div>
       </div>
   
-      <div class="summary" v-if="showDeletedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems">
-          <i class="ui icon Trash Outline"></i>{{item.raw}}
-        </a>
-      </div>
       <div class="items" v-for="item in deletedItems">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
@@ -251,7 +258,7 @@ a>i.github {
 }
 
 .items-header {
-  padding: 30px 0 0;
+  padding: 10px 0 0;
   color: #333;
   font-weight: normal;
 }
@@ -270,7 +277,7 @@ a>i.github {
 }
 
 .content {
-  margin-top: 50px;
+  margin-top: 70px;
   padding: 0 30px;
 }
 
