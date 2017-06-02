@@ -70,7 +70,7 @@
       <h3 class="ui header items-header grey" v-if="deletedItems.length">
         Deleted items
         <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
-          {{deletedItems.length}} new items.
+          {{deletedItems.length}} deleted items.
           <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
         </span>
       </h3>
