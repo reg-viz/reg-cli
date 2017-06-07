@@ -39,19 +39,6 @@
         </a>
       </div>
   
-      <h3 class="ui header items-header green" v-if="passedItems.length">
-        Passed items
-        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
-          {{passedItems.length}} passed items.
-          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
-  
-      <div class="summary" v-if="showPassedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
-          <i class="ui icon Checkmark"></i>{{item.raw}}
-        </a>
-      </div>
   
       <h3 class="ui header items-header grey" v-if="newItems.length">
         New items
@@ -81,6 +68,20 @@
         </a>
       </div>
   
+      <h3 class="ui header items-header green" v-if="passedItems.length">
+        Passed items
+        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
+          {{passedItems.length}} passed items.
+          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+        </span>
+      </h3>
+  
+      <div class="summary" v-if="showPassedItemSummary">
+        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
+          <i class="ui icon Checkmark"></i>{{item.raw}}
+        </a>
+      </div>
+
       <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
       </h2>
@@ -103,20 +104,6 @@
           </div>
           <div class="capture" v-on:click="open(expectedDir + item.raw)">
             <capture-image :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
-          </div>
-        </div>
-      </div>
-  
-      <h3 class="ui header items-header green" v-if="passedItems.length">
-        Passed items
-      </h3>       
-      <div class="items" v-for="item in passedItems">
-        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
-          <i class="ui icon Checkmark"></i>{{item.raw}}
-        </a>
-        <div class="captures">
-          <div class="capture" v-on:click="open(actualDir + item.raw)">
-            <capture-image :src="actualDir + item.raw" :kind="'Passed'"></capture-image>
           </div>
         </div>
       </div>
@@ -148,6 +135,21 @@
           </div>
         </div>
       </div>
+
+      <h3 class="ui header items-header green" v-if="passedItems.length">
+        Passed items
+      </h3>       
+      <div class="items" v-for="item in passedItems">
+        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
+          <i class="ui icon Checkmark"></i>{{item.raw}}
+        </a>
+        <div class="captures">
+          <div class="capture" v-on:click="open(actualDir + item.raw)">
+            <capture-image :src="actualDir + item.raw" :kind="'Passed'"></capture-image>
+          </div>
+        </div>
+      </div>
+            
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
