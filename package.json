@@ -43,7 +43,7 @@
     "css-loader": "^0.28.2",
     "flow-bin": "^0.48.0",
     "flow-typed": "^2.0.0",
-    "husky": "^0.13.3",
+    "husky": "^0.14.0",
     "rimraf": "^2.6.1",
     "vue": "^2.3.3",
     "vue-lazyload": "^1.0.3",
