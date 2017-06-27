@@ -167,20 +167,19 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
         cleanupExpectedDir(expectedImages, expectedDir);
         copyImages(actualImages, dirs).then(() => {
           log.success(`\nAll images are updated. `);
-          resolve(result);
         })
       } else {
         // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
           log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
-          if (!ignoreChange) process.exit(1);
-          return;
+          if (!ignoreChange) return Promise.reject();
         }
       }
+      resolve(result);
     })
     .catch(err => {
       log.fail(err);
-      process.exit(1);
+      return Promise.reject(err);
     });
 });
 

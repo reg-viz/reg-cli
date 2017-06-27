@@ -57,4 +57,4 @@ compare({
   json,
   urlPrefix,
   threshold,
-});
+}).catch(() => process.exit(1));
