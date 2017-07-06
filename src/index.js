@@ -56,9 +56,9 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
     }
     return new Promise((resolve, reject) => {
       imageDifference({
-        actualImage: `${actualDir}${image}`,
-        expectedImage: `${expectedDir}${image}`,
-        diffImage: `${diffDir}${image}`,
+        actualFilename: `${actualDir}${image}`,
+        expectedFilename: `${expectedDir}${image}`,
+        diffFilename: `${diffDir}${image}`,
       })
         .then((result) => {
           const passed = result.percentage <= threshold;
