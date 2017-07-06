@@ -1,6 +1,6 @@
 /* @flow */
 
-const imageDifference = require('imageDifference').default;
+const imageDifference = require('image-difference').default;
 const { Spinner } = require('cli-spinner');
 const glob = require('glob'); // $FlowIgnore
 const mkdirp = require('make-dir'); // $FlowIgnore
