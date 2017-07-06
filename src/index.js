@@ -1,6 +1,6 @@
 /* @flow */
 
-const imageDiff = require('image-diff');
+const imageDifference = require('imageDifference').default;
 const { Spinner } = require('cli-spinner');
 const glob = require('glob'); // $FlowIgnore
 const mkdirp = require('make-dir'); // $FlowIgnore
@@ -55,18 +55,18 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
       return Promise.resolve({ passed: true, image });
     }
     return new Promise((resolve, reject) => {
-      imageDiff.getFullResult({
+      imageDifference({
         actualImage: `${actualDir}${image}`,
         expectedImage: `${expectedDir}${image}`,
         diffImage: `${diffDir}${image}`,
-        shadow: true,
-      }, (err, result) => {
-        if (err) {
-          reject(err);
-        }
-        const passed = result.percentage <= threshold;
-        resolve({ passed, image });
       })
+        .then((result) => {
+          const passed = result.percentage <= threshold;
+          return { passed, image };
+        })
+        .catch((e) => {
+          reject(err);
+        })
     })
   })
 };
