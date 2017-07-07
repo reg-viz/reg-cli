@@ -54,20 +54,19 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
     if (actualHash === expectedHash) {
       return Promise.resolve({ passed: true, image });
     }
-    return new Promise((resolve, reject) => {
-      imageDifference({
-        actualFilename: `${actualDir}${image}`,
-        expectedFilename: `${expectedDir}${image}`,
-        diffFilename: `${diffDir}${image}`,
-      })
-        .then((result) => {
-          const passed = result.percentage <= threshold;
-          return { passed, image };
-        })
-        .catch((e) => {
-          reject(err);
-        })
+    return imageDifference({
+      actualFilename: `${actualDir}${image}`,
+      expectedFilename: `${expectedDir}${image}`,
+      diffFilename: `${diffDir}${image}`,
+      // metric: 'RMSE',
     })
+      .then((result) => {
+        const passed = result.percentage <= threshold;
+        return { passed, image };
+      })
+      .catch((e) => {
+        reject(e);
+      })
   })
 };
 

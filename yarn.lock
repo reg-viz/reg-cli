@@ -894,6 +894,13 @@ babel-preset-es2016@^6.24.1:
   dependencies:
     babel-plugin-transform-exponentiation-operator "^6.24.1"
 
+babel-preset-es2017@^6.24.1:
+  version "6.24.1"
+  resolved "https://registry.yarnpkg.com/babel-preset-es2017/-/babel-preset-es2017-6.24.1.tgz#597beadfb9f7f208bcfd8a12e9b2b29b8b2f14d1"
+  dependencies:
+    babel-plugin-syntax-trailing-function-commas "^6.22.0"
+    babel-plugin-transform-async-to-generator "^6.24.1"
+
 babel-preset-stage-2@^6.24.1:
   version "6.24.1"
   resolved "https://registry.yarnpkg.com/babel-preset-stage-2/-/babel-preset-stage-2-6.24.1.tgz#d9e2960fb3d71187f0e64eec62bc07767219bdc1"
@@ -2539,9 +2546,9 @@ ignore-by-default@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/ignore-by-default/-/ignore-by-default-1.0.1.tgz#48ca6d72f6c6a3af00a9ad4ae6876be3889e2b09"
 
-image-difference@^2.0.5:
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/image-difference/-/image-difference-2.0.5.tgz#7924c4659ed063d8be01124a359d6c81c8c1a0bc"
+image-difference@2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/image-difference/-/image-difference-2.0.7.tgz#9552a97648cf46f1c6ee8a2946cb16bb26947345"
   dependencies:
     chalk "^2.0.1"
     commander "^2.10.0"

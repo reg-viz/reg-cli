@@ -14,14 +14,14 @@ test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
 })
 
-test('should display error message when passing only 1 argument', async t => {
+test.serial('should display error message when passing only 1 argument', async t => {
   const stdout = await new Promise((resolve) => {
     execFile('./dist/cli.js', ['./sample/actual'], (error, stdout) => resolve(stdout));
   })
   t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
 
-test('should display error message when passing only 2 argument', async t => {
+test.serial('should display error message when passing only 2 argument', async t => {
   const stdout = await new Promise((resolve) => {
     execFile('./dist/cli.js', ['./sample/actual', './sample/expected'], (error, stdout) => resolve(stdout));
   })
@@ -45,6 +45,7 @@ test.serial('should generate image diff and output fail message', async t => {
     fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_IMAGE}`);
     t.pass();
   } catch (e) {
+    console.log(e)
     t.fail();
   }
 });
@@ -202,3 +203,4 @@ test.serial('should generate success report', async t => {
 test.afterEach.always(async t => {
   await new Promise((done) => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
 });
+
