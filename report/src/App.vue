@@ -34,11 +34,10 @@
       </h3>
   
       <div class="summary" v-if="showChangedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems">
+        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems" v-bind:key="item.encoded">
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
       </div>
-  
   
       <h3 class="ui header items-header grey" v-if="newItems.length">
         New items
@@ -49,7 +48,7 @@
       </h3>
   
       <div class="summary" v-if="showNewItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems" v-bind:key="item.encoded">
           <i class="ui icon File Outline"></i>{{item.raw}}
         </a>
       </div>
@@ -63,7 +62,7 @@
       </h3>
   
       <div class="summary" v-if="showDeletedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems">
+        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems" v-bind:key="item.encoded">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
       </div>
@@ -77,21 +76,21 @@
       </h3>
   
       <div class="summary" v-if="showPassedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems">
+        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems" v-bind:key="item.encoded">
           <i class="ui icon Checkmark"></i>{{item.raw}}
         </a>
       </div>
-
+  
       <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
       </h2>
   
       <div class="ui divider"></div>
-
+  
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
-      </h3>     
-      <div class="items" v-for="item in failedItems">
+      </h3>
+      <div class="items" v-for="item in failedItems" v-bind:key="item.encoded">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link red">
           <i class="ui icon remove"></i>{{item.raw}}
         </a>
@@ -110,8 +109,8 @@
   
       <h3 class="ui header items-header" v-if="newItems.length">
         New items
-      </h3>  
-      <div class="items" v-for="item in newItems">
+      </h3>
+      <div class="items" v-for="item in newItems" v-bind:key="item.encoded">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon File Outline"></i>{{item.raw}}
         </a>
@@ -124,8 +123,8 @@
   
       <h3 class="ui header items-header" v-if="deletedItems.length">
         Deleted items
-      </h3>  
-      <div class="items" v-for="item in deletedItems">
+      </h3>
+      <div class="items" v-for="item in deletedItems" v-bind:key="item.encoded">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
           <i class="ui icon Trash Outline"></i>{{item.raw}}
         </a>
@@ -135,11 +134,11 @@
           </div>
         </div>
       </div>
-
+  
       <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
-      </h3>       
-      <div class="items" v-for="item in passedItems">
+      </h3>
+      <div class="items" v-for="item in passedItems" v-bind:key="item.encoded">
         <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
           <i class="ui icon Checkmark"></i>{{item.raw}}
         </a>
@@ -149,7 +148,7 @@
           </div>
         </div>
       </div>
-            
+  
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
