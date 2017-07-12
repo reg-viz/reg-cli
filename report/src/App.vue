@@ -25,6 +25,9 @@
       </h2>
       <div class="ui clearing divider"></div>
   
+      <item-summaries :title="'Changed items'" :color="'red'" :items="failedItems">
+      </item-summaries>
+  
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
         <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
