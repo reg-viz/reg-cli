@@ -25,64 +25,14 @@
       </h2>
       <div class="ui clearing divider summary-divider"></div>
   
-      <item-summaries :title="'Changed items'" :icon="'remove'" :color="'red'" :items="failedItems">
+      <item-summaries class="summaries" :title="'Changed items'" :icon="'remove'" :color="'red'" :items="failedItems">
       </item-summaries>
-  
-      <!--<h3 class="ui header items-header red" v-if="failedItems.length">
-                Changed items
-                <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
-                  {{failedItems.length}} changed items.
-                  <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-                </span>
-              </h3>
-          
-              <div class="summary" v-if="showChangedItemSummary">
-                <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems" v-bind:key="item.encoded">
-                  <i class="ui icon remove"></i>{{item.raw}}
-                </a>
-              </div>-->
-  
-      <h3 class="ui header items-header grey" v-if="newItems.length">
-        New items
-        <span class="items-header-sub" v-on:click="showNewItemSummary = !showNewItemSummary">
-          {{newItems.length}} new items.
-          <i :class="showNewItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
-  
-      <div class="summary" v-if="showNewItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in newItems" v-bind:key="item.encoded">
-          <i class="ui icon File Outline"></i>{{item.raw}}
-        </a>
-      </div>
-  
-      <h3 class="ui header items-header grey" v-if="deletedItems.length">
-        Deleted items
-        <span class="items-header-sub" v-on:click="showDeletedItemSummary = !showDeletedItemSummary">
-          {{deletedItems.length}} deleted items.
-          <i :class="showDeletedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
-  
-      <div class="summary" v-if="showDeletedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link grey" v-for="item in deletedItems" v-bind:key="item.encoded">
-          <i class="ui icon Trash Outline"></i>{{item.raw}}
-        </a>
-      </div>
-  
-      <h3 class="ui header items-header green" v-if="passedItems.length">
-        Passed items
-        <span class="items-header-sub" v-on:click="showPassedItemSummary = !showPassedItemSummary">
-          {{passedItems.length}} passed items.
-          <i :class="showPassedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
-  
-      <div class="summary" v-if="showPassedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link green" v-for="item in passedItems" v-bind:key="item.encoded">
-          <i class="ui icon Checkmark"></i>{{item.raw}}
-        </a>
-      </div>
+      <item-summaries class="summaries" :title="'New items'" :icon="'File Outline'" :color="'grey'" :items="newItems">
+      </item-summaries>
+      <item-summaries class="summaries" :title="'Deleted items'" :icon="'Trash Outline'" :color="'grey'" :items="deletedItems">
+      </item-summaries>
+      <item-summaries class="summaries" :title="'Passed items'" :icon="'Checkmark'" :color="'green'" :items="passedItems">
+      </item-summaries>
   
       <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
@@ -173,7 +123,6 @@ function searchItems(type) {
 
 function getSearchParams() {
   const s = location.search.match(/search=(.*?)(&|$)/);
-  console.log(s)
   if (!s || !s[1]) return "";
   return decodeURIComponent(s[1]) || "";
 }
@@ -190,10 +139,6 @@ module.exports = {
     expectedDir: window['__reg__'].expectedDir,
     diffDir: window['__reg__'].diffDir,
     search: getSearchParams(),
-    showChangedItemSummary: false,
-    showPassedItemSummary: false,
-    showNewItemSummary: false,
-    showDeletedItemSummary: false,
     modalSrc: "",
     modalBgSrc: null,
     isModalOpen: false,
@@ -276,18 +221,14 @@ module.exports = {
   z-index: 1000;
 }
 
-.summary-divider {
-  margin-bottom: 30px;
+.summaries {
+  margin-top: 30px;
 }
 
 a>i.github {
   font-size: 28px;
   margin: 0 20px 0;
   color: #333;
-}
-
-.summary {
-  margin: 5px 20px 20px;
 }
 
 .items-header {
