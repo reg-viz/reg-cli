@@ -54,8 +54,6 @@ If `-R` option set, output html report to specfied directory.
 
 ![screenshot](https://github.com/bokuweb/reg-cli/blob/master/docs/screenshot.png?raw=true)
 
-- sampe image - https://www.pexels.com/photo/grey-fur-kitten-127028/
-
 ## Test
 
 ``` sh

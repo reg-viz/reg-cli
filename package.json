@@ -11,7 +11,7 @@
     "dev:report": "webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "prepublish": "npm run build && npm run build:report",
-    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./diff -I -R",
+    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html",
     "test": "npm run build && chmod +x dist/cli.js && ava test/test.js"
   },
   "repository": {
