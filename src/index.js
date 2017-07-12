@@ -61,7 +61,9 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
       // metric: 'RMSE',
     })
       .then((result) => {
-        const passed = result.percentage <= threshold;
+        // also see. https://github.com/argos-ci/image-difference/issues/8
+        const percentage = result.value / (result.width * result.height);
+        const passed = percentage <= threshold;
         return { passed, image };
       })
       .catch((e) => {
