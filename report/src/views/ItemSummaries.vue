@@ -1,15 +1,15 @@
 <template>
-    <div>
-        <h3 class="ui header items-header `${color || ''}`" v-if="items.length">
+    <div v-if="items.length">
+        <h3 :class="'ui header items-header ' + color">
             {{title}}
-            <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
-                {{items.length}} {title}.
-                <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+            <span class="items-header-sub" v-on:click="showSummary = !showSummary">
+                {{items.length}} items.
+                <i :class="showSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
             </span>
         </h3>
-        <div class="summary" v-if="showChangedItemSummary">
-            <a :href="'#' + item.encoded" class="ui link `${color || ''}`" v-for="item in items" v-bind:key="item.encoded">
-                <i class="ui icon remove"></i>{{item.raw}}
+        <div class="summary" v-if="showSummary">
+            <a :href="'#' + item.encoded" :class="'ui link ' + color" v-for="item in items" v-bind:key="item.encoded">
+                <i :class="'ui icon ' + icon"></i>{{item.raw}}
             </a>
         </div>
     </div>
@@ -19,9 +19,9 @@
 
 module.exports = {
     name: 'ItemSummaries',
-    props: ['color', 'title', 'items'],
+    props: ['color', 'title', 'items', 'icon'],
     data: () => ({
-        showChangedItemSummary: false,
+        showSummary: false,
     }),
 }
 </script>

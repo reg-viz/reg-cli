@@ -23,24 +23,24 @@
       <h2 class="ui header items-header" v-if="!isNotFound">
         Summary
       </h2>
-      <div class="ui clearing divider"></div>
+      <div class="ui clearing divider summary-divider"></div>
   
-      <item-summaries :title="'Changed items'" :color="'red'" :items="failedItems">
+      <item-summaries :title="'Changed items'" :icon="'remove'" :color="'red'" :items="failedItems">
       </item-summaries>
   
-      <h3 class="ui header items-header red" v-if="failedItems.length">
-        Changed items
-        <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
-          {{failedItems.length}} changed items.
-          <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
-        </span>
-      </h3>
-  
-      <div class="summary" v-if="showChangedItemSummary">
-        <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems" v-bind:key="item.encoded">
-          <i class="ui icon remove"></i>{{item.raw}}
-        </a>
-      </div>
+      <!--<h3 class="ui header items-header red" v-if="failedItems.length">
+                Changed items
+                <span class="items-header-sub" v-on:click="showChangedItemSummary = !showChangedItemSummary">
+                  {{failedItems.length}} changed items.
+                  <i :class="showChangedItemSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+                </span>
+              </h3>
+          
+              <div class="summary" v-if="showChangedItemSummary">
+                <a :href="'#' + item.encoded" class="ui link red" v-for="item in failedItems" v-bind:key="item.encoded">
+                  <i class="ui icon remove"></i>{{item.raw}}
+                </a>
+              </div>-->
   
       <h3 class="ui header items-header grey" v-if="newItems.length">
         New items
@@ -161,6 +161,7 @@
 <script>
 const CaptureImage = require('./views/CaptureImage.vue');
 const CaptureModal = require('./views/CaptureModal.vue');
+const ItemSummaries = require('./views/ItemSummaries.vue');
 
 function searchItems(type) {
   return window['__reg__'][type]
@@ -182,6 +183,7 @@ module.exports = {
   components: {
     'capture-image': CaptureImage,
     'capture-modal': CaptureModal,
+    'item-summaries': ItemSummaries,
   },
   data: () => ({
     actualDir: window['__reg__'].actualDir,
@@ -272,6 +274,10 @@ module.exports = {
   justify-content: space-between;
   top: 0;
   z-index: 1000;
+}
+
+.summary-divider {
+  margin-bottom: 30px;
 }
 
 a>i.github {
