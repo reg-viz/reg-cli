@@ -1,0 +1,21 @@
+.red {
+  color: #DB2828;
+}
+
+.green {
+  color: #21BA45;
+}
+
+.items-header {
+    padding: 0;
+    color: #333;
+    font-weight: normal;
+}
+
+.items-header-sub {
+    font-size: 12px;
+    font-weight: normal;
+    margin-left: 15px;
+    color: #666;
+    cursor: pointer;
+}

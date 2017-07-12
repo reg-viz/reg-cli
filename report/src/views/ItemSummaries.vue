@@ -26,30 +26,9 @@ module.exports = {
 }
 </script>
 
+<style scoped src="../styles/common.css"></style>
 <style scoped>
-.items-header {
-    padding: 0;
-    color: #333;
-    font-weight: normal;
-}
-
-.items-header-sub {
-    font-size: 12px;
-    font-weight: normal;
-    margin-left: 15px;
-    color: #666;
-    cursor: pointer;
-}
-
 .summary {
     margin: 5px 20px 20px;
-}
-
-.red {
-    color: #DB2828;
-}
-
-.green {
-    color: #21BA45;
 }
 </style>

@@ -189,6 +189,7 @@ module.exports = {
 }
 </script>
 
+<style scoped src="./styles/common.css"></style>
 <style scoped>
 .not-found {
   min-height: calc(100% - 80px);
@@ -231,20 +232,6 @@ a>i.github {
   color: #333;
 }
 
-.items-header {
-  padding: 0;
-  color: #333;
-  font-weight: normal;
-}
-
-.items-header-sub {
-  font-size: 12px;
-  font-weight: normal;
-  margin-left: 15px;
-  color: #666;
-  cursor: pointer;
-}
-
 .input {
   height: 28px;
   width: 240px;
@@ -263,14 +250,6 @@ a>i.github {
 .link {
   font-size: 13px;
   display: block;
-}
-
-.red {
-  color: #DB2828;
-}
-
-.green {
-  color: #21BA45;
 }
 
 .captures {
