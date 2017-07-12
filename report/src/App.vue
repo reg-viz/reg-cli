@@ -33,75 +33,34 @@
       </item-summaries>
       <item-summaries class="summaries" :title="'Passed items'" :icon="'Checkmark'" :color="'green'" :items="passedItems">
       </item-summaries>
-  
       <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
       </h2>
-  
       <div class="ui divider"></div>
-  
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
       </h3>
-      <div class="items" v-for="item in failedItems" v-bind:key="item.encoded">
-        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link red">
-          <i class="ui icon remove"></i>{{item.raw}}
-        </a>
-        <div class="captures">
-          <div class="capture" v-on:click="open(diffDir + item.raw, actualDir + item.raw)">
-            <capture-image :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
-          </div>
-          <div class="capture" v-on:click="open(actualDir + item.raw)">
-            <capture-image :src="actualDir + item.raw" :kind="'After'"></capture-image>
-          </div>
-          <div class="capture" v-on:click="open(expectedDir + item.raw)">
-            <capture-image :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
-          </div>
-        </div>
-      </div>
+      <item-details class="items" :icon="'remove'" :color="'red'" :items="failedItems" :open="open" :diffDir="diffDir" :actualDir="actualDir" :expectedDir="expectedDir">
+      </item-details>
   
       <h3 class="ui header items-header" v-if="newItems.length">
         New items
       </h3>
-      <div class="items" v-for="item in newItems" v-bind:key="item.encoded">
-        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
-          <i class="ui icon File Outline"></i>{{item.raw}}
-        </a>
-        <div class="captures">
-          <div class="capture" v-on:click="open(actualDir + item.raw)">
-            <capture-image :src="actualDir + item.raw" :kind="'New'"></capture-image>
-          </div>
-        </div>
-      </div>
+  
+      <item-details class="items" :icon="'File Outline'" :color="'grey'" :items="newItems" :open="open" :actualDir="actualDir">
+      </item-details>
   
       <h3 class="ui header items-header" v-if="deletedItems.length">
         Deleted items
       </h3>
-      <div class="items" v-for="item in deletedItems" v-bind:key="item.encoded">
-        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link grey">
-          <i class="ui icon Trash Outline"></i>{{item.raw}}
-        </a>
-        <div class="captures">
-          <div class="capture" v-on:click="open(expectedDir + item.raw)">
-            <capture-image :src="expectedDir + item.raw" :kind="'Deleted'"></capture-image>
-          </div>
-        </div>
-      </div>
+      <item-details class="items" :icon="'Trash Outline'" :color="'grey'" :items="deletedItems" :open="open" :expectedDir="expectedDir">
+      </item-details>
   
       <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
       </h3>
-      <div class="items" v-for="item in passedItems" v-bind:key="item.encoded">
-        <a :href="'#' + item.encoded" :id="item.encoded" class="ui link green">
-          <i class="ui icon Checkmark"></i>{{item.raw}}
-        </a>
-        <div class="captures">
-          <div class="capture" v-on:click="open(actualDir + item.raw)">
-            <capture-image :src="actualDir + item.raw" :kind="'Passed'"></capture-image>
-          </div>
-        </div>
-      </div>
-  
+      <item-details class="items" :icon="'Checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
+      </item-details>
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
@@ -109,9 +68,9 @@
 </template>
 
 <script>
-const CaptureImage = require('./views/CaptureImage.vue');
 const CaptureModal = require('./views/CaptureModal.vue');
 const ItemSummaries = require('./views/ItemSummaries.vue');
+const ItemDetails = require('./views/ItemDetails.vue');
 
 function searchItems(type) {
   return window['__reg__'][type]
@@ -130,9 +89,9 @@ function getSearchParams() {
 module.exports = {
   name: 'App',
   components: {
-    'capture-image': CaptureImage,
     'capture-modal': CaptureModal,
     'item-summaries': ItemSummaries,
+    'item-details': ItemDetails,
   },
   data: () => ({
     actualDir: window['__reg__'].actualDir,
@@ -242,20 +201,9 @@ a>i.github {
   padding: 0 30px;
 }
 
-.capture {
-  flex-basis: 30%;
-  cursor: pointer;
-}
-
 .link {
   font-size: 13px;
   display: block;
-}
-
-.captures {
-  display: flex;
-  justify-content: space-between;
-  margin: 15px 0 40px;
 }
 
 .logo {
