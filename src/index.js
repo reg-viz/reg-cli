@@ -105,13 +105,15 @@ const cleanupExpectedDir = (expectedImages, expectedDir) => {
   expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
 };
 
-module.exports = (params: Params) => new Promise((resolve, reject) => {
+module.exports = (params: Params) => {
   const { actualDir, expectedDir, diffDir, update, json,
     ignoreChange, report, urlPrefix, threshold } = params;
   const dirs = { actualDir, expectedDir, diffDir };
+
   let spinner = new Spinner('[Processing].. %s');
   spinner.setSpinnerString('|/-\\');
   spinner.start();
+
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
   const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`).map(path => path.replace(actualDir, ''));
   const deletedImages = difference(expectedImages, actualImages);
@@ -166,9 +168,9 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
 
       if (update) {
         cleanupExpectedDir(expectedImages, expectedDir);
-        copyImages(actualImages, dirs).then(() => {
+        return copyImages(actualImages, dirs).then(() => {
           log.success(`\nAll images are updated. `);
-        })
+        });
       } else {
         // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
@@ -176,11 +178,11 @@ module.exports = (params: Params) => new Promise((resolve, reject) => {
           if (!ignoreChange) return Promise.reject();
         }
       }
-      resolve(result);
+      return result;
     })
     .catch(err => {
       log.fail(err);
       return Promise.reject(err);
     });
-});
+};
 
