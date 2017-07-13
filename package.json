@@ -13,7 +13,7 @@
     "prepublish": "npm run build && npm run build:report",
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html",
     "test:cli": "avaron test/cli.test.js",
-    "test:report": "avaron test/report.test.js --renderer",
+    "test:report": "avaron test/report/*.test.js --renderer",
     "test": "npm run build:report && npm run build && chmod +x dist/cli.js && npm run test:cli"
   },
   "repository": {
@@ -48,6 +48,9 @@
     "flow-bin": "^0.49.1",
     "flow-typed": "^2.0.0",
     "husky": "^0.14.0",
+    "require-extension-hooks": "^0.3.0",
+    "require-extension-hooks-babel": "^0.1.1",
+    "require-extension-hooks-vue": "^0.4.0",
     "rimraf": "^2.6.1",
     "uglify-js": "^3.0.24",
     "uglifyjs-webpack-plugin": "^0.4.6",
@@ -66,5 +69,11 @@
   ],
   "bin": {
     "reg-cli": "./dist/cli.js"
+  },
+  "avaron": {
+    "require": [
+      "./test/helpers/setup.js"
+    ],
+    "fixture": "./fixture.html"
   }
 }

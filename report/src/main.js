@@ -11,7 +11,6 @@ Vue.use(VueLazyload, {
   error: 'https://github.com/bokuweb/reg-cli/blob/master/docs/image.png?raw=true',
   filter: {
     filter(props) {
-      console.log(props)
     }
   }
 });
