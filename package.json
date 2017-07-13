@@ -56,7 +56,7 @@
     "uglifyjs-webpack-plugin": "^0.4.6",
     "vue": "^2.3.3",
     "vue-lazyload": "^1.0.3",
-    "vue-loader": "12.1",
+    "vue-loader": "~13.0.2",
     "vue-template-compiler": "^2.3.3",
     "vue-thin-modal": "^0.2.0",
     "webpack": "2.6",
