@@ -6,8 +6,10 @@ node_js:
   - '8'
   - '7'
   - '6'
-
-# before_install:
-#   - sudo add-apt-repository -y ppa:moti-p/cc
-#   - sudo apt-get update
-#   - sudo apt-get -y --reinstall --fix-missinginstall imagemagick
+addons:
+  apt:
+    packages:
+      - xvfb
+before_install:
+  - export DISPLAY=':99.0'
+  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &

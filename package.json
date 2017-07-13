@@ -12,7 +12,9 @@
     "flow": "flow",
     "prepublish": "npm run build && npm run build:report",
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html",
-    "test": "npm run build:report && npm run build && chmod +x dist/cli.js && ava test/test.js"
+    "test:cli": "avaron test/cli.test.js",
+    "test:report": "avaron test/report.test.js --renderer",
+    "test": "npm run build:report && npm run build && chmod +x dist/cli.js && npm run test:cli"
   },
   "repository": {
     "type": "git",
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "ava": "^0.20.0",
+    "avaron": "^0.0.10",
     "babel-cli": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
