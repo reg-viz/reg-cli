@@ -61,13 +61,13 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
       // metric: 'RMSE',
     })
       .then((result) => {
-        // also see. https://github.com/argos-ci/image-difference/issues/8
+        // See also. https://github.com/argos-ci/image-difference/issues/8
         const percentage = result.value / (result.width * result.height);
         const passed = percentage <= threshold;
         return { passed, image };
       })
       .catch((e) => {
-        reject(e);
+        Promise.reject(e);
       })
   })
 };
@@ -96,7 +96,7 @@ const compareImages = (
   threshold,
 ): Promise<$TupleMap<CompareResult[], typeof $await>> => {
   return Promise.all(actualImages.map((actualImage) => {
-    if (!expectedImages.includes(actualImage)) return;
+    if (!expectedImages.includes(actualImage)) return Promise.resolve();
     return compareAndCreateDiff({ ...dirs, image: actualImage, threshold })
   }).filter(p => !!p))
 };
