@@ -95,10 +95,11 @@ const compareImages = (
   dirs,
   threshold,
 ): Promise<$TupleMap<CompareResult[], typeof $await>> => {
-  return Promise.all(actualImages.map((actualImage) => {
-    if (!expectedImages.includes(actualImage)) return Promise.resolve();
-    return compareAndCreateDiff({ ...dirs, image: actualImage, threshold })
-  }).filter(p => !!p))
+  return Promise.all(
+    actualImages
+      .filter((actualImage) => expectedImages.includes(actualImage))
+      .map((actualImage) => compareAndCreateDiff({ ...dirs, image: actualImage, threshold }))
+  );
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {
