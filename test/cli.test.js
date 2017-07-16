@@ -43,7 +43,7 @@ test.serial('should generate image diff and output fail message', async t => {
   t.true(stdout.indexOf('test failed.') !== -1);
 
   try {
-    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_IMAGE}`);
+    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_DIFF_IMAGE}`);
     t.pass();
   } catch (e) {
     console.log(e)
