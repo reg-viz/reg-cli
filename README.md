@@ -17,11 +17,6 @@
 ## Installation
  
 ### Requirements
-
-- ImageMagick
-
-`reg-cli` depends on `ImageMagick`.   
-There are numerous ways to install them. For instance, if you're on OS X you can use Homebrew: `brew install imagemagick`. Please install this before continuing.
  
  - Node.js v6+
  
