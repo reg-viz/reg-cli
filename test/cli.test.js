@@ -9,6 +9,7 @@ const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';
 const RESOURCE = 'resource';
 const SAMPLE_IMAGE = 'sample.jpg';
+const SAMPLE_DIFF_IMAGE = 'sample.png';
 
 test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
@@ -42,7 +43,7 @@ test.serial('should generate image diff and output fail message', async t => {
   t.true(stdout.indexOf('test failed.') !== -1);
 
   try {
-    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_IMAGE}`);
+    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_DIFF_IMAGE}`);
     t.pass();
   } catch (e) {
     console.log(e)
@@ -135,7 +136,7 @@ test.serial('should generate fail report', async t => {
     const expected = {
       actualItems: [`/${SAMPLE_IMAGE}`],
       expectedItems: [`/${SAMPLE_IMAGE}`],
-      diffItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
       failedItems: [`/${SAMPLE_IMAGE}`],
       newItems: [],
       deletedItems: [],

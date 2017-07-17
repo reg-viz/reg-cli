@@ -1,6 +1,6 @@
 /* @flow */
 
-const imageDifference = require('image-difference').default;
+const { imgDiff } = require('img-diff-js');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob'); // $FlowIgnore
 const mkdirp = require('make-dir'); // $FlowIgnore
@@ -54,16 +54,18 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
     if (actualHash === expectedHash) {
       return Promise.resolve({ passed: true, image });
     }
-    return imageDifference({
+    const diffImage = image.replace(/\.[^\.]+$/, ".png");
+    return imgDiff({
       actualFilename: `${actualDir}${image}`,
       expectedFilename: `${expectedDir}${image}`,
-      diffFilename: `${diffDir}${image}`,
+      diffFilename: `${diffDir}${diffImage}`,
+      options: {
+        threshold,
+      },
       // metric: 'RMSE',
     })
       .then((result) => {
-        // See also. https://github.com/argos-ci/image-difference/issues/8
-        const percentage = result.value / (result.width * result.height);
-        const passed = percentage <= threshold;
+        const passed = result.imagesAreSame;
         return { passed, image };
       })
       .catch((e) => {
@@ -137,6 +139,7 @@ module.exports = (params: Params) => {
     .then((results) => {
       const passed = results.filter(r => r.passed).map((r) => r.image);
       const failed = results.filter(r => !r.passed).map((r) => r.image);
+      const diffItems = failed.map(image => image.replace(/\.[^\.]+$/, ".png"));
 
       const result = output({
         passedItems: passed,
@@ -146,7 +149,7 @@ module.exports = (params: Params) => {
         expectedItems: update ? actualImages : expectedImages,
         previousExpectedImages: expectedImages,
         actualItems: actualImages,
-        diffItems: failed,
+        diffItems,
         json,
         actualDir,
         expectedDir,
