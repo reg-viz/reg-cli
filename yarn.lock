@@ -2862,12 +2862,13 @@ ignore-by-default@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/ignore-by-default/-/ignore-by-default-1.0.1.tgz#48ca6d72f6c6a3af00a9ad4ae6876be3889e2b09"
 
-img-diff-js@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.3.0.tgz#583ac0844a4be8339dbde866d0d1db791c7fe3b6"
+img-diff-js@^0.3.2:
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.3.2.tgz#de44efd37ab642d590b8b3a849e73692b5be6a6e"
   dependencies:
     decode-tiff "^0.2.0"
     jpeg-js "^0.3.3"
+    mkdirp "^0.5.1"
     pixelmatch "^4.0.2"
     pngjs "^3.2.0"
 
