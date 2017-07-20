@@ -31,4 +31,7 @@ module.exports = {
 .summary {
     margin: 5px 20px 20px;
 }
+.link {
+    display: block;
+}
 </style>
