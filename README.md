@@ -1,8 +1,8 @@
 # reg-cli
 
-[Experimental]Visual regression test tool.
+Visual regression test tool.
 
-[![Build Status](https://img.shields.io/travis/bokuweb/reg-cli.svg?style=flat-square)](https://travis-ci.org/bokuweb/reg-cli)
+[![Build Status](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)](https://travis-ci.org/reg-viz/reg-cli)
 [![Version](https://img.shields.io/npm/v/reg-cli.svg?style=flat-square)](https://www.npmjs.com/package/reg-cli)
 [![Greenkeeper badge](https://badges.greenkeeper.io/bokuweb/reg-cli.svg)](https://greenkeeper.io/)
 
