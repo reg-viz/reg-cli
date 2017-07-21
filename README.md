@@ -3,7 +3,7 @@
 Visual regression test tool.
 
 [![Build Status](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)](https://travis-ci.org/reg-viz/reg-cli)
-[![Version](https://img.shields.io/npm/v/reg-cli.svg?style=flat-square)](https://www.npmjs.com/package/reg-cli)
+[![Version](https://img.shields.io/npm/v/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
 [![Greenkeeper badge](https://badges.greenkeeper.io/reg-viz/reg-cli.svg)](https://greenkeeper.io/)
 
 ## Table of Contents
