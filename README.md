@@ -45,8 +45,8 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   
 ### html report
 
-If `-R` option set, output html report to specfied directory.   
-https://bokuweb.github.io/reg-cli/   
+If `-R` option set, output html report to specfied directory.  
+https://reg-viz.github.io/reg-cli/
 
 ![screenshot](https://github.com/bokuweb/reg-cli/blob/master/docs/screenshot.png?raw=true)
 
