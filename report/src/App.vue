@@ -6,7 +6,7 @@
         <div class="logo">REG</div>
       </div>
       <div>
-        <a href="https://github.com/bokuweb/reg-cli">
+        <a href="https://github.com/reg-viz/reg-cli">
           <i class="ui icon github big"></i>
         </a>
         <div class="ui input mini icon">
