@@ -204,6 +204,7 @@ a>i.github {
 
 .content {
   margin-top: 100px;
+  min-height: calc(100vh - 270px);
   padding: 0 30px;
 }
 
