@@ -1,9 +1,12 @@
 <template>
   <div class="wrapper">
     <div class="main-header">
-      <div class="logo">REG</div>
+      <div class="branding">
+        <img src="../assets/reglogo.svg" alt="reg">
+        <div class="logo">REG</div>
+      </div>
       <div>
-        <a href="https://github.com/bokuweb/reg-cli">
+        <a href="https://github.com/reg-viz/reg-cli">
           <i class="ui icon github big"></i>
         </a>
         <div class="ui input mini icon">
@@ -61,6 +64,9 @@
       </h3>
       <item-details class="items" :icon="'Checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
       </item-details>
+    </div>
+    <div class="footer">
+      <p>Powered by <a href="https://github.com/reg-viz">reg-viz</a></p>
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
@@ -198,6 +204,7 @@ a>i.github {
 
 .content {
   margin-top: 100px;
+  min-height: calc(100vh - 270px);
   padding: 0 30px;
 }
 
@@ -206,15 +213,37 @@ a>i.github {
   display: block;
 }
 
+.branding {
+  display: flex;
+  align-items: center;
+}
+
+.branding>img{
+  margin-left: -6px;
+  width: 32px;
+  height: 32px;
+}
+
 .logo {
-  font-size: 24px;
-  font-family: 'Dosis', sans-serif;
-  font-weight: bold;
+  margin-left: .35em;
+  font-size: 22px;
+  font-family: 'Lato', sans-serif;
+  letter-spacing: .2em;
+  font-weight: 300;
   line-height: 40px;
   color: #333;
 }
 
 .detail {
   margin-top: 60px;
+}
+
+.footer {
+  width: 100%;
+  padding: 60px 30px;
+  background: #fcfcfc;
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
 }
 </style>
