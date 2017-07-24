@@ -18,7 +18,11 @@ module.exports = {
         test: /\.js$/,
         use: "babel-loader",
         include: [path.resolve(__dirname, 'report/src')]
-      }
+      },
+      {
+        test: /\.(svg)$/,
+        use: ["file-loader"],
+      },
     ]
   },
   devServer: {

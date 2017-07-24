@@ -1,7 +1,10 @@
 <template>
   <div class="wrapper">
     <div class="main-header">
-      <div class="logo">REG</div>
+      <div class="branding">
+        <img src="../assets/reglogo.svg" alt="reg">
+        <div class="logo">REG</div>
+      </div>
       <div>
         <a href="https://github.com/bokuweb/reg-cli">
           <i class="ui icon github big"></i>
@@ -206,10 +209,23 @@ a>i.github {
   display: block;
 }
 
+.branding {
+  display: flex;
+  align-items: center;
+}
+
+.branding>img{
+  margin-left: -6px;
+  width: 32px;
+  height: 32px;
+}
+
 .logo {
-  font-size: 24px;
-  font-family: 'Dosis', sans-serif;
-  font-weight: bold;
+  margin-left: .35em;
+  font-size: 22px;
+  font-family: 'Lato', sans-serif;
+  letter-spacing: .2em;
+  font-weight: 300;
   line-height: 40px;
   color: #333;
 }
