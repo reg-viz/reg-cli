@@ -65,6 +65,9 @@
       <item-details class="items" :icon="'Checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
       </item-details>
     </div>
+    <div class="footer">
+      <p>Powered by <a href="https://github.com/reg-viz">reg-viz</a></p>
+    </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
   </div>
@@ -232,5 +235,14 @@ a>i.github {
 
 .detail {
   margin-top: 60px;
+}
+
+.footer {
+  width: 100%;
+  padding: 60px 30px;
+  background: #fcfcfc;
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
 }
 </style>
