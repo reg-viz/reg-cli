@@ -43,9 +43,11 @@ const createHTMLReport = (params) => {
     expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
     diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
   };
+  const faviconType = (json.hasFailed || json.hasNew || json.hasDeleted) ? 'failure' : 'success';
   const view = {
-    js, report: JSON.stringify(json),
-    faviconData: loadFaviconAsDataURL(json.type),
+    js,
+    report: JSON.stringify(json),
+    faviconData: loadFaviconAsDataURL(faviconType),
   };
   return Mustache.render(template.toString(), view);
 };
