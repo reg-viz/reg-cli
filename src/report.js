@@ -4,6 +4,12 @@ const mkdirp = require('mkdirp');
 const path = require('path');
 const log = require('./log');
 
+const loadFaviconAsDataURL = (type) => {
+  const fname = path.resolve(__dirname, `../report/assets/favicon_${type}.png`);
+  const buffer = fs.readFileSync(fname);
+  return 'data:image/png;base64,' + buffer.toString('base64');
+}
+
 const createJSONReport = (params) => {
   return {
     failedItems: params.failedItems,
@@ -39,6 +45,7 @@ const createHTMLReport = (params) => {
   };
   const view = {
     js, report: JSON.stringify(json),
+    faviconData: loadFaviconAsDataURL(json.type),
   };
   return Mustache.render(template.toString(), view);
 };
