@@ -201,6 +201,66 @@ test.serial('should generate success report', async t => {
   }
 });
 
+test.serial('should generate newItem report', async t => {
+  await new Promise((done) => rimraf(`${WORKSPACE}/resource/expected`, done));
+  const stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ], (error, stdout) => resolve(stdout));
+  });
+
+  try {
+    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const expected = {
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [],
+      diffItems: [],
+      failedItems: [],
+      newItems: [`/${SAMPLE_IMAGE}`],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate deleteItem report', async t => {
+  await new Promise((done) => rimraf(`${WORKSPACE}/resource/actual`, done));
+  const stdout = await new Promise((resolve) => {
+    execFile('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ], (error, stdout) => resolve(stdout));
+  });
+
+  try {
+    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const expected = {
+      actualItems: [],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [`/${SAMPLE_IMAGE}`],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
 test.afterEach.always(async t => {
   await new Promise((done) => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
 });
