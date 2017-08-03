@@ -1,15 +1,24 @@
 import test from 'ava';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
+import spawn from 'cross-spawn';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';
 const RESOURCE = 'resource';
 const SAMPLE_IMAGE = 'sample.jpg';
 const SAMPLE_DIFF_IMAGE = 'sample.png';
+
+const replaceReportPath = report => {
+  Object.keys(report).forEach(key => {
+    report[key] = typeof report[key] === 'string'
+      ? report[key].replace(/\\/g, '/')
+      : report[key].map(r => r.replace(/\\/g, '/'));
+  });
+  return report;
+}
 
 test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
@@ -144,7 +153,7 @@ test.serial('should generate fail report', async t => {
   });
 
   try {
-    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
       actualItems: [`/${SAMPLE_IMAGE}`],
       expectedItems: [`/${SAMPLE_IMAGE}`],
@@ -175,6 +184,20 @@ test.serial('should update images with `-U` option', async t => {
     p.stderr.on('data', data => console.error(data));
   });
   t.true(code === 0);
+  const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+  const expected = {
+    actualItems: [`/${SAMPLE_IMAGE}`],
+    expectedItems: [`/${SAMPLE_IMAGE}`],
+    diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
+    failedItems: [`/${SAMPLE_IMAGE}`],
+    newItems: [],
+    deletedItems: [],
+    passedItems: [],
+    actualDir: `./${WORKSPACE}/resource/actual`,
+    expectedDir: `./${WORKSPACE}/resource/expected`,
+    diffDir: `./${WORKSPACE}/diff`,
+  };
+  t.deepEqual(report, expected);
 });
 
 test.serial('should generate success report', async t => {
@@ -184,12 +207,12 @@ test.serial('should generate success report', async t => {
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.stdout.on('data', data => resolve(data));
+    p.on('close', (code) => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
   try {
-    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
       actualItems: [`/${SAMPLE_IMAGE}`],
       expectedItems: [`/${SAMPLE_IMAGE}`],
@@ -222,7 +245,7 @@ test.serial('should generate newItem report', async t => {
   });
 
   try {
-    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
       actualItems: [`/${SAMPLE_IMAGE}`],
       expectedItems: [],
@@ -255,7 +278,7 @@ test.serial('should generate deletedItem report', async t => {
   });
 
   try {
-    const report = JSON.parse(fs.readFileSync(`./reg.json`, 'utf8'));
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
       actualItems: [],
       expectedItems: [`/${SAMPLE_IMAGE}`],
