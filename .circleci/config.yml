@@ -20,9 +20,6 @@ jobs:
             xvfbd start
             yarn run test
             xvfbd stop          
-      - run:
-          name: Test
-          command: yarn run test
   patch_release:
     <<: *defaults
     steps:
