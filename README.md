@@ -4,6 +4,7 @@ Visual regression test tool.
 
 [![CircleCI](https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg)](https://circleci.com/gh/reg-viz/reg-cli/tree/master)
 [![Build Status](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)](https://travis-ci.org/reg-viz/reg-cli)
+[![Build status](https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true)](https://ci.appveyor.com/project/bokuweb/reg-cli)
 [![Version](https://img.shields.io/npm/v/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
 [![Greenkeeper badge](https://badges.greenkeeper.io/reg-viz/reg-cli.svg)](https://greenkeeper.io/)
 
