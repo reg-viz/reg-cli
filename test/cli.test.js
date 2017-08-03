@@ -4,6 +4,7 @@ import fs from 'fs';
 import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
+import path from 'path';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';
@@ -11,13 +12,15 @@ const RESOURCE = 'resource';
 const SAMPLE_IMAGE = 'sample.jpg';
 const SAMPLE_DIFF_IMAGE = 'sample.png';
 
+const path = (path) => path.resolve(process.cwd(), path);
+
 test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
 })
 
 test.serial('should display error message when passing only 1 argument', async t => {
   const stdout = await new Promise((resolve) => {
-    const p = spawn('./dist/cli.js', ['./sample/actual']);
+    const p = spawn(path('./dist/cli.js'), [path('./sample/actual')]);
     p.stdout.on('data', data => resolve(data));
     p.stderr.on('data', data => console.error(data));
   });
