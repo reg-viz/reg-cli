@@ -1,10 +1,10 @@
 import test from 'ava';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
 import path from 'path';
+import spawn from 'cross-spawn';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';

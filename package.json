@@ -44,6 +44,7 @@
     "babel-preset-es2017": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
     "copyfiles": "^1.2.0",
+    "cross-spawn": "^5.1.0",
     "css-loader": "^0.28.2",
     "flow-bin": "^0.52.0",
     "flow-typed": "^2.0.0",
