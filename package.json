@@ -73,7 +73,7 @@
   },
   "avaron": {
     "require": [
-      "test/helpers/setup.js"
+      "./test/helpers/setup.js"
     ],
     "fixture": "fixture.html"
   }
