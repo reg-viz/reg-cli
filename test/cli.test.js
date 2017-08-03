@@ -207,7 +207,7 @@ test.serial('should generate success report', async t => {
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.stdout.on('data', data => resolve(data));
+    p.on('close', (code) => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
