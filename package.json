@@ -14,7 +14,7 @@
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html",
     "test:cli": "ava test/cli.test.js",
     "test:report": "avaron test/report/*.test.js --renderer",
-    "test": "npm run build:report && npm run build && chmod +x dist/cli.js && npm run test:cli"
+    "test": "npm run build:report && npm run build && chmod +x dist/cli.js && npm run test:cli && npm run test:report"
   },
   "repository": {
     "type": "git",
