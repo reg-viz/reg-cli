@@ -1,3 +1,5 @@
+   
+      
 <p align="center"><img src ="https://github.com/reg-viz/reg-cli/blob/master/logo.png?raw=true" /></p>
 
 <p align="center">Visual regression test tool and html reporter.</p>
@@ -8,10 +10,10 @@
 <img src="https://img.shields.io/travis/reg-viz/reg-cli.svg" alt="Build Status" /></a>
 <a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
 <img src="https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true" alt="Build Status" /></a>
-<a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a> 
-<a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a> 
+<a href="https://www.npmjs.com/package/@reg-viz/reg-cli">
+<img src="https://img.shields.io/npm/v/@reg-viz/reg-cli.svg" alt="Build Status" /></a> 
+<a href="https://www.npmjs.com/package/@reg-viz/reg-cli">
+<img src="https://img.shields.io/npm/dm/@reg-viz/reg-cli.svg" /></a> 
 <a href="https://greenkeeper.io/">
 <img src="https://badges.greenkeeper.io/reg-viz/reg-cli.svg" /></a> 
 </p>
