@@ -4,9 +4,9 @@
 
 <p align="center"><a href="https://circleci.com/gh/reg-viz/reg-cli/tree/master">
 <img src="https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg" alt="Build Status" /></a>
-<p align="center"><a href="https://travis-ci.org/reg-viz/reg-cli">
+<a href="https://travis-ci.org/reg-viz/reg-cli">
 <img src="https://img.shields.io/travis/reg-viz/reg-cli.svg" alt="Build Status" /></a>
- <p align="center"><a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
+<a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
 <img src="https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true" alt="Build Status" /></a>
 <a href="https://www.npmjs.com/package/reg-cli">
 <img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a> 
