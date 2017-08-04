@@ -35,7 +35,7 @@
 `reg-cli` support Node.js v6+ 
  
 ``` sh
-$ npm i -D reg-cli
+$ npm i -D @reg-viz/reg-cli
 ```
 
 ## Usage
