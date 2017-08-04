@@ -1,5 +1,5 @@
 {
-  "name": "reg-cli",
+  "name": "@reg-viz/reg-cli",
   "version": "0.8.6",
   "description": "",
   "main": "./dist/index.js",
