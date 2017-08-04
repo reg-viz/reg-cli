@@ -1,12 +1,20 @@
-# reg-cli
+<p align="center"><img src ="https://github.com/reg-viz/reg-cli/blob/master/logo.png?raw=true" /></p>
 
-Visual regression test tool.
+<p align="center">Visual regression test tool and html reporter.</p>
 
-[![CircleCI](https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg)](https://circleci.com/gh/reg-viz/reg-cli/tree/master)
-[![Build Status](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)](https://travis-ci.org/reg-viz/reg-cli)
-[![Build status](https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true)](https://ci.appveyor.com/project/bokuweb/reg-cli)
-[![Version](https://img.shields.io/npm/v/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
-[![Greenkeeper badge](https://badges.greenkeeper.io/reg-viz/reg-cli.svg)](https://greenkeeper.io/)
+<p align="center"><a href="https://circleci.com/gh/reg-viz/reg-cli/tree/master">
+<img src="https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg" alt="Build Status" /></a>
+<p align="center"><a href="https://travis-ci.org/reg-viz/reg-cli">
+<img src="https://img.shields.io/travis/reg-viz/reg-cli.svg" alt="Build Status" /></a>
+ <p align="center"><a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
+<img src="https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true" alt="Build Status" /></a>
+<a href="https://www.npmjs.com/package/reg-cli">
+<img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a> 
+<a href="https://www.npmjs.com/package/reg-cli">
+<img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a> 
+<a href="https://greenkeeper.io/">
+<img src="https://badges.greenkeeper.io/reg-viz/reg-cli.svg" /></a> 
+</p>
 
 ## Table of Contents
 
