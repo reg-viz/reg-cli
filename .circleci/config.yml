@@ -50,7 +50,7 @@ jobs:
             npm version patch
             git push origin master
             git push --tags
-            npm publish
+            npm publish --access=public
   minor_release:
     <<: *defaults
     steps:
@@ -81,7 +81,7 @@ jobs:
             npm version minor
             git push origin master
             git push --tags
-            npm publish
+            npm publish --access=public
 workflows:
   version: 2
   build_pipeline:
