@@ -48,9 +48,9 @@ jobs:
           command: |
             git reset --hard HEAD
             npm version patch
+            npm publish --access=public            
             git push origin master
             git push --tags
-            npm publish --access=public
   minor_release:
     <<: *defaults
     steps:
@@ -79,9 +79,9 @@ jobs:
           command: |
             git reset --hard HEAD
             npm version minor
+            npm publish --access=public
             git push origin master
             git push --tags
-            npm publish --access=public
 workflows:
   version: 2
   build_pipeline:
