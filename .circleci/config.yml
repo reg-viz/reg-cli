@@ -48,7 +48,7 @@ jobs:
           command: |
             git reset --hard HEAD
             npm version patch
-            npm publish --access=public            
+            npm publish           
             git push origin master
             git push --tags
   minor_release:
@@ -79,7 +79,7 @@ jobs:
           command: |
             git reset --hard HEAD
             npm version minor
-            npm publish --access=public
+            npm publish
             git push origin master
             git push --tags
 workflows:
