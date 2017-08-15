@@ -2,7 +2,7 @@
       
 <p align="center"><img src ="https://github.com/reg-viz/reg-cli/blob/master/logo.png?raw=true" /></p>
 
-<p align="center">Visual regression test tool and html reporter.</p>
+<p align="center">Visual regression test tool with html reporter.</p>
 
 <p align="center"><a href="https://circleci.com/gh/reg-viz/reg-cli/tree/master">
 <img src="https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg" alt="Build Status" /></a>
