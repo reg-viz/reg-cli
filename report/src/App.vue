@@ -30,11 +30,11 @@
   
       <item-summaries class="summaries" :title="'Changed items'" :icon="'remove'" :color="'red'" :items="failedItems">
       </item-summaries>
-      <item-summaries class="summaries" :title="'New items'" :icon="'File Outline'" :color="'grey'" :items="newItems">
+      <item-summaries class="summaries" :title="'New items'" :icon="'file outline'" :color="'grey'" :items="newItems">
       </item-summaries>
-      <item-summaries class="summaries" :title="'Deleted items'" :icon="'Trash Outline'" :color="'grey'" :items="deletedItems">
+      <item-summaries class="summaries" :title="'Deleted items'" :icon="'trash outline'" :color="'grey'" :items="deletedItems">
       </item-summaries>
-      <item-summaries class="summaries" :title="'Passed items'" :icon="'Checkmark'" :color="'green'" :items="passedItems">
+      <item-summaries class="summaries" :title="'Passed items'" :icon="'checkmark'" :color="'green'" :items="passedItems">
       </item-summaries>
       <h2 class="ui header items-header detail" v-if="!isNotFound">
         Detail
@@ -50,19 +50,19 @@
         New items
       </h3>
   
-      <item-details class="items" :icon="'File Outline'" :color="'grey'" :items="newItems" :open="open" :actualDir="actualDir">
+      <item-details class="items" :icon="'file outline'" :color="'grey'" :items="newItems" :open="open" :actualDir="actualDir">
       </item-details>
   
       <h3 class="ui header items-header" v-if="deletedItems.length">
         Deleted items
       </h3>
-      <item-details class="items" :icon="'Trash Outline'" :color="'grey'" :items="deletedItems" :open="open" :expectedDir="expectedDir">
+      <item-details class="items" :icon="'trash outline'" :color="'grey'" :items="deletedItems" :open="open" :expectedDir="expectedDir">
       </item-details>
   
       <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
       </h3>
-      <item-details class="items" :icon="'Checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
+      <item-details class="items" :icon="'checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
       </item-details>
     </div>
     <div class="footer">

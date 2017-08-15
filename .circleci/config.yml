@@ -19,6 +19,7 @@ jobs:
           command: |
             xvfbd start
             yarn run test
+            yarn reg-suit run
             xvfbd stop          
   patch_release:
     <<: *defaults

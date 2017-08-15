@@ -4,7 +4,7 @@
             {{title}}
             <span class="items-header-sub" v-on:click="showSummary = !showSummary">
                 {{items.length}} items.
-                <i :class="showSummary ? 'ui icon Square Outline Minus' : ' ui icon Square Outline Plus'"></i>
+                <i :class="showSummary ? 'ui icon square outline minus' : ' ui icon square outline plus'"></i>
             </span>
         </h3>
         <div class="summary" v-if="showSummary">
