@@ -13,7 +13,7 @@ mkdirp.sync(`${root}/screenshot/actual`);
 nightmare
   .goto(`file://${root}/sample/index.html`)
   .wait(1000)
-  .screenshot(`${root}/screenshot/index.png`)
+  .screenshot(`${root}/screenshot/actual/index.png`)
   .end()
   .then(() => {
     console.log("Captured screenshot")
