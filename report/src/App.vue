@@ -137,7 +137,7 @@ module.exports = {
       this.$modal.pop();
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
-      }, 200);
+      }, 400);
     },
 
     inputSearch(e) {
