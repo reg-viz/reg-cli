@@ -51,7 +51,7 @@
     "flow-bin": "^0.53.0",
     "flow-typed": "^2.0.0",
     "husky": "^0.14.0",
-    "nightmare": "^2.10.0",
+    "puppeteer": "^0.10.0",
     "reg-keygen-git-hash-plugin": "^0.5.1",
     "reg-notify-github-plugin": "^0.5.1",
     "reg-publish-s3-plugin": "^0.5.1",
