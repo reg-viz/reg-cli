@@ -13,7 +13,7 @@ mkdirp.sync(`${root}/screenshot/actual`);
 nightmare
   .viewport(1200, 2400)
   .goto(`file://${root}/sample/index.html`)
-  .wait(1000)
+  .wait(3000)
   .screenshot(`${root}/screenshot/actual/index.png`)
   .end()
   .then(() => {
