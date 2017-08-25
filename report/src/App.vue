@@ -10,7 +10,7 @@
           <i class="ui icon github big"></i>
         </a>
         <div class="ui input mini icon">
-          <input type="text" placeholder="Search..." @input="addParams" v-model="search">
+          <input type="text" placeholder="Search..." @input="inputSearch" :value="search">
           <i class="ui icon search"></i>
         </div>
       </div>
@@ -74,14 +74,16 @@
 </template>
 
 <script>
+const SEARCH_DEBOUNCE_MSEC = 50;
+const debounce = require('lodash.debounce');
 const CaptureModal = require('./views/CaptureModal.vue');
 const ItemSummaries = require('./views/ItemSummaries.vue');
 const ItemDetails = require('./views/ItemDetails.vue');
 
-function searchItems(type) {
+function searchItems(type, search) {
   return window['__reg__'][type]
     .filter(item => {
-      const words = this.search.split(' ');
+      const words = search.split(' ');
       return words.every(w => item.raw.indexOf(w) !== -1);
     });
 }
@@ -108,20 +110,12 @@ module.exports = {
     modalBgSrc: null,
     isModalOpen: false,
     scrollTop: 0,
+    failedItems: searchItems('failedItems', getSearchParams()),
+    passedItems: searchItems('passedItems', getSearchParams()),
+    newItems: searchItems('newItems', getSearchParams()),
+    deletedItems: searchItems('deletedItems', getSearchParams()),
   }),
   computed: {
-    failedItems: function () {
-      return searchItems.bind(this)('failedItems');
-    },
-    passedItems: function () {
-      return searchItems.bind(this)('passedItems');
-    },
-    newItems: function () {
-      return searchItems.bind(this)('newItems');
-    },
-    deletedItems: function () {
-      return searchItems.bind(this)('deletedItems');
-    },
     isNotFound: function () {
       return this.failedItems.length === 0 &&
         this.passedItems.length === 0 &&
@@ -146,10 +140,15 @@ module.exports = {
       }, 200);
     },
 
-    addParams(e) {
-      const s = location.search.match(/search=(.*?)(&|$)/);
-      history.pushState('', '', `?search=${e.target.value}`);
-    }
+    inputSearch(e) {
+      this.search = e.target.value;
+      this.filter(this.search);
+      history.pushState('', '', `?search=${encodeURIComponent(this.search)}`);
+    },
+
+    filter: debounce(function(search) {
+      ['failedItems', 'passedItems', 'newItems', 'deletedItems'].forEach(type => this[type] = searchItems(type, search));
+    }, SEARCH_DEBOUNCE_MSEC),
   }
 }
 </script>
