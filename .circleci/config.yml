@@ -1,7 +1,7 @@
 defaults: &defaults
   working_directory: ~/reg-cli
   docker:
-    - image: reg-viz/node-xcb
+    - image: regviz/node-xcb
 
 version: 2
 jobs:
