@@ -1,25 +1,17 @@
-const Nightmare = require("nightmare");
-const nightmare = Nightmare({
-  show: false, width: 1200, height: 2600, webPreferences: {
-    nodeIntegration: true,
-  }
-});
+const puppeteer = require('puppeteer');
 const mkdirp = require("mkdirp");
 const path = require("path");
 const root = path.resolve(__dirname, '..');
 
-mkdirp.sync(`${root}/screenshot/actual`);
-
-nightmare
-  .viewport(1200, 2400)
-  .goto(`file://${root}/sample/index.html`)
-  .wait(1000)
-  .screenshot(`${root}/screenshot/actual/index.png`)
-  .end()
-  .then(() => {
-    console.log("Captured screenshot")
-  })
-  .catch(x => {
-    console.error(x);
-    process.exit(1);
-  });
+(async() => {
+  const url = `file://${root}/sample/index.html`;
+  const outpath = `${root}/screenshot/actual/index.png`;
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  mkdirp.sync(`${root}/screenshot/actual`);
+  const page = await browser.newPage();
+  await page.goto(url, { waitUntil: 'load' });
+  await page.waitForSelector('.content');
+  await page.screenshot({ path: outpath });
+  browser.close();
+  console.log(' \uD83C\uDFA8 Captured screenshot to', outpath);
+})();
