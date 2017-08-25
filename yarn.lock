@@ -309,9 +309,9 @@ ava-init@^0.2.0:
     read-pkg-up "^2.0.0"
     write-pkg "^3.1.0"
 
-ava@^0.21.0:
-  version "0.21.0"
-  resolved "https://registry.yarnpkg.com/ava/-/ava-0.21.0.tgz#cd8d8ea3546f57150dea38548b9f72f8ca583d29"
+ava@^0.22.0:
+  version "0.22.0"
+  resolved "https://registry.yarnpkg.com/ava/-/ava-0.22.0.tgz#4c28a1fdef7e749ba0c8131ac18a7ca489eef049"
   dependencies:
     "@ava/babel-preset-stage-4" "^1.1.0"
     "@ava/babel-preset-transform-test-files" "^3.0.0"
@@ -394,11 +394,11 @@ ava@^0.21.0:
     unique-temp-dir "^1.0.0"
     update-notifier "^2.1.0"
 
-avaron@^0.0.11:
-  version "0.0.11"
-  resolved "https://registry.yarnpkg.com/avaron/-/avaron-0.0.11.tgz#8c7617d438f26b28d192c325cb3a5764a17068f1"
+avaron@^0.0.12:
+  version "0.0.12"
+  resolved "https://registry.yarnpkg.com/avaron/-/avaron-0.0.12.tgz#bd37d49e6bfc2105f3e83441e33fc406d8091440"
   dependencies:
-    ava "^0.21.0"
+    ava "^0.22.0"
     electron "~1.6.2"
     make-dir "^1.0.0"
 
@@ -2552,9 +2552,9 @@ flatten@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/flatten/-/flatten-1.0.2.tgz#dae46a9d78fbe25292258cc1e780a41d95c03782"
 
-flow-bin@^0.52.0:
-  version "0.52.0"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.52.0.tgz#b6d9abe8bcd1ee5c62df386451a4e2553cadc3a3"
+flow-bin@^0.53.0:
+  version "0.53.1"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.53.1.tgz#9b22b63a23c99763ae533ebbab07f88c88c97d84"
 
 flow-typed@^2.0.0:
   version "2.1.5"
@@ -6229,9 +6229,9 @@ webpack-sources@^1.0.1:
     source-list-map "^2.0.0"
     source-map "~0.5.3"
 
-webpack@~3.4.0:
-  version "3.4.1"
-  resolved "https://registry.yarnpkg.com/webpack/-/webpack-3.4.1.tgz#4c3f4f3fb318155a4db0cb6a36ff05c5697418f4"
+webpack@~3.5.0:
+  version "3.5.5"
+  resolved "https://registry.yarnpkg.com/webpack/-/webpack-3.5.5.tgz#3226f09fc8b3e435ff781e7af34f82b68b26996c"
   dependencies:
     acorn "^5.0.0"
     acorn-dynamic-import "^2.0.0"
