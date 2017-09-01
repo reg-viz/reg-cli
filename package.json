@@ -16,7 +16,7 @@
     "test:cli": "chmod +x dist/cli.js && avaron test/cli.test.js",
     "test:report": "avaron test/report/*.test.js --renderer",
     "test:screenshot": "npm run build:report && npm run reg && npm run screenshot",
-    "test": "npm run flow && npm run build:report && npm run build && npm run test:cli && npm run test:report && npm run test:screenshot"
+    "test": "npm run build:report && npm run build && npm run test:cli && npm run test:report && npm run test:screenshot"
   },
   "repository": {
     "type": "git",

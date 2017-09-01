@@ -18,6 +18,7 @@ jobs:
           name: Test
           command: |
             xvfbd start
+            yarn run flow
             yarn run test
             yarn reg-suit run
             xvfbd stop          
