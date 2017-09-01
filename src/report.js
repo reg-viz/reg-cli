@@ -55,19 +55,10 @@ const createHTMLReport = (params) => {
 module.exports = (params) => {
   if (params.report) {
     const html = createHTMLReport(params);
-    try {
-      mkdirp.sync(path.dirname(params.report));
-      fs.writeFileSync(params.report, html);
-    } catch (err) {
-      log.fail(err);
-    };
+    mkdirp.sync(path.dirname(params.report));
+    fs.writeFileSync(params.report, html);
   }
   const json = createJSONReport(params);
-  try {
-    mkdirp.sync(path.dirname(params.json));
-    fs.writeFileSync(params.json, JSON.stringify(json));
-  } catch (err) {
-    log.fail(err);
-  };
+  fs.writeFileSync(params.json, JSON.stringify(json));
   return json;
 }

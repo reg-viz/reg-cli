@@ -1,10 +1,10 @@
 
 /* @flow */
 
-const { imgDiff } = require('img-diff-js');
-const md5File = require('md5-file');
+const { imgDiff } = require('img-diff-js'); // $FlowIgnore
+const md5File = require('md5-file'); // $FlowIgnore
 
-type DiffCreatorParams = {
+export type DiffCreatorParams = {
   actualDir: string;
   expectedDir: string;
   diffDir: string;
@@ -19,7 +19,7 @@ const getMD5 = (file) => new Promise((resolve, reject) => {
   })
 });
 
-const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams): Promise<CompareResult> => {
+const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams) => {
   return Promise.all([
     getMD5(`${actualDir}${image}`),
     getMD5(`${expectedDir}${image}`),

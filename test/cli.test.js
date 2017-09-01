@@ -181,6 +181,7 @@ test.serial('should update images with `-U` option', async t => {
       '-U'
     ]);
     p.on('close', (code) => resolve(code));
+    // p.stdout.on('data', data => console.log(data.toString()));
     p.stderr.on('data', data => console.error(data));
   });
   t.true(code === 0);

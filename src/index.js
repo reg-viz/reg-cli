@@ -1,15 +1,17 @@
 /* @flow */
 
-const { Spinner } = require('cli-spinner');
-const glob = require('glob'); // $FlowIgnore
-const mkdirp = require('make-dir'); // $FlowIgnore
-const fs = require('fs');
-const path = require('path');
-const log = require('./log');
-const createReport = require('./report');
-const spawn = require('cross-spawn');
+import { Spinner } from 'cli-spinner';
+import glob from 'glob'; // $FlowIgnore
+import mkdirp from 'make-dir'; // $FlowIgnore
+import fs from 'fs';
+import path from 'path';
+import log from './log';
+import createReport from './report';
+import spawn from 'cross-spawn'; // $FlowIgnore
+import bbPromise from 'bluebird'; // $FlowIgnore
+import type {DiffCreatorParams } from './diff';
+import { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } from './icon';
 
-const { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } = require('./icon');
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 
 type CompareResult = {
@@ -21,14 +23,18 @@ type RegParams = {
   actualDir: string;
   expectedDir: string;
   diffDir: string;
-  update: boolean;
-  ignoreChange: boolean;
-  report: string | boolean;
-  json: string;
-  urlPrefix: string;
-  threshold: number;
-  disableUpdateMessage: boolean;
+  update?: boolean;
+  ignoreChange?: boolean;
+  report?: string | boolean;
+  json?: string;
+  urlPrefix?: string;
+  threshold?: number;
+  disableUpdateMessage?: boolean;
+  concurrency?: number;
 };
+
+const spinner = new Spinner('[Processing].. %s');
+spinner.setSpinnerString('|/-\\');
 
 const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
 
@@ -65,26 +71,58 @@ const compareImages = (
   actualImages: string[],
   dirs,
   threshold,
-): Promise<$TupleMap<CompareResult[], typeof $await>> => {
-  return Promise.all(
-    actualImages
-      .filter((actualImage) => expectedImages.includes(actualImage))
-      // .map((actualImage) => compareAndCreateDiff({ ...dirs, image: actualImage, threshold }))
-      .map((actualImage) => createDiffProcess({ ...dirs, image: actualImage, threshold }))
-  );
+): Promise<CompareResult[]> => {
+  const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
+  return bbPromise.map(images, (actualImage) => {
+    return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
+  }, { concurrency: 1 });
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {
   expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
 };
 
+const aggregate = (result) => {
+  const passed = result.filter(r => r.passed).map((r) => r.image);
+  const failed = result.filter(r => !r.passed).map((r) => r.image);
+  const diffItems = failed.map(image => image.replace(/\.[^\.]+$/, ".png"));
+  return { passed, failed, diffItems };
+};
+
+const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actualItems }) => {
+  cleanupExpectedDir(expectedItems, expectedDir);
+  return copyImages(actualItems, { actualDir, expectedDir, diffDir }).then(() => {
+    log.success(`\nAll images are updated. `);
+  });
+};
+
+const notify = (result) => {
+  if (result.deletedItems.length > 0) {
+    log.warn(`\n${TEARDROP} ${result.deletedItems.length} deleted images detected.`);
+    result.deletedItems.forEach((image) => log.warn(`  ${MULTIPLICATION_X} ${result.actualDir}${image}`));
+  }
+
+  if (result.newItems.length > 0) {
+    log.info(`\n${TEARDROP} ${result.newItems.length} new images detected.`);
+    result.newItems.forEach((image) => log.info(`  ${GREEK_CROSS} ${result.actualDir}${image}`));
+  }
+
+  if (result.passedItems.length > 0) {
+    log.success(`\n${CHECK_MARK} ${result.passedItems.length} test succeeded.`);
+    result.passedItems.forEach((image) => log.success(`  ${CHECK_MARK} ${result.actualDir}${image}`));
+  }
+
+  if (result.failedItems.length > 0) {
+    log.fail(`\n${BALLOT_X} ${result.failedItems.length} test failed.`);
+    result.failedItems.forEach((image) => log.fail(`  ${BALLOT_X} ${result.actualDir}${image}`));
+  }
+}
+
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, update, json,
     ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
   const dirs = { actualDir, expectedDir, diffDir };
 
-  let spinner = new Spinner('[Processing].. %s');
-  spinner.setSpinnerString('|/-\\');
   spinner.start();
 
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
@@ -95,23 +133,10 @@ module.exports = (params: RegParams) => {
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
 
-  if (deletedImages.length > 0) {
-    log.warn(`\n${TEARDROP} ${deletedImages.length} deleted images detected.`);
-    deletedImages.forEach((image) => log.warn(`  ${MULTIPLICATION_X} ${actualDir}${image}`));
-  }
-
-  if (newImages.length > 0) {
-    log.info(`\n${TEARDROP} ${newImages.length} new images detected.`);
-    newImages.forEach((image) => log.info(`  ${GREEK_CROSS} ${actualDir}${image}`));
-  }
-
   return compareImages(expectedImages, actualImages, dirs, threshold)
-    .then((results) => {
-      const passed = results.filter(r => r.passed).map((r) => r.image);
-      const failed = results.filter(r => !r.passed).map((r) => r.image);
-      const diffItems = failed.map(image => image.replace(/\.[^\.]+$/, ".png"));
-
-      const result = createReport({
+    .then((result) => aggregate(result))
+    .then(({ passed, failed, diffItems }) => {
+      return createReport({
         passedItems: passed,
         failedItems: failed,
         newItems: newImages,
@@ -127,29 +152,20 @@ module.exports = (params: RegParams) => {
         report,
         urlPrefix,
       });
-
+    })
+    .then((result) => {
       spinner.stop(true);
-
-      if (passed.length > 0) {
-        log.success(`\n${CHECK_MARK} ${passed.length} test succeeded.`);
-        passed.forEach((image) => log.success(`  ${CHECK_MARK} ${actualDir}${image}`));
-      }
-
-      if (failed.length > 0) {
-        log.fail(`\n${BALLOT_X} ${failed.length} test failed.`);
-        failed.forEach((image) => log.fail(`  ${BALLOT_X} ${actualDir}${image}`));
-      }
-
-      if (update) {
-        cleanupExpectedDir(expectedImages, expectedDir);
-        return copyImages(actualImages, dirs).then(() => {
-          log.success(`\nAll images are updated. `);
-        });
-      } else {
-        if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
-          if (!disableUpdateMessage) log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
-          if (!ignoreChange) return Promise.reject();
-        }
+      return result;
+    })
+    .then((result) => {
+      notify(result);
+      return result;
+    })
+    .then((result) => {
+      if (update) return updateExpected(result).then(() => result);
+      if (result.failedItems.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
+        if (!disableUpdateMessage) log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
+        if (!ignoreChange) return Promise.reject();
       }
       return result;
     })
