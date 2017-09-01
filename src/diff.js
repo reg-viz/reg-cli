@@ -19,33 +19,58 @@ const getMD5 = (file) => new Promise((resolve, reject) => {
   })
 });
 
-const createDiff = ({ actualDir, expectedDir, diffDir, images, threshold }: DiffCreatorParams) => {
-  images.forEach((image) => {
-    return Promise.all([
-      getMD5(`${actualDir}${image}`),
-      getMD5(`${expectedDir}${image}`),
-    ]).then(([actualHash, expectedHash]) => {
-      if (actualHash === expectedHash) {
-        return process.stdout.write(JSON.stringify({ passed: true, image }));
-      }
-      const diffImage = image.replace(/\.[^\.]+$/, ".png");
-      return imgDiff({
-        actualFilename: `${actualDir}${image}`,
-        expectedFilename: `${expectedDir}${image}`,
-        diffFilename: `${diffDir}${diffImage}`,
-        options: {
-          threshold,
-        },
-      })
-        .then((result) => {
-          const passed = result.imagesAreSame;
-          process.stdout.write(JSON.stringify({ passed, image }));
-        })
-        .catch((e) => {
-          process.stderr.write(JSON.stringify(e));
-        })
+const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams) => {
+  //images.forEach((image) => {
+  return Promise.all([
+    getMD5(`${actualDir}${image}`),
+    getMD5(`${expectedDir}${image}`),
+  ]).then(([actualHash, expectedHash]) => {
+    if (actualHash === expectedHash) {
+      // return process.send({ passed: true, image });
+      return process.stdout.write(JSON.stringify({ passed: true, image }));
+    }
+    const diffImage = image.replace(/\.[^\.]+$/, ".png");
+    return imgDiff({
+      actualFilename: `${actualDir}${image}`,
+      expectedFilename: `${expectedDir}${image}`,
+      diffFilename: `${diffDir}${diffImage}`,
+      options: {
+        threshold,
+      },
     })
-  });
+      .then((result) => {
+        const passed = result.imagesAreSame;
+        // process.send({ passed, image });
+        process.stdout.write(JSON.stringify({ passed, image }));
+      })
+      .catch((e) => {
+        process.stderr.write(JSON.stringify(e));
+      })
+  })
+  //});
 };
 
-createDiff(JSON.parse(process.argv[2]));
+// process.on('message', (data) => {
+//   createDiff(data);
+// });
+
+process.stdin.on('data', (data) => {
+  createDiff(JSON.parse(data));
+});
+
+// process.send({ message: "aa", hoge: "fuga" });
+// JSON.parse(process.argv[2]));
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -6,9 +6,11 @@ import mkdirp from 'make-dir'; // $FlowIgnore
 import fs from 'fs';
 import path from 'path';
 import log from './log';
-import { flatten, chunk } from 'lodash';
+import { range, flatten, chunk } from 'lodash';
 import createReport from './report';
-import spawn from 'cross-spawn'; // $FlowIgnore
+import { fork } from 'child_process'; // $FlowIgnore
+import bbPromise from 'bluebird'; // $FlowIgnore
+import spawn from 'cross-spawn';
 import type { DiffCreatorParams } from './diff';
 import { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } from './icon';
 
@@ -54,17 +56,68 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
   })))
 };
 
-const createDiffProcess = (params) => new Promise((resolve, reject) => {
-  const args = JSON.stringify(params);
-  const p = spawn('node', [path.resolve(__dirname, './diff.js'), JSON.stringify(params)]);
-  let data = [];
-  p.stdout.setEncoding('utf8');
-  p.stdout.on('data', d => data.push(JSON.parse(d)));
-  p.stderr.on('data', err => reject(JSON.parse(err)));
-  p.on('exit', () => {
-    resolve(data);
-  });
-});
+// const createDiffProcess = (params) => { // new Promise((resolve, reject) => {
+// const args = JSON.stringify(params);
+// const p = fork(path.resolve(__dirname, './diff.js'));
+//return fork(path.resolve(__dirname, './diff.js'));
+// let data = [];
+// p.stdout.setEncoding('utf8');
+// p.stdout.on('data', d => {
+//   data.push(JSON.parse(d))
+// });
+// p.on("message", (a) => console.log(a));
+// p.stderr.on('data', err => {
+//  console.log(err.toString())
+// reject(JSON.parse(err))
+// });
+// p.on('exit', () => {
+//   console.log('a')
+//   resolve(data);
+// });
+
+// };
+
+class ProcessAdaptor {
+
+  constructor() {
+    //this.process = fork(path.resolve(__dirname, './diff.js'), null, {cwd: __dirname});
+    this.process = spawn('node', [path.resolve(__dirname, './diff.js')]);
+    // let data = '';
+    this._isRunning = false;
+  }
+
+  get isRunning() {
+    return this._isRunning;
+  }
+
+  run(params) {
+    return new Promise((resolve, reject) => {
+      this._isRunning = true;
+      this.process.stdout.setEncoding('utf8');
+      this.process.stdout.on('data', d => {
+        this._isRunning = false;
+        // console.log(d)
+        resolve(JSON.parse(d));
+      });
+      this.process.stderr.on('data', err => {
+        // console.log(err)
+        reject(JSON.parse(err));
+      });
+      this.process.on('exit', () => {
+        // resolve(JSON.parse(data));
+      });
+
+      this.process.stdin.write(JSON.stringify(params));
+    });
+    // this.process.send(params);
+    // this._isRunning = true;
+    // this.process.on("message", (result) => {
+    //   this._isRunning = false;
+    //   resolve(result);
+    // });
+    ///})
+  }
+}
 
 const compareImages = ({
   expectedImages,
@@ -74,11 +127,29 @@ const compareImages = ({
   concurrency,
 }): Promise<CompareResult[]> => {
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
-  const len = ~~(images.length / (concurrency || 4)) + 1;
-  const chunks = chunk(images, len);
-  return Promise.all(chunks.map(c => {
-    return createDiffProcess({ ...dirs, images: c, threshold: threshold || 0 });
-  })).then((res) => flatten(res));
+  // const len = ~~(images.length / (concurrency || 4)) + 1;
+  // const chunks = chunk(images, len);
+
+  //[Promise.resolve(), Promise.resolve()].reduce((p) => p.then)
+// console.log("asdasd")
+  const processes = range(concurrency || 4).map(() => new ProcessAdaptor());
+  // images.reduce((q, p) => {
+  //   return q.then(() => )
+  // }, Promise.resolve([]));
+
+  // return Promise.all(chunks.map(c => new Promise((resolve) => {
+  //   const p = createDiffProcess();
+  //   p.send({ ...dirs, images: c, threshold: threshold || 0 });
+  //   p.on("message", (a) => {
+  //     p.disconnect();
+  //     console.log(a)
+  //     resolve(a);
+  //   });
+  // })) //).then((res) => flatten(res));
+  return bbPromise.map(images, (image) => {
+    const p = processes.find(p => !p.isRunning);
+    return p.run({ ...dirs, image, threshold: threshold || 0 });
+  }, { concurrency: 4 });
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {

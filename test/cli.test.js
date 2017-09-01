@@ -1,5 +1,6 @@
 import test from 'ava';
 import fs from 'fs';
+import path from 'path';
 import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
@@ -24,7 +25,7 @@ test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
 })
 
-/*
+
 test.serial('should display error message when passing only 1 argument', async t => {
   const stdout = await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', ['./sample/actual']);
@@ -42,7 +43,7 @@ test.serial('should display error message when passing only 2 argument', async t
   })
   t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
-
+/*
 test.serial('should generate image diff with exit code 1', async t => {
   const code = await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
@@ -323,8 +324,9 @@ test.serial('perf', async t => {
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-    ]);
+    ], { cwd: path.resolve(__dirname, "../") });
     p.on('close', (code) => resolve(code));
+    // p.stdout.on('data', data => console.log(data));
     p.stderr.on('data', data => console.error(data));
   });
   console.timeEnd('100images');
