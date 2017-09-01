@@ -59,7 +59,7 @@ compare({
   json,
   urlPrefix,
   threshold,
-  concurrency: cli.flags.concurrency || 4,
+  concurrency: Number(cli.flags.concurrency) || 4,
 })
   .then(() => process.exit(0))
   .catch(() => process.exit(1));

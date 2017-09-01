@@ -51,7 +51,7 @@
     "cross-spawn": "^5.1.0",
     "css-loader": "^0.28.2",
     "flow-bin": "^0.54.0",
-    "flow-typed": "^2.0.0",
+    "flow-typed": "^2.1.5",
     "husky": "^0.14.0",
     "nightmare": "^2.10.0",
     "reg-keygen-git-hash-plugin": "^0.5.1",

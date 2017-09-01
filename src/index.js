@@ -5,12 +5,12 @@ import glob from 'glob'; // $FlowIgnore
 import mkdirp from 'make-dir'; // $FlowIgnore
 import fs from 'fs';
 import path from 'path';
-import log from './log';
 import { range } from 'lodash';
+import log from './log';
 import createReport from './report';
-import { fork } from 'child_process'; // $FlowIgnore
-import bbPromise from 'bluebird'; // $FlowIgnore
+import bluebird from 'bluebird'; // $FlowIgnore
 import spawn from 'cross-spawn';
+import ProcessAdaptor from './process-adaptor';
 import type { DiffCreatorParams } from './diff';
 import { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } from './icon';
 
@@ -56,34 +56,6 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
   })))
 };
 
-
-class ProcessAdaptor {
-
-  constructor() {
-    this.process = fork(path.resolve(__dirname, './diff.js'));
-    this._isRunning = false;
-  }
-
-  get isRunning() {
-    return this._isRunning;
-  }
-
-  run(params) {
-    return new Promise((resolve, reject) => {
-      this._isRunning = true;
-      this.process.send(params);
-      this.process.once("message", (result) => {
-        this._isRunning = false;
-        resolve(result);
-      });
-    })
-  }
-
-  close() {
-    this.process.kill();
-  }
-}
-
 const compareImages = ({
   expectedImages,
   actualImages,
@@ -94,13 +66,15 @@ const compareImages = ({
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
   concurrency = images.length < 20 ? 1 : concurrency || 4;
   const processes = range(concurrency).map(() => new ProcessAdaptor());
-  return bbPromise.map(images, (image) => {
+  return bluebird.map(images, (image) => {
     const p = processes.find(p => !p.isRunning);
-    return p.run({ ...dirs, image, threshold: threshold || 0 });
+    if (p) {
+      return p.run({ ...dirs, image, threshold: threshold || 0 });
+    }
   }, { concurrency }).then((result) => {
     processes.forEach((p) => p.close());
     return result;
-  });
+  }).filter(r => !!r);
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {

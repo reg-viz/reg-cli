@@ -2556,7 +2556,7 @@ flow-bin@^0.54.0:
   version "0.54.0"
   resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.54.0.tgz#f2fb0478e9e99702b623c9ed84079a39903bba77"
 
-flow-typed@^2.0.0:
+flow-typed@^2.1.5:
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/flow-typed/-/flow-typed-2.1.5.tgz#c96912807a286357340042783c9369360f384bbd"
   dependencies:

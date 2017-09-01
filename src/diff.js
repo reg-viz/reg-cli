@@ -1,6 +1,4 @@
 
-/* @flow */
-
 const { imgDiff } = require('img-diff-js'); // $FlowIgnore
 const md5File = require('md5-file'); // $FlowIgnore
 
