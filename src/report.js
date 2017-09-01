@@ -59,6 +59,7 @@ module.exports = (params) => {
     fs.writeFileSync(params.report, html);
   }
   const json = createJSONReport(params);
+  mkdirp.sync(path.dirname(params.json));
   fs.writeFileSync(params.json, JSON.stringify(json));
   return json;
 }
