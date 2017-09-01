@@ -23,7 +23,8 @@ const cli = meow(`
     -I, --ignoreChange If true, error will not be thrown when image change detected.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
-    -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
+    -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different).
+    -C, --concurrency How many processes launches in parallel. If omitted 4.
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `, {
@@ -34,6 +35,7 @@ const cli = meow(`
       R: 'report',
       P: 'urlPrefix',
       T: 'threshold',
+      C: 'concurrency',
     },
   });
 
@@ -57,6 +59,7 @@ compare({
   json,
   urlPrefix,
   threshold,
+  concurrency: cli.flags.concurrency || 4,
 })
   .then(() => process.exit(0))
   .catch(() => process.exit(1));
