@@ -6,6 +6,7 @@ import mkdirp from 'make-dir'; // $FlowIgnore
 import fs from 'fs';
 import path from 'path';
 import log from './log';
+import { flatten, chunk } from 'lodash';
 import createReport from './report';
 import spawn from 'cross-spawn'; // $FlowIgnore
 import bbPromise from 'bluebird'; // $FlowIgnore
@@ -54,15 +55,15 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
   })))
 };
 
-const createDiffProcess = (params: DiffCreatorParams) => new Promise((resolve, reject) => {
+const createDiffProcess = (params) => new Promise((resolve, reject) => {
   const args = JSON.stringify(params);
   const p = spawn('node', [path.resolve(__dirname, './diff.js'), JSON.stringify(params)]);
-  let data = '';
+  let data = [];
   p.stdout.setEncoding('utf8');
-  p.stdout.on('data', d => data += d);
+  p.stdout.on('data', d => data.push(JSON.parse(d)));
   p.stderr.on('data', err => reject(JSON.parse(err)));
   p.on('exit', () => {
-    resolve(JSON.parse(data));
+    resolve(data);
   });
 });
 
@@ -74,9 +75,14 @@ const compareImages = ({
   concurrency,
 }): Promise<CompareResult[]> => {
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
-  return bbPromise.map(images, (actualImage) => {
-    return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
-  }, { concurrency: concurrency || 4 });
+  const len = ~~(images / (concurrency || 8)) + 1;
+  const chunks = chunk(images, len);
+  return Promise.all(chunks.map(c => {
+    return createDiffProcess({ ...dirs, images: c, threshold: threshold || 0 });
+  })).then((res) => flatten(res));
+  // return bbPromise.map(images, (actualImage) => {
+  //   return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
+  // }, { concurrency: concurrency || 4 });
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {
