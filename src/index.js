@@ -1,14 +1,14 @@
 /* @flow */
 
-const { imgDiff } = require('img-diff-js');
 const { Spinner } = require('cli-spinner');
 const glob = require('glob'); // $FlowIgnore
 const mkdirp = require('make-dir'); // $FlowIgnore
-const md5File = require('md5-file');
 const fs = require('fs');
 const path = require('path');
 const log = require('./log');
-const output = require('./report');
+const createReport = require('./report');
+const spawn = require('cross-spawn');
+
 const { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } = require('./icon');
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 
@@ -30,49 +30,7 @@ type RegParams = {
   disableUpdateMessage: boolean;
 };
 
-type DiffCreatorParams = {
-  actualDir: string;
-  expectedDir: string;
-  diffDir: string;
-  image: string;
-  threshold: number;
-}
-
 const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
-
-const getMD5 = (file) => new Promise((resolve, reject) => {
-  md5File(file, (err, hash) => {
-    if (err) reject(err);
-    resolve(hash);
-  })
-});
-
-const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams): Promise<CompareResult> => {
-  return Promise.all([
-    getMD5(`${actualDir}${image}`),
-    getMD5(`${expectedDir}${image}`),
-  ]).then(([actualHash, expectedHash]) => {
-    if (actualHash === expectedHash) {
-      return Promise.resolve({ passed: true, image });
-    }
-    const diffImage = image.replace(/\.[^\.]+$/, ".png");
-    return imgDiff({
-      actualFilename: `${actualDir}${image}`,
-      expectedFilename: `${expectedDir}${image}`,
-      diffFilename: `${diffDir}${diffImage}`,
-      options: {
-        threshold,
-      },
-    })
-      .then((result) => {
-        const passed = result.imagesAreSame;
-        return { passed, image };
-      })
-      .catch((e) => {
-        Promise.reject(e);
-      })
-  })
-};
 
 const copyImages = (actualImages, { expectedDir, actualDir }) => {
   return Promise.all(actualImages.map((image) => new Promise((resolve, reject) => {
@@ -85,11 +43,22 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
         resolve();
       })
     } catch (err) {
-      log.fail(err);
       reject(err);
     }
   })))
 };
+
+const createDiffProcess = (params: DiffCreatorParams) => new Promise((resolve, reject) => {
+  const args = JSON.stringify(params);
+  const p = spawn('node', [path.resolve(__dirname, './diff.js'), JSON.stringify(params)]);
+  let data = '';
+  p.stdout.setEncoding('utf8');
+  p.stdout.on('data', d => data += d);
+  p.stderr.on('data', err => reject(JSON.parse(err)));
+  p.on('exit', () => {
+    resolve(JSON.parse(data));
+  });
+});
 
 const compareImages = (
   expectedImages: string[],
@@ -100,7 +69,8 @@ const compareImages = (
   return Promise.all(
     actualImages
       .filter((actualImage) => expectedImages.includes(actualImage))
-      .map((actualImage) => compareAndCreateDiff({ ...dirs, image: actualImage, threshold }))
+      // .map((actualImage) => compareAndCreateDiff({ ...dirs, image: actualImage, threshold }))
+      .map((actualImage) => createDiffProcess({ ...dirs, image: actualImage, threshold }))
   );
 };
 
@@ -131,7 +101,7 @@ module.exports = (params: RegParams) => {
   }
 
   if (newImages.length > 0) {
-    log.warn(`\n${TEARDROP} ${newImages.length} new images detected.`);
+    log.info(`\n${TEARDROP} ${newImages.length} new images detected.`);
     newImages.forEach((image) => log.info(`  ${GREEK_CROSS} ${actualDir}${image}`));
   }
 
@@ -141,7 +111,7 @@ module.exports = (params: RegParams) => {
       const failed = results.filter(r => !r.passed).map((r) => r.image);
       const diffItems = failed.map(image => image.replace(/\.[^\.]+$/, ".png"));
 
-      const result = output({
+      const result = createReport({
         passedItems: passed,
         failedItems: failed,
         newItems: newImages,
