@@ -9,8 +9,7 @@ import log from './log';
 import { flatten, chunk } from 'lodash';
 import createReport from './report';
 import spawn from 'cross-spawn'; // $FlowIgnore
-import bbPromise from 'bluebird'; // $FlowIgnore
-import type {DiffCreatorParams } from './diff';
+import type { DiffCreatorParams } from './diff';
 import { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS } from './icon';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
@@ -74,19 +73,12 @@ const compareImages = ({
   threshold,
   concurrency,
 }): Promise<CompareResult[]> => {
-  console.log("hoge", new Date());
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
-  const len = ~~(images / (concurrency || 8)) + 1;
+  const len = ~~(images.length / (concurrency || 4)) + 1;
   const chunks = chunk(images, len);
   return Promise.all(chunks.map(c => {
     return createDiffProcess({ ...dirs, images: c, threshold: threshold || 0 });
-  })).then((res) => {
-    console.log("fuga", new Date());
-    return flatten(res);
-  });
-  // return bbPromise.map(images, (actualImage) => {0
-  //   return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
-  // }, { concurrency: concurrency || 4 });
+  })).then((res) => flatten(res));
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {

@@ -103,19 +103,17 @@ var compareImages = function compareImages(_ref2) {
       threshold = _ref2.threshold,
       concurrency = _ref2.concurrency;
 
-  console.log("hoge", new Date());
   var images = actualImages.filter(function (actualImage) {
     return expectedImages.includes(actualImage);
   });
-  var len = ~~(images / (concurrency || 8)) + 1;
+  var len = ~~(images.length / (concurrency || 4)) + 1;
   var chunks = (0, _lodash.chunk)(images, len);
   return Promise.all(chunks.map(function (c) {
     return createDiffProcess(_extends({}, dirs, { images: c, threshold: threshold || 0 }));
   })).then(function (res) {
-    console.log("fuga", new Date());
     return (0, _lodash.flatten)(res);
   });
-  // return bbPromise.map(images, (actualImage) => {0
+  // return bbPromise.map(images, (actualImage) => {
   //   return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
   // }, { concurrency: concurrency || 4 });
 };

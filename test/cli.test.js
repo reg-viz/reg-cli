@@ -8,7 +8,7 @@ import spawn from 'cross-spawn';
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';
 const RESOURCE = 'resource';
-const SAMPLE_IMAGE = 'sample.jpg';
+const SAMPLE_IMAGE = 'sample.png';
 const SAMPLE_DIFF_IMAGE = 'sample.png';
 
 const replaceReportPath = report => {
@@ -24,6 +24,7 @@ test.beforeEach(async t => {
   await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
 })
 
+/*
 test.serial('should display error message when passing only 1 argument', async t => {
   const stdout = await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', ['./sample/actual']);
@@ -297,6 +298,39 @@ test.serial('should generate deletedItem report', async t => {
     t.fail();
   }
 });
+
+*/
+
+test.serial('perf', async t => {
+  const copy = (s, d, done) => {
+    const r = fs.createReadStream(s);
+    const w = fs.createWriteStream(d);
+    r.pipe(w);
+    w.on("close", (ex) => {
+      done();
+    });
+  }
+  for (let i = 0; i < 100; i++) {
+    await Promise.all([
+      new Promise((resolve) => copy(`${WORKSPACE}/resource/actual/sample.png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve)),
+      new Promise((resolve) => copy(`${WORKSPACE}/resource/expected/sample.png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve)),
+    ]);
+  }
+
+  console.time('100images');
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+  console.timeEnd('100images');
+  t.pass();
+});
+
 
 test.afterEach.always(async t => {
   await new Promise((done) => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
