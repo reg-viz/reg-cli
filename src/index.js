@@ -17,7 +17,7 @@ type CompareResult = {
   image: string;
 };
 
-type Params = {
+type RegParams = {
   actualDir: string;
   expectedDir: string;
   diffDir: string;
@@ -27,6 +27,7 @@ type Params = {
   json: string;
   urlPrefix: string;
   threshold: number;
+  disableUpdateMessage: boolean;
 };
 
 type DiffCreatorParams = {
@@ -62,7 +63,6 @@ const compareAndCreateDiff = ({ actualDir, expectedDir, diffDir, image, threshol
       options: {
         threshold,
       },
-      // metric: 'RMSE',
     })
       .then((result) => {
         const passed = result.imagesAreSame;
@@ -108,9 +108,9 @@ const cleanupExpectedDir = (expectedImages, expectedDir) => {
   expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
 };
 
-module.exports = (params: Params) => {
+module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, update, json,
-    ignoreChange, report, urlPrefix, threshold } = params;
+    ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
   const dirs = { actualDir, expectedDir, diffDir };
 
   let spinner = new Spinner('[Processing].. %s');
@@ -176,9 +176,8 @@ module.exports = (params: Params) => {
           log.success(`\nAll images are updated. `);
         });
       } else {
-        // TODO: add fail option
         if (failed.length > 0 /* || newImages.length > 0 || deletedImages.length > 0 */) {
-          log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
+          if (!disableUpdateMessage) log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
           if (!ignoreChange) return Promise.reject();
         }
       }
