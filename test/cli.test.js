@@ -43,7 +43,7 @@ test.serial('should display error message when passing only 2 argument', async t
   })
   t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
-/*
+
 test.serial('should generate image diff with exit code 1', async t => {
   const code = await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
@@ -300,8 +300,6 @@ test.serial('should generate deletedItem report', async t => {
   }
 });
 
-*/
-
 test.serial('perf', async t => {
   const copy = (s, d, done) => {
     const r = fs.createReadStream(s);
@@ -327,7 +325,9 @@ test.serial('perf', async t => {
     ], { cwd: path.resolve(__dirname, "../") });
     p.on('close', (code) => resolve(code));
     // p.stdout.on('data', data => console.log(data));
-    p.stderr.on('data', data => console.error(data));
+    p.stderr.on('data', data => {
+      console.error(data.toString());
+    });
   });
   console.timeEnd('100images');
   t.pass();
