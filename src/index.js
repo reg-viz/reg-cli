@@ -66,16 +66,17 @@ const createDiffProcess = (params: DiffCreatorParams) => new Promise((resolve, r
   });
 });
 
-const compareImages = (
-  expectedImages: string[],
-  actualImages: string[],
+const compareImages = ({
+  expectedImages,
+  actualImages,
   dirs,
   threshold,
-): Promise<CompareResult[]> => {
+  concurrency,
+}): Promise<CompareResult[]> => {
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
   return bbPromise.map(images, (actualImage) => {
     return createDiffProcess({ ...dirs, image: actualImage, threshold: threshold || 0 });
-  }, { concurrency: 1 });
+  }, { concurrency: concurrency || 4 });
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {
@@ -119,7 +120,7 @@ const notify = (result) => {
 }
 
 module.exports = (params: RegParams) => {
-  const { actualDir, expectedDir, diffDir, update, json,
+  const { actualDir, expectedDir, diffDir, update, json, concurrency,
     ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
   const dirs = { actualDir, expectedDir, diffDir };
 
@@ -133,7 +134,13 @@ module.exports = (params: RegParams) => {
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
 
-  return compareImages(expectedImages, actualImages, dirs, threshold)
+  return compareImages({
+    expectedImages,
+    actualImages,
+    dirs,
+    threshold,
+    concurrency,
+  })
     .then((result) => aggregate(result))
     .then(({ passed, failed, diffItems }) => {
       return createReport({
