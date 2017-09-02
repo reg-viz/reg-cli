@@ -1,5 +1,5 @@
-// flow-typed signature: 5d60d0e2e1a024fad66e58cd775cdcfc
-// flow-typed version: e6f7626e10/meow_v3.x.x/flow_>=v0.28.x
+// flow-typed signature: 43c4544830c615dbbf641316eedc12f1
+// flow-typed version: b43dff3e0e/meow_v3.x.x/flow_>=v0.25.x
 
 declare module 'meow' {
   declare type options = string | Array<string> | {
