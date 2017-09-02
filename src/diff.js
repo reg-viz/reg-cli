@@ -1,6 +1,7 @@
+/* @flow */
 
-const { imgDiff } = require('img-diff-js'); // $FlowIgnore
-const md5File = require('md5-file'); // $FlowIgnore
+import { imgDiff } from 'img-diff-js'; // $FlowIgnore
+import md5File from 'md5-file'; // $FlowIgnore
 
 export type DiffCreatorParams = {
   actualDir: string;
@@ -8,6 +9,11 @@ export type DiffCreatorParams = {
   diffDir: string;
   image: string;
   threshold: number;
+}
+
+export type DiffResult = {
+  image: string;
+  passed: boolean;
 }
 
 const getMD5 = (file) => new Promise((resolve, reject) => {
@@ -23,6 +29,7 @@ const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffC
     getMD5(`${expectedDir}${image}`),
   ]).then(([actualHash, expectedHash]) => {
     if (actualHash === expectedHash) {
+      if (!process || !process.send) return;
       return process.send({ passed: true, image });
     }
     const diffImage = image.replace(/\.[^\.]+$/, ".png");
@@ -35,6 +42,7 @@ const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffC
       },
     })
       .then((result) => {
+        if (!process || !process.send) return;
         const passed = result.imagesAreSame;
         process.send({ passed, image });
       })

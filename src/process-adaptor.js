@@ -1,28 +1,37 @@
+/* @flow */
+
 import { fork } from 'child_process'; // $FlowIgnore
 import path from 'path';
+import type { DiffCreatorParams, DiffResult } from './diff';
 
 export default class ProcessAdaptor {
+
+  _isRunning: boolean;
+  _process: child_process$ChildProcess;
+
   constructor() {
-    this.process = fork(path.resolve(__dirname, './diff.js'));
+    this._process = fork(path.resolve(__dirname, './diff.js'));
     this._isRunning = false;
   }
 
-  get isRunning() {
+  isRunning() {
     return this._isRunning;
   }
 
-  run(params) {
+  run(params: DiffCreatorParams): Promise<?DiffResult> {
     return new Promise((resolve, reject) => {
       this._isRunning = true;
-      this.process.send(params);
-      this.process.once("message", (result) => {
+      if (!this._process || !this._process.send) resolve();
+      this._process.send(params);
+      this._process.once('message', (result) => {
         this._isRunning = false;
         resolve(result);
       });
-    })
+    });
   }
 
   close() {
-    this.process.kill();
+    if (!this._process || !this._process.kill) return;
+    this._process.kill();
   }
 }

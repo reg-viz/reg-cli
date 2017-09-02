@@ -1,3 +1,5 @@
+/* @flow */
+
 const red = '\u001b[31m';
 const green = '\u001b[32m';
 const yellow = '\u001b[33m';
@@ -6,17 +8,17 @@ const cyan = '\u001b[36m';
 const reset = '\u001b[0m';
 
 
-module.exports = {
-  info(text) {
+export default {
+  info(text: string) {
     console.log(`${cyan}${text}${reset}`);
   },
-  warn(text) {
+  warn(text: string) {
     console.log(`${yellow}${text}${reset}`);
   },
-  success(text) {
+  success(text: string) {
     console.log(`${green}${text}${reset}`);
   },
-  fail(text) {
+  fail(text: string) {
     console.log(`${red}${text}${reset}`);
   },
 };

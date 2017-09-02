@@ -27,7 +27,7 @@ type RegParams = {
   diffDir: string;
   update?: boolean;
   ignoreChange?: boolean;
-  report?: string | boolean;
+  report?: string;
   json?: string;
   urlPrefix?: string;
   threshold?: number;
@@ -67,7 +67,7 @@ const compareImages = ({
   concurrency = images.length < 20 ? 1 : concurrency || 4;
   const processes = range(concurrency).map(() => new ProcessAdaptor());
   return bluebird.map(images, (image) => {
-    const p = processes.find(p => !p.isRunning);
+    const p = processes.find(p => !p.isRunning());
     if (p) {
       return p.run({ ...dirs, image, threshold: threshold || 0 });
     }
@@ -117,7 +117,7 @@ const notify = (result) => {
   }
 }
 
-module.exports = (params: RegParams) => {
+export default (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, update, json, concurrency,
     ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
   const dirs = { actualDir, expectedDir, diffDir };
@@ -150,12 +150,12 @@ module.exports = (params: RegParams) => {
         previousExpectedImages: expectedImages,
         actualItems: actualImages,
         diffItems,
-        json,
+        json: json || './reg.json',
         actualDir,
         expectedDir,
         diffDir,
-        report,
-        urlPrefix,
+        report: report || '',
+        urlPrefix: urlPrefix || '',
       });
     })
     .then((result) => {

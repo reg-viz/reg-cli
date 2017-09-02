@@ -2,9 +2,9 @@
 
 /* @flow */
 
-const meow = require('meow');
-const compare = require('./');
-const log = require('./log');
+import meow from 'meow';
+import compare from './';
+import log from './log';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 
@@ -45,7 +45,7 @@ const urlPrefix = typeof cli.flags.urlPrefix === 'string' ? cli.flags.urlPrefix 
 
 const report = typeof cli.flags.report === 'string'
   ? cli.flags.report
-  : !!cli.flags.report && './report.html';
+  : !!cli.flags.report ? './report.html' : '';
 
 const threshold = Number(cli.flags.threshold) || 0;
 

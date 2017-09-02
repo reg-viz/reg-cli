@@ -1,8 +1,27 @@
-const Mustache = require('mustache');
-const fs = require('fs');
-const mkdirp = require('mkdirp');
-const path = require('path');
-const log = require('./log');
+/* @flow */
+
+import Mustache from 'mustache';
+import fs from 'fs';
+import mkdirp from 'mkdirp';
+import path from 'path';
+import log from './log';
+
+export type ReportParams = {
+  passedItems: string[];
+  failedItems: string[];
+  newItems: string[];
+  deletedItems: string[];
+  expectedItems: string[];
+  previousExpectedImages: string[];
+  actualItems: string[];
+  diffItems: string[];
+  json: string;
+  actualDir: string;
+  expectedDir: string;
+  diffDir: string;
+  report: string;
+  urlPrefix: string;
+}
 
 const loadFaviconAsDataURL = (type) => {
   const fname = path.resolve(__dirname, `../report/assets/favicon_${type}.png`);
@@ -52,8 +71,8 @@ const createHTMLReport = (params) => {
   return Mustache.render(template.toString(), view);
 };
 
-module.exports = (params) => {
-  if (params.report) {
+export default (params: ReportParams) => {
+  if (!!params.report) {
     const html = createHTMLReport(params);
     mkdirp.sync(path.dirname(params.report));
     fs.writeFileSync(params.report, html);
