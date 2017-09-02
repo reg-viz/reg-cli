@@ -54,6 +54,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
   * `-P`, `--urlPrefix` Add prefix to all image src.
   * `-T`, `--threshold` Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
+  * `-C`, `--concurrency` How many processes launches in parallel. If omitted 4.
   
 ### html report
 
