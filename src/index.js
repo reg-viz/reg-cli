@@ -117,7 +117,7 @@ const notify = (result) => {
   }
 }
 
-export default (params: RegParams) => {
+module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, update, json, concurrency,
     ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
   const dirs = { actualDir, expectedDir, diffDir };
