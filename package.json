@@ -29,7 +29,7 @@
     "chalk": "^2.0.0",
     "cli-spinner": "^0.2.6",
     "glob": "^7.1.2",
-    "img-diff-js": "^0.3.2",
+    "img-diff-js": "^0.4.0",
     "lodash": "^4.17.4",
     "make-dir": "^1.0.0",
     "md5-file": "^3.1.1",
