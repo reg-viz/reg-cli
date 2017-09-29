@@ -26,7 +26,7 @@ const cli = meow(`
   Options
     -U, --update Update expected images.(Copy \`actual images\` to \`expected images\`).
     -J, --json Specified json report path. If omitted ./reg.json.
-    -I, --ignoreChange If true, process.exit(0) called if changed items detected.
+    -I, --ignoreChange If true, error will not be thrown when image change detected.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
     -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different).
@@ -91,24 +91,26 @@ observer.on('compare', ({ type, path }) => {
     case 'fail': return log.fail(`${BALLOT_X} change  ${actualDir}${path}`);
   }
   spinner.start();
-})
+});
 
-observer.once('complete', (result) => {
+observer.once('update', () => log.success(`✨ your expected images are updated ✨`));
+
+observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems }) => {
   spinner.stop(true);
   log.info('\n');
-  if (result.failedItems.length) log.fail(`${BALLOT_X} ${result.failedItems.length} file(s) changed.`);
-  if (result.deletedItems.length) log.warn(`${MINUS} ${result.deletedItems.length} file(s) deleted.`);
-  if (result.newItems.length) log.info(`${GREEK_CROSS} ${result.newItems.length} file(s) appended.`);
-  if (result.passedItems.length) log.success(`${CHECK_MARK} ${result.passedItems.length} file(s) passed.`);
-  if (!update && result.failedItems.length > 0) {
+  if (failedItems.length) log.fail(`${BALLOT_X} ${failedItems.length} file(s) changed.`);
+  if (deletedItems.length) log.warn(`${MINUS} ${deletedItems.length} file(s) deleted.`);
+  if (newItems.length) log.info(`${GREEK_CROSS} ${newItems.length} file(s) appended.`);
+  if (passedItems.length) log.success(`${CHECK_MARK} ${passedItems.length} file(s) passed.`);
+  if (!update && failedItems.length > 0) {
     log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
     if (!ignoreChange) process.exit(1);
   }
   return process.exit(0);
-})
+});
 
 observer.once('error', (error) => {
   log.fail(error);
   process.exit(1);
-})
+});
 
