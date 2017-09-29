@@ -9,9 +9,10 @@ export default class ProcessAdaptor {
   _isRunning: boolean;
   _process: child_process$ChildProcess;
 
-  constructor() {
+  constructor(emitter) {
     this._process = fork(path.resolve(__dirname, './diff.js'));
     this._isRunning = false;
+    this._emitter = emitter;
   }
 
   isRunning() {
@@ -25,6 +26,9 @@ export default class ProcessAdaptor {
       this._process.send(params);
       this._process.once('message', (result) => {
         this._isRunning = false;
+        this._emitter.emit('compare', {
+          type: result.passed ? 'pass' : 'fail', path: result.image,
+        });
         resolve(result);
       });
     });

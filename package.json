@@ -26,14 +26,14 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",
-    "chalk": "^2.0.0",
+    "chalk": "^2.1.0",
     "cli-spinner": "^0.2.6",
+    "cross-spawn": "^5.1.0",
     "glob": "^7.1.2",
     "img-diff-js": "^0.4.0",
     "lodash": "^4.17.4",
     "make-dir": "^1.0.0",
     "md5-file": "^3.1.1",
-    "cross-spawn": "^5.1.0",
     "meow": "^3.7.0",
     "mustache": "^2.3.0"
   },
