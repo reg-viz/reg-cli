@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "ava": "^0.22.0",
-    "avaron": "^0.0.12",
+    "avaron": "^0.0.13",
     "babel-cli": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-plugin-transform-es2015-block-scoping": "^6.26.0",
