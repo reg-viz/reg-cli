@@ -25,6 +25,7 @@ const cli = meow(`
     -P, --urlPrefix Add prefix to all image src.
     -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different).
     -C, --concurrency How many processes launches in parallel. If omitted 4.
+    -A, --enableAntialias. Enable antialias. If omitted false.
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `, {
@@ -36,6 +37,7 @@ const cli = meow(`
       P: 'urlPrefix',
       T: 'threshold',
       C: 'concurrency',
+      A: 'enableAntialias',
     },
   });
 
@@ -60,6 +62,7 @@ compare({
   urlPrefix,
   threshold,
   concurrency: Number(cli.flags.concurrency) || 4,
+  enableAntialias: !!cli.flags.enableAntialias,
 })
   .then(() => process.exit(0))
   .catch(() => process.exit(1));

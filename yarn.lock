@@ -52,6 +52,10 @@
   version "7.0.43"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-7.0.43.tgz#a187e08495a075f200ca946079c914e1a5fe962c"
 
+"@types/node@^8.0.24":
+  version "8.0.31"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.0.31.tgz#d9af61093cf4bfc9f066ca34de0175012cfb0ce9"
+
 abbrev@1:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.0.tgz#d0554c2256636e2f56e7c2e5ad183f859428d81f"
@@ -394,12 +398,12 @@ ava@^0.22.0:
     unique-temp-dir "^1.0.0"
     update-notifier "^2.1.0"
 
-avaron@^0.0.12:
-  version "0.0.12"
-  resolved "https://registry.yarnpkg.com/avaron/-/avaron-0.0.12.tgz#bd37d49e6bfc2105f3e83441e33fc406d8091440"
+avaron@^0.0.13:
+  version "0.0.13"
+  resolved "https://registry.yarnpkg.com/avaron/-/avaron-0.0.13.tgz#6f57dee4cd23b1189ffbb607958d7c6ec656529d"
   dependencies:
     ava "^0.22.0"
-    electron "~1.6.2"
+    electron "^1.7.6"
     make-dir "^1.0.0"
 
 aws-sdk@^2.77.0:
@@ -2142,11 +2146,11 @@ electron@^1.4.4:
     electron-download "^3.0.1"
     extract-zip "^1.0.3"
 
-electron@~1.6.2:
-  version "1.6.12"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-1.6.12.tgz#860ddf0c659681f60b815f4b98c077fe1b6f867c"
+electron@^1.7.6:
+  version "1.8.1"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-1.8.1.tgz#19b6f39f2013e204a91a60bc3086dc7a4a07ed88"
   dependencies:
-    "@types/node" "^7.0.18"
+    "@types/node" "^8.0.24"
     electron-download "^3.0.1"
     extract-zip "^1.0.3"
 
@@ -3065,6 +3069,16 @@ ignore-by-default@^1.0.0:
 img-diff-js@^0.3.2:
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.3.2.tgz#de44efd37ab642d590b8b3a849e73692b5be6a6e"
+  dependencies:
+    decode-tiff "^0.2.0"
+    jpeg-js "^0.3.3"
+    mkdirp "^0.5.1"
+    pixelmatch "^4.0.2"
+    pngjs "^3.2.0"
+
+img-diff-js@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.4.0.tgz#eae1a6cacccc64a170ad7420e29a6dacaadad991"
   dependencies:
     decode-tiff "^0.2.0"
     jpeg-js "^0.3.3"

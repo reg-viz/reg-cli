@@ -9,6 +9,7 @@ export type DiffCreatorParams = {
   diffDir: string;
   image: string;
   threshold: number;
+  enableAntialias: boolean;
 }
 
 export type DiffResult = {
@@ -23,7 +24,7 @@ const getMD5 = (file) => new Promise((resolve, reject) => {
   })
 });
 
-const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffCreatorParams) => {
+const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold, enableAntialias }: DiffCreatorParams) => {
   return Promise.all([
     getMD5(`${actualDir}${image}`),
     getMD5(`${expectedDir}${image}`),
@@ -38,12 +39,15 @@ const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold }: DiffC
       expectedFilename: `${expectedDir}${image}`,
       diffFilename: `${diffDir}${diffImage}`,
       options: {
-        threshold,
+        threshold: 0,
+        includeAA: !enableAntialias,
       },
     })
-      .then((result) => {
+      .then(({ width, height, diffCount }) => {
         if (!process || !process.send) return;
-        const passed = result.imagesAreSame;
+        const totalPixel = width * height;
+        const ratio = diffCount / totalPixel;
+        const passed = ratio <= threshold;
         process.send({ passed, image });
       })
   })
