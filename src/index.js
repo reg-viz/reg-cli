@@ -33,6 +33,7 @@ type RegParams = {
   threshold?: number;
   disableUpdateMessage?: boolean;
   concurrency?: number;
+  enableAntialias?: boolean;
 };
 
 const spinner = new Spinner('[Processing].. %s');
@@ -62,6 +63,7 @@ const compareImages = ({
   dirs,
   threshold,
   concurrency,
+  enableAntialias,
 }): Promise<CompareResult[]> => {
   const images = actualImages.filter((actualImage) => expectedImages.includes(actualImage));
   concurrency = images.length < 20 ? 1 : concurrency || 4;
@@ -69,7 +71,7 @@ const compareImages = ({
   return bluebird.map(images, (image) => {
     const p = processes.find(p => !p.isRunning());
     if (p) {
-      return p.run({ ...dirs, image, threshold: threshold || 0 });
+      return p.run({ ...dirs, image, threshold: threshold || 0, enableAntialias });
     }
   }, { concurrency }).then((result) => {
     processes.forEach((p) => p.close());
@@ -119,7 +121,7 @@ const notify = (result) => {
 
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, update, json, concurrency,
-    ignoreChange, report, urlPrefix, threshold, disableUpdateMessage } = params;
+    ignoreChange, report, urlPrefix, threshold, disableUpdateMessage, enableAntialias } = params;
   const dirs = { actualDir, expectedDir, diffDir };
 
   spinner.start();
@@ -138,6 +140,7 @@ module.exports = (params: RegParams) => {
     dirs,
     threshold,
     concurrency,
+    enableAntialias: !!enableAntialias,
   })
     .then((result) => aggregate(result))
     .then(({ passed, failed, diffItems }) => {
