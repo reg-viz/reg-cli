@@ -50,7 +50,7 @@
     "babel-preset-stage-2": "^6.24.1",
     "copyfiles": "^1.2.0",
     "css-loader": "^0.28.2",
-    "flow-bin": "^0.54.0",
+    "flow-bin": "^0.55.0",
     "flow-typed": "^2.1.5",
     "husky": "^0.14.0",
     "nightmare": "^2.10.0",
