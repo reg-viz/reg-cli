@@ -105,7 +105,6 @@ observer.once('complete', (result) => {
     if (!ignoreChange) process.exit(1);
   }
   return process.exit(0);
-  process.exit(1);
 })
 
 observer.once('error', (error) => {

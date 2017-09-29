@@ -92,7 +92,7 @@ const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actual
 
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, json, concurrency, update,
-    report, urlPrefix, threshold, disableUpdateMessage, enableAntialias } = params;
+    report, urlPrefix, threshold, enableAntialias } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
