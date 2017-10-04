@@ -64,7 +64,7 @@
     "rimraf": "^2.6.1",
     "uglify-js": "^3.0.24",
     "uglifyjs-webpack-plugin": "^0.4.6",
-    "url-loader": "^0.5.9",
+    "url-loader": "^0.6.1",
     "vue": "^2.3.3",
     "vue-lazyload": "^1.0.3",
     "vue-loader": "~12.2.2",
