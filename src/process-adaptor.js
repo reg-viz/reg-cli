@@ -2,16 +2,19 @@
 
 import { fork } from 'child_process'; // $FlowIgnore
 import path from 'path';
+import type EventEmitter from 'events';
 import type { DiffCreatorParams, DiffResult } from './diff';
 
 export default class ProcessAdaptor {
 
   _isRunning: boolean;
   _process: child_process$ChildProcess;
+  _emitter: EventEmitter;
 
-  constructor() {
+  constructor(emitter: EventEmitter) {
     this._process = fork(path.resolve(__dirname, './diff.js'));
     this._isRunning = false;
+    this._emitter = emitter;
   }
 
   isRunning() {
@@ -25,6 +28,9 @@ export default class ProcessAdaptor {
       this._process.send(params);
       this._process.once('message', (result) => {
         this._isRunning = false;
+        this._emitter.emit('compare', {
+          type: result.passed ? 'pass' : 'fail', path: result.image,
+        });
         resolve(result);
       });
     });

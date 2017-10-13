@@ -1,24 +1,18 @@
 /* @flow */
 
-const red = '\u001b[31m';
-const green = '\u001b[32m';
-const yellow = '\u001b[33m';
-const blue = '\u001b[34m';
-const cyan = '\u001b[36m';
-const reset = '\u001b[0m';
-
+const chalk = require('chalk');
 
 export default {
   info(text: string) {
-    console.log(`${cyan}${text}${reset}`);
+    console.log(chalk.cyan(text));
   },
   warn(text: string) {
-    console.log(`${yellow}${text}${reset}`);
+    console.log(chalk.gray(text));
   },
   success(text: string) {
-    console.log(`${green}${text}${reset}`);
+    console.log(chalk.green(text));
   },
   fail(text: string) {
-    console.log(`${red}${text}${reset}`);
+    console.log(chalk.red(text));
   },
 };
