@@ -38,7 +38,7 @@
     "mustache": "^2.3.0"
   },
   "devDependencies": {
-    "ava": "^0.22.0",
+    "ava": "^0.23.0",
     "avaron": "^0.0.13",
     "babel-cli": "^6.24.1",
     "babel-loader": "^7.0.0",
