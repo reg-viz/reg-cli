@@ -5,13 +5,13 @@
                 <i :class="'ui icon ' + icon"></i>{{item.raw}}
             </a>
             <div class="captures">
-                <div v-if="diffDir" class="capture" v-on:click="open(diffDir + item.raw, actualDir + item.raw)">
+                <div v-if="diffDir" class="capture" v-on:click="openCapture(diffDir + item.raw, actualDir + item.raw)">
                     <capture-image :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
                 </div>
-                <div v-if="actualDir" class="capture" v-on:click="xopen(item.raw)">
+                <div v-if="actualDir" class="capture" v-on:click="open(item.raw, actualDir)">
                     <capture-image :src="actualDir + item.raw" :kind="'After'"></capture-image>
                 </div>
-                <div v-if="expectedDir" class="capture" v-on:click="xopen(item.raw)">
+                <div v-if="expectedDir" class="capture" v-on:click="open(item.raw, expectedDir)">
                     <capture-image :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
                 </div>
             </div>
@@ -27,10 +27,16 @@ module.exports = {
     components: {
         'capture-image': CaptureImage,
     },
-    props: ['items', 'color', 'icon', 'open', 'xopen', 'diffDir', 'actualDir', 'expectedDir', 'canBeCalculated'],
-    data: () => ({
-        // showSummary: false,
-    }),
+    props: ['items', 'color', 'icon', 'openCapture', 'openComparison', 'diffDir', 'actualDir', 'expectedDir'],
+    methods: {
+      open: function(src, dir) {
+        if (this.openComparison) {
+          this.openComparison(src);
+        } else {
+          this.openCapture(dir + src);
+        }
+      }
+    },
 }
 </script>
 

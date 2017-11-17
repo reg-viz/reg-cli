@@ -1,12 +1,9 @@
 <template>
   <div>
-    <modal name="diffMarking">
+    <modal name="comparison">
       <div class="wrapper">
         <div class="modal">
-          <div class="bg" v-if="bg">
-            <img :src="bg" />
-          </div>
-          <div class="markers-area" v-if="!bg">
+          <div class="markers-area">
             <img :src="srcActual" />
             <div v-if="matching">
               <div class="markers" v-for="m in matching.matches">
@@ -16,10 +13,7 @@
               </div>
             </div>
           </div>
-          <div class="bg" v-if="bg">
-            <img :src="bg" />
-          </div>
-          <div class="markers-area" v-if="!bg">
+          <div class="markers-area">
             <img :src="srcExpected" />
             <div v-if="matching">
               <div class="markers" v-for="m in matching.matches">
@@ -37,8 +31,8 @@
 
 <script>
 module.exports = {
-  name: 'DiffMarkingModal',
-  props: ['srcActual', 'srcExpected', 'bg', 'matching'],
+  name: 'ComparisonModal',
+  props: ['srcActual', 'srcExpected', 'matching'],
   computed: {
     w1: function () {
       return this.matching ? this.matching.images[0].width : 100;
@@ -91,12 +85,6 @@ module.exports = {
   font-size: 0;
 }
 
-.bg {
-  position: absolute;
-  opacity: 0.2;
-  pointer-events: none;
-}
-
 .modal {
   display: flex;
 }
@@ -128,7 +116,7 @@ img {
 }
 
 .rect.diff {
-  color: red;
+  color: #DB2828;
 }
 
 </style>
