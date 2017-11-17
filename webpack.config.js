@@ -2,11 +2,14 @@ const path = require('path');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
-  entry: './report/src/main.js',
+  entry: {
+    build: './report/src/main.js',
+    worker: './report/src/worker.js',
+  },
   output: {
     path: path.join(__dirname, '/report/dist'),
     publicPath: '/static',
-    filename: 'build.js'
+    filename: '[name].js'
   },
   module: {
     rules: [
