@@ -29,7 +29,6 @@ class WorkerClient {
   }
 
   requestCalc(req) {
-    console.log(req);
     const seq =  ++this._seq;
     if (this._cache[req.raw]) {
       setTimeout(() => this._emitter.emit('result', { ...this._cache[req.raw], seq }), 10);

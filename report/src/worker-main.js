@@ -3,7 +3,6 @@ const ximgdiffVersionString = require('x-img-diff-js/package.json').version;
 
 function version2number(versionString) {
   const [_, major, minor, patch] = versionString.match(/^(\d*)\.(\d*)\.(\d*)/);
-  console.log(major, minor, patch);
   return ((+major) * 10000) + ((+minor) * 100) + (+patch);
 }
 
