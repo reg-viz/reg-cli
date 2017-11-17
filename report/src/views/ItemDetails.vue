@@ -8,10 +8,10 @@
                 <div v-if="diffDir" class="capture" v-on:click="open(diffDir + item.raw, actualDir + item.raw)">
                     <capture-image :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
                 </div>
-                <div v-if="actualDir" class="capture" v-on:click="open(actualDir + item.raw)">
+                <div v-if="actualDir" class="capture" v-on:click="xopen(item.raw)">
                     <capture-image :src="actualDir + item.raw" :kind="'After'"></capture-image>
                 </div>
-                <div v-if="expectedDir" class="capture" v-on:click="open(expectedDir + item.raw)">
+                <div v-if="expectedDir" class="capture" v-on:click="xopen(item.raw)">
                     <capture-image :src="expectedDir + item.raw" :kind="'Before'"></capture-image>
                 </div>
             </div>
@@ -27,7 +27,7 @@ module.exports = {
     components: {
         'capture-image': CaptureImage,
     },
-    props: ['items', 'color', 'icon', 'open', 'diffDir', 'actualDir', 'expectedDir'],
+    props: ['items', 'color', 'icon', 'open', 'xopen', 'diffDir', 'actualDir', 'expectedDir', 'canBeCalculated'],
     data: () => ({
         // showSummary: false,
     }),

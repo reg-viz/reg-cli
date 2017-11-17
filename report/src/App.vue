@@ -43,7 +43,7 @@
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
       </h3>
-      <item-details class="items" :icon="'remove'" :color="'red'" :items="failedItems" :open="open" :diffDir="diffDir" :actualDir="actualDir" :expectedDir="expectedDir">
+      <item-details class="items" :icon="'remove'" :color="'red'" :items="failedItems" :open="open" :xopen="xopen" :diffDir="diffDir" :actualDir="actualDir" :expectedDir="expectedDir" :canBeCalculated="true">
       </item-details>
   
       <h3 class="ui header items-header" v-if="newItems.length">
@@ -70,13 +70,16 @@
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
+    <diff-marking-modal :srcActual="selectedSrcActual" :srcExpected="selectedSrcExpected" :matching="selectedMatchingResult" :bg="modalBgSrc"></diff-marking-modal>
   </div>
 </template>
 
 <script>
 const SEARCH_DEBOUNCE_MSEC = 50;
 const debounce = require('lodash.debounce');
+const workerClient = require('./worker-client').default;
 const CaptureModal = require('./views/CaptureModal.vue');
+const DiffMarkingModal = require('./views/DiffMarkingModal.vue');
 const ItemSummaries = require('./views/ItemSummaries.vue');
 const ItemDetails = require('./views/ItemDetails.vue');
 
@@ -98,6 +101,7 @@ module.exports = {
   name: 'App',
   components: {
     'capture-modal': CaptureModal,
+    'diff-marking-modal': DiffMarkingModal,
     'item-summaries': ItemSummaries,
     'item-details': ItemDetails,
   },
@@ -114,7 +118,20 @@ module.exports = {
     passedItems: searchItems('passedItems', getSearchParams()),
     newItems: searchItems('newItems', getSearchParams()),
     deletedItems: searchItems('deletedItems', getSearchParams()),
+    lastRequestSequence: null,
+    selectedRaw: "",
+    selectedSrcActual: "",
+    selectedSrcExpected: "",
+    selectedMatchingResult: null,
   }),
+  created: function () {
+    workerClient.subscrive(data => {
+      if (this.lastRequestSequence === data.seq && this.isModalOpen) {
+        console.log(data, this.lastRequestSequence);
+        this.selectedMatchingResult = data.result;
+      }
+    });
+  },
   computed: {
     isNotFound: function () {
       return this.failedItems.length === 0 &&
@@ -135,6 +152,9 @@ module.exports = {
     close() {
       this.isModalOpen = false;
       this.$modal.pop();
+      this.selectedSrcActual = "";
+      this.selectedSrcExpected = "";
+      this.selectedMatchingResult = null;
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
       }, 400);
@@ -149,6 +169,20 @@ module.exports = {
     filter: debounce(function(search) {
       ['failedItems', 'passedItems', 'newItems', 'deletedItems'].forEach(type => this[type] = searchItems(type, search));
     }, SEARCH_DEBOUNCE_MSEC),
+
+    xopen(src) {
+      this.selectedRaw = src;
+      this.selectedSrcActual = this.actualDir + src;
+      this.selectedSrcExpected = this.expectedDir + src;
+      this.lastRequestSequence = workerClient.requestCalc({
+        raw: src,
+        actualSrc: this.selectedSrcActual,
+        expectedSrc: this.selectedSrcExpected
+      });
+      this.isModalOpen = true;
+      this.scrollTop = window.pageYOffset;
+      this.$modal.push('diffMarking')
+    },
   }
 }
 </script>
