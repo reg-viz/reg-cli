@@ -1,4 +1,4 @@
-const { ModuleClass } = require('./worker/module');
+const { ModuleClass } = require('./detector-wrapper/module');
 const ximgdiffVersionString = require('x-img-diff-js/package.json').version;
 
 function version2number(versionString) {

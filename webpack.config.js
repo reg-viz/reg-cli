@@ -4,7 +4,7 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 module.exports = {
   entry: {
     build: './report/src/main.js',
-    worker: './report/src/worker.js',
+    worker: './report/src/worker-main.js',
   },
   output: {
     path: path.join(__dirname, '/report/dist'),
