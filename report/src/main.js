@@ -21,4 +21,5 @@ new Vue({
   render: h => h(App),
 });
 
-workerClient.start();
+const ximgdiffConfig = window['__reg__'].ximgdiffConfig || { enabled: false };
+workerClient.start(ximgdiffConfig);

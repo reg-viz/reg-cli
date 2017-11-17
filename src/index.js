@@ -30,6 +30,7 @@ type RegParams = {
   threshold?: number;
   concurrency?: number;
   enableAntialias?: boolean;
+  enableClientAdditionalDetection?: boolean;
 };
 
 const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
@@ -92,7 +93,7 @@ const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actual
 
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, json, concurrency, update,
-    report, urlPrefix, threshold, enableAntialias } = params;
+    report, urlPrefix, threshold, enableAntialias, enableClientAdditionalDetection } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
@@ -130,6 +131,7 @@ module.exports = (params: RegParams) => {
         diffDir,
         report: report || '',
         urlPrefix: urlPrefix || '',
+        enableClientAdditionalDetection: !!enableClientAdditionalDetection,
       });
     })
     .then((result) => {

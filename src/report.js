@@ -21,6 +21,7 @@ export type ReportParams = {
   diffDir: string;
   report: string;
   urlPrefix: string;
+  enableClientAdditionalDetection: boolean;
 }
 
 const loadFaviconAsDataURL = (type) => {
@@ -61,6 +62,10 @@ const createHTMLReport = (params) => {
     actualDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
     expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
     diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
+    ximgdiffConfig: {
+      enabled: params.enableClientAdditionalDetection,
+      workerUrl: `${params.urlPrefix}worker.js`,
+    },
   };
   const faviconType = (json.hasFailed || json.hasNew || json.hasDeleted) ? 'failure' : 'success';
   const view = {
@@ -71,11 +76,26 @@ const createHTMLReport = (params) => {
   return Mustache.render(template.toString(), view);
 };
 
+function createXimdiffWorker(params: ReportParams) {
+  const file = path.join(__dirname, '../template/worker_pre.js');
+  const moduleJs = fs.readFileSync(path.join(__dirname, '../report/dist/worker.js'), 'utf8');
+  const wasmLoaderJs = fs.readFileSync(path.join(__dirname, '../report/assets/cv-wasm_browser.js'), 'utf8');
+  const template = fs.readFileSync(file);
+  const ximgdiffWasmUrl = `${params.urlPrefix}detector.wasm`;
+  return Mustache.render(template.toString(), { ximgdiffWasmUrl }) + '\n' + moduleJs + '\n' + wasmLoaderJs;
+}
+
 export default (params: ReportParams) => {
   if (!!params.report) {
     const html = createHTMLReport(params);
     mkdirp.sync(path.dirname(params.report));
     fs.writeFileSync(params.report, html);
+    if (!!params.enableClientAdditionalDetection) {
+      const workerjs = createXimdiffWorker(params);
+      fs.writeFileSync(path.resolve(path.dirname(params.report), 'worker.js'), workerjs);
+      const wasmBuf = fs.readFileSync(path.resolve(__dirname, '../report/assets/cv-wasm_browser.wasm'));
+      fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
+    }
   }
   const json = createJSONReport(params);
   mkdirp.sync(path.dirname(params.json));

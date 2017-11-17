@@ -4,14 +4,15 @@ class ModuleClass {
   constructor(opt){
     this._initCb = opt.init;
     this._version = opt.version;
+    this._wasmUrl = opt.wasmUrl;
   }
 
   locateFile(baseName) {
-    return `/dist/${baseName}`;
+    return self.location.pathname.replace(/\/[^\/]*$/, '/') + baseName;
   }
 
   instantiateWasm(imports, callback) {
-    instantiateCachedURL(this._version, this.locateFile('cv-wasm_browser.wasm'), imports)
+    instantiateCachedURL(this._version, this._wasmUrl, imports)
       .then(instance => callback(instance));
     return { };
   }

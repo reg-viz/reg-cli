@@ -1,6 +1,11 @@
-const version = 100000; // TODO convert from package.json version
-
 const { ModuleClass } = require('./worker/module');
+const ximgdiffVersionString = require('x-img-diff-js/package.json').version;
+
+function version2number(versionString) {
+  const [_, major, minor, patch] = versionString.match(/^(\d*)\.(\d*)\.(\d*)/);
+  console.log(major, minor, patch);
+  return ((+major) * 10000) + ((+minor) * 100) + (+patch);
+}
 
 let loaded = false;
 let lastRequestEvent = null;
@@ -22,7 +27,8 @@ function calc(ev) {
 }
 
 self.Module = new ModuleClass({
-  version,
+  version: version2number(ximgdiffVersionString),
+  wasmUrl: self.wasmUrl,
   init: () => {
     loaded = true;
     if (lastRequestEvent) calc(lastRequestEvent);
@@ -43,5 +49,3 @@ self.addEventListener('message', (ev) => {
     default:
   }
 });
-
-importScripts('/dist/cv-wasm_browser.js'); // TODO concatnate 

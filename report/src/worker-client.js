@@ -59,8 +59,13 @@ class WorkerClient {
     this._emitter.emit('result', data);
   }
 
-  start() {
-    this.worker = new Worker(window['__ximgdiff_worker_url']);
+  start(config) {
+    this._config = config;
+    const { enabled, workerUrl } = config;
+    if (!enabled || !workerUrl) {
+      return;
+    }
+    this.worker = new Worker(workerUrl);
     this.worker.addEventListener('message', (ev) => {
       const meta = ev.data;
       switch (meta.type) {
