@@ -32,7 +32,7 @@ class WorkerClient {
     console.log(req);
     const seq =  ++this._seq;
     if (this._cache[req.raw]) {
-      setTimeout(() => this._emitter.emit('result', this._cache[req.raw]), 10);
+      setTimeout(() => this._emitter.emit('result', { ...this._cache[req.raw], seq }), 10);
       return seq;
     }
     Promise.all([
