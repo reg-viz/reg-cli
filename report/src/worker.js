@@ -1,4 +1,5 @@
 const version = 100000; // TODO convert from package.json version
+
 const { ModuleClass } = require('./worker/module');
 
 let loaded = false;
