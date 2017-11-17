@@ -11,6 +11,9 @@
                   <div class="rect diff" v-bind:style="{ left: sx1(r), top: sy1(r), width: sw1(r), height: sh1(r) }"></div>
                 </div>
               </div>
+              <div v-for="r in matching.strayingRects[0]">
+                <div class="rect straying" v-bind:style="{ left: sx1(r), top: sy1(r), width: sw1(r), height: sh1(r) }"></div>
+              </div>
             </div>
           </div>
           <div class="markers-area">
@@ -20,6 +23,9 @@
                 <div v-for="r in m[1].diffMarkers">
                   <div class="rect diff" v-bind:style="{ left: sx2(r), top: sy2(r), width: sw2(r), height: sh2(r) }"></div>
                 </div>
+              </div>
+              <div v-for="r in matching.strayingRects[1]">
+                <div class="rect straying" v-bind:style="{ left: sx2(r), top: sy2(r), width: sw2(r), height: sh2(r) }"></div>
               </div>
             </div>
           </div>
@@ -117,6 +123,10 @@ img {
 
 .rect.diff {
   color: #DB2828;
+}
+
+.rect.straying {
+  color: #B413EC;
 }
 
 </style>
