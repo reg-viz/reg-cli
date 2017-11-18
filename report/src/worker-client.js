@@ -49,7 +49,7 @@ class WorkerClient {
     return seq;
   }
 
-  subscrive(cb) {
+  subscribe(cb) {
     return this._emitter.on('result', cb);
   }
 
@@ -79,5 +79,5 @@ class WorkerClient {
   }
 }
 
-const clinet = new WorkerClient();
-export default clinet;
+const client = new WorkerClient();
+export default client;

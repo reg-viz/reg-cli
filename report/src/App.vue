@@ -125,7 +125,7 @@ module.exports = {
     selectedMatchingResult: null,
   }),
   created: function () {
-    workerClient.subscrive(data => {
+    workerClient.subscribe(data => {
       if (this.lastRequestSequence === data.seq && this.isModalOpen) {
         this.selectedMatchingResult = data.result;
       }

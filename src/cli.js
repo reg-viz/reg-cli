@@ -32,7 +32,7 @@ const cli = meow(`
     -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different).
     -C, --concurrency How many processes launches in parallel. If omitted 4.
     -A, --enableAntialias. Enable antialias. If omitted false.
-    -X, --additionalDetection. Enable additional deffirence detection(highly experimental). Select "none" or "client" (default: "none").
+    -X, --additionalDetection. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `, {
