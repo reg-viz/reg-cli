@@ -3,9 +3,6 @@
     <modal name="capture" disable-backdrop>
       <div class="wrapper">
         <div class="modal">
-          <div class="bg" v-if="bg">
-            <img :src="bg" />
-          </div>
           <img :src="src" />
         </div>
       </div>
@@ -16,7 +13,7 @@
 <script>
 module.exports = {
   name: 'CaptureModal',
-  props: ['src', 'bg'],
+  props: ['src'],
 }
 </script>
 

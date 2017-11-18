@@ -6,7 +6,7 @@
             </a>
             <div class="captures">
                 <div v-if="diffDir" class="capture" v-on:click="openCapture(diffDir + item.raw, actualDir + item.raw)">
-                    <capture-image :src="diffDir + item.raw" :bg="actualDir + item.raw" :kind="'Diff'"></capture-image>
+                    <capture-image :src="diffDir + item.raw" :kind="'Diff'"></capture-image>
                 </div>
                 <div v-if="actualDir" class="capture" v-on:click="open(item.raw, actualDir)">
                     <capture-image :src="actualDir + item.raw" :kind="'After'"></capture-image>
