@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import VueLazyload from 'vue-lazyload';
-import VueThinModal from 'vue-thin-modal'
+import VueThinModal from 'vue-thin-modal';
+import workerClient from './worker-client';
 
 const App = require('./App.vue');
 
@@ -19,3 +20,6 @@ new Vue({
   el: '#app',
   render: h => h(App),
 });
+
+const ximgdiffConfig = window['__reg__'].ximgdiffConfig || { enabled: false };
+workerClient.start(ximgdiffConfig);

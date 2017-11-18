@@ -43,26 +43,26 @@
       <h3 class="ui header items-header red" v-if="failedItems.length">
         Changed items
       </h3>
-      <item-details class="items" :icon="'remove'" :color="'red'" :items="failedItems" :open="open" :diffDir="diffDir" :actualDir="actualDir" :expectedDir="expectedDir">
+      <item-details class="items" :icon="'remove'" :color="'red'" :items="failedItems" :openCapture="openCapture" :openComparison="openComparison" :diffDir="diffDir" :actualDir="actualDir" :expectedDir="expectedDir">
       </item-details>
   
       <h3 class="ui header items-header" v-if="newItems.length">
         New items
       </h3>
   
-      <item-details class="items" :icon="'file outline'" :color="'grey'" :items="newItems" :open="open" :actualDir="actualDir">
+      <item-details class="items" :icon="'file outline'" :color="'grey'" :items="newItems" :openCapture="openCapture" :actualDir="actualDir">
       </item-details>
   
       <h3 class="ui header items-header" v-if="deletedItems.length">
         Deleted items
       </h3>
-      <item-details class="items" :icon="'trash outline'" :color="'grey'" :items="deletedItems" :open="open" :expectedDir="expectedDir">
+      <item-details class="items" :icon="'trash outline'" :color="'grey'" :items="deletedItems" :openCapture="openCapture" :expectedDir="expectedDir">
       </item-details>
   
       <h3 class="ui header items-header green" v-if="passedItems.length">
         Passed items
       </h3>
-      <item-details class="items" :icon="'checkmark'" :color="'green'" :items="passedItems" :open="open" :actualDir="actualDir">
+      <item-details class="items" :icon="'checkmark'" :color="'green'" :items="passedItems" :openCapture="openCapture" :actualDir="actualDir">
       </item-details>
     </div>
     <div class="footer">
@@ -70,13 +70,16 @@
     </div>
     <capture-modal :src="modalSrc" :bg="modalBgSrc">
     </capture-modal>
+    <comparison-modal :src="modalSrc" :srcActual="selectedSrcActual" :srcExpected="selectedSrcExpected" :matching="selectedMatchingResult" :bg="modalBgSrc"></comparison-modal>
   </div>
 </template>
 
 <script>
 const SEARCH_DEBOUNCE_MSEC = 50;
 const debounce = require('lodash.debounce');
+const workerClient = require('./worker-client').default;
 const CaptureModal = require('./views/CaptureModal.vue');
+const ComparisonModal = require('./views/ComparisonModal.vue');
 const ItemSummaries = require('./views/ItemSummaries.vue');
 const ItemDetails = require('./views/ItemDetails.vue');
 
@@ -98,6 +101,7 @@ module.exports = {
   name: 'App',
   components: {
     'capture-modal': CaptureModal,
+    'comparison-modal': ComparisonModal,
     'item-summaries': ItemSummaries,
     'item-details': ItemDetails,
   },
@@ -114,7 +118,19 @@ module.exports = {
     passedItems: searchItems('passedItems', getSearchParams()),
     newItems: searchItems('newItems', getSearchParams()),
     deletedItems: searchItems('deletedItems', getSearchParams()),
+    lastRequestSequence: null,
+    selectedRaw: "",
+    selectedSrcActual: "",
+    selectedSrcExpected: "",
+    selectedMatchingResult: null,
   }),
+  created: function () {
+    workerClient.subscribe(data => {
+      if (this.lastRequestSequence === data.seq && this.isModalOpen) {
+        this.selectedMatchingResult = data.result;
+      }
+    });
+  },
   computed: {
     isNotFound: function () {
       return this.failedItems.length === 0 &&
@@ -124,7 +140,7 @@ module.exports = {
     },
   },
   methods: {
-    open(src, bg) {
+    openCapture(src, bg) {
       this.modalSrc = src;
       this.modalBgSrc = bg;
       this.isModalOpen = true;
@@ -132,9 +148,26 @@ module.exports = {
       this.$modal.push('capture')
     },
 
+    openComparison(src) {
+      this.modalSrc = src;
+      this.selectedSrcActual = this.actualDir + src;
+      this.selectedSrcExpected = this.expectedDir + src;
+      this.lastRequestSequence = workerClient.requestCalc({
+        raw: src,
+        actualSrc: this.selectedSrcActual,
+        expectedSrc: this.selectedSrcExpected
+      });
+      this.isModalOpen = true;
+      this.scrollTop = window.pageYOffset;
+      this.$modal.push('comparison')
+    },
+
     close() {
       this.isModalOpen = false;
       this.$modal.pop();
+      this.selectedSrcActual = "";
+      this.selectedSrcExpected = "";
+      this.selectedMatchingResult = null;
       setTimeout(() => {
         window.scrollTo(0, this.scrollTop);
       }, 400);

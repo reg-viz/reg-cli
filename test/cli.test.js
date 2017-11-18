@@ -143,6 +143,28 @@ test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when
   }
 });
 
+test.serial('should generate worker js and wasm files under `${WORKSPACE}/dist` when `-R -X` option enabled', async t => {
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-R`, `${WORKSPACE}/dist/report.html`,
+      `-X`, 'client',
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    t.truthy(fs.existsSync(`${WORKSPACE}/dist/worker.js`));
+    t.truthy(fs.existsSync(`${WORKSPACE}/dist/detector.wasm`));
+  } catch (e) {
+    console.error(e);
+    t.fail();
+  }
+});
+
 test.serial('should generate fail report', async t => {
   await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
