@@ -34,7 +34,8 @@ jobs:
           command: yarn
       - run:
           name: Build
-          command: yarn run build
+          command: |
+            yarn run build          
       - run:
           name: Setup git
           command: |
@@ -64,7 +65,8 @@ jobs:
           command: yarn
       - run:
           name: Build
-          command: yarn run build          
+          command: |
+            yarn run build          
       - run:
           name: Setup git
           command: |
