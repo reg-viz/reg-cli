@@ -45,7 +45,6 @@ jobs:
           name: Login npm
           command: |
             echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
-            echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.yarnrc
             npm whoami
       - run:
           name: Publish to npm
@@ -53,7 +52,8 @@ jobs:
             git reset --hard HEAD
             yarn run copy:ximgdiff
             VER=`npm version patch`
-            yarn publish --new-version $VER
+            yarn pack
+            npm publish reg-cli-$VER.tgz --unsafe-perm   
             git push origin master
             git push --tags
   minor_release:
@@ -79,7 +79,6 @@ jobs:
           name: Login npm
           command: |
             echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
-            echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.yarnrc
             npm whoami
       - run:
           name: Publish to npm
@@ -87,7 +86,8 @@ jobs:
             git reset --hard HEAD
             yarn run copy:ximgdiff
             VER=`npm version minor`
-            yarn publish --new-version $VER
+            yarn pack
+            npm publish reg-cli-$VER.tgz --unsafe-perm 
             git push origin master
             git push --tags
 workflows:
