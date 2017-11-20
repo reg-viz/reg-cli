@@ -48,7 +48,6 @@ jobs:
       - run:
           name: Publish to npm
           command: |
-            git reset --hard HEAD
             npm version patch
             npm publish           
             git push origin master
@@ -79,7 +78,6 @@ jobs:
       - run:
           name: Publish to npm
           command: |
-            git reset --hard HEAD
             npm version minor
             npm publish
             git push origin master
