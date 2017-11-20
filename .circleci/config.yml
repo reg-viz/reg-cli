@@ -51,8 +51,8 @@ jobs:
           command: |
             git reset --hard HEAD
             yarn run copy:ximgdiff
-            npm version patch
-            yarn publish
+            VER=npm version patch
+            yarn publish --new-version $VER
             git push origin master
             git push --tags
   minor_release:
@@ -84,8 +84,8 @@ jobs:
           command: |
             git reset --hard HEAD
             yarn run copy:ximgdiff
-            npm version minor
-            yarn publish
+            VER=npm version minor
+            yarn publish --new-version $VER
             git push origin master
             git push --tags
 workflows:
