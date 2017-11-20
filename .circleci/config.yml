@@ -36,7 +36,6 @@ jobs:
           name: Build
           command: |
             yarn run build          
-            yarn run copy:ximgdiff
       - run:
           name: Setup git
           command: |
@@ -51,8 +50,9 @@ jobs:
           name: Publish to npm
           command: |
             git reset --hard HEAD
+            yarn run copy:ximgdiff
             npm version patch
-            npm publish           
+            npm publish --unsafe-perm          
             git push origin master
             git push --tags
   minor_release:
@@ -69,7 +69,6 @@ jobs:
           name: Build
           command: |
             yarn run build          
-            yarn run copy:ximgdiff
       - run:
           name: Setup git
           command: |
@@ -84,8 +83,9 @@ jobs:
           name: Publish to npm
           command: |
             git reset --hard HEAD
+            yarn run copy:ximgdiff
             npm version minor
-            npm publish
+            npm publish --unsafe-perm
             git push origin master
             git push --tags
 workflows:
