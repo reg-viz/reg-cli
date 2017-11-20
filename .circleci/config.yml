@@ -52,7 +52,7 @@ jobs:
             git reset --hard HEAD
             yarn run copy:ximgdiff
             npm version patch
-            npm publish --unsafe-perm          
+            yarn publish
             git push origin master
             git push --tags
   minor_release:
@@ -85,7 +85,7 @@ jobs:
             git reset --hard HEAD
             yarn run copy:ximgdiff
             npm version minor
-            npm publish --unsafe-perm
+            yarn publish
             git push origin master
             git push --tags
 workflows:
