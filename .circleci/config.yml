@@ -49,11 +49,8 @@ jobs:
       - run:
           name: Publish to npm
           command: |
-            git reset --hard HEAD
-            yarn run copy:ximgdiff
-            VER=`npm version patch`
-            yarn pack
-            npm publish reg-cli-$VER.tgz --unsafe-perm   
+            npm version patch
+            npm publish           
             git push origin master
             git push --tags
   minor_release:
@@ -83,11 +80,8 @@ jobs:
       - run:
           name: Publish to npm
           command: |
-            git reset --hard HEAD
-            yarn run copy:ximgdiff
-            VER=`npm version minor`
-            yarn pack
-            npm publish reg-cli-$VER.tgz --unsafe-perm 
+            npm version minor
+            npm publish
             git push origin master
             git push --tags
 workflows:
