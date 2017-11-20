@@ -45,6 +45,7 @@ jobs:
           name: Login npm
           command: |
             echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
+            echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.yarnrc
             npm whoami
       - run:
           name: Publish to npm
@@ -78,6 +79,7 @@ jobs:
           name: Login npm
           command: |
             echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.npmrc
+            echo "//registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}" > ~/.yarnrc
             npm whoami
       - run:
           name: Publish to npm
