@@ -11,9 +11,17 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - npm-cache-{{ checksum "yarn.lock" }}-{{ checksum "package.json" }}
+            - npm-cache
       - run:
           name: Install dependencies
-          command: yarn
+          command: yarn install --pure-lockfile
+      - save_cache:
+          key: npm-cache-{{ checksum "yarn.lock" }}-{{ checksum "package.json" }}
+          paths:
+            - node_modules
       - run:
           name: Test
           command: |
@@ -31,7 +39,11 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          command: yarn
+          command: yarn install --pure-lockfile
+      - restore_cache:
+          keys:
+            - npm-cache-{{ checksum "yarn.lock" }}-{{ checksum "package.json" }}
+            - npm-cache
       - run:
           name: Build
           command: |
@@ -60,9 +72,13 @@ jobs:
           fingerprints:
             - "df:c6:25:54:15:dd:05:63:b5:e0:c3:ae:56:6b:8b:95"
       - checkout
+      - restore_cache:
+          keys:
+            - npm-cache-{{ checksum "yarn.lock" }}-{{ checksum "package.json" }}
+            - npm-cache
       - run:
           name: Install dependencies
-          command: yarn
+          command: yarn install --pure-lockfile
       - run:
           name: Build
           command: |
