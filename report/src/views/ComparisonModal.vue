@@ -43,14 +43,11 @@ module.exports = {
     w1: function () {
       return this.matching ? this.matching.images[0].width : 100;
     },
-    h1: function () {
-      return this.matching ? this.matching.images[0].height: 100;
-    },
     w2: function () {
       return this.matching ? this.matching.images[1].width : 100;
     },
-    h2: function () {
-      return this.matching ? this.matching.images[1].height: 100;
+    h: function () {
+      return this.matching ? Math.max(this.matching.images[0].height, this.matching.images[1].height) : 100;
     },
   },
   methods: {
@@ -58,25 +55,25 @@ module.exports = {
       return `${rect.x / this.w1 * 100}%`;
     },
     sy1: function(rect) {
-      return `${rect.y / this.h1 * 100}%`;
+      return `${rect.y / this.h * 100}%`;
     },
     sw1: function(rect) {
       return `${rect.width / this.w1 * 100}%`;
     },
     sh1: function(rect) {
-      return `${rect.height / this.h1 * 100}%`;
+      return `${rect.height / this.h * 100}%`;
     },
     sx2: function(rect) {
       return `${rect.x / this.w2 * 100}%`;
     },
     sy2: function(rect) {
-      return `${rect.y / this.h2 * 100}%`;
+      return `${rect.y / this.h * 100}%`;
     },
     sw2: function(rect) {
       return `${rect.width / this.w2 * 100}%`;
     },
     sh2: function(rect) {
-      return `${rect.height / this.h2 * 100}%`;
+      return `${rect.height / this.h * 100}%`;
     },
   }
 }
@@ -105,6 +102,7 @@ img {
 
 .markers-area {
   position: relative;
+  line-height: 0;
 }
 
 .markers {
