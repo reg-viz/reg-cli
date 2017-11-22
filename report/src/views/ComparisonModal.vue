@@ -7,6 +7,7 @@
             <img :src="srcActual" />
             <div v-if="matching">
               <div class="markers" v-for="m in matching.matches">
+                <div class="rect bounding" v-bind:style="{ left: sx1(m[0].bounding), top: sy1(m[0].bounding), width: sw1(m[0].bounding), height: sh1(m[0].bounding) }"></div>
                 <div v-for="r in m[0].diffMarkers">
                   <div class="rect diff" v-bind:style="{ left: sx1(r), top: sy1(r), width: sw1(r), height: sh1(r) }"></div>
                 </div>
@@ -20,6 +21,7 @@
             <img :src="srcExpected" />
             <div v-if="matching">
               <div class="markers" v-for="m in matching.matches">
+                <div class="rect bounding" v-bind:style="{ left: sx1(m[1].bounding), top: sy1(m[1].bounding), width: sw1(m[1].bounding), height: sh1(m[1].bounding) }"></div>
                 <div v-for="r in m[1].diffMarkers">
                   <div class="rect diff" v-bind:style="{ left: sx2(r), top: sy2(r), width: sw2(r), height: sh2(r) }"></div>
                 </div>
@@ -119,6 +121,11 @@ img {
   outline: 2px solid currentColor;
 }
 
+.rect.bounding {
+  outline-width: 1px;
+  color: #4183C4;
+}
+
 .rect.diff {
   color: #DB2828;
 }
@@ -126,5 +133,4 @@ img {
 .rect.straying {
   color: #B413EC;
 }
-
 </style>

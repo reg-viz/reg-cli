@@ -6371,9 +6371,9 @@ write-pkg@^3.1.0:
     sort-keys "^2.0.0"
     write-json-file "^2.2.0"
 
-x-img-diff-js@^0.1.5:
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/x-img-diff-js/-/x-img-diff-js-0.2.1.tgz#c22354b1d25cae48213568a75eaac1d017d4e482"
+x-img-diff-js@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/x-img-diff-js/-/x-img-diff-js-0.2.2.tgz#3d504348ea8959b98a10330a6c36a773a9e0a2f3"
 
 xdg-basedir@^3.0.0:
   version "3.0.0"
