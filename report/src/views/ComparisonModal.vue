@@ -118,7 +118,7 @@ img {
 
 .rect {
   position: absolute;
-  border: 2px solid currentColor;
+  outline: 2px solid currentColor;
 }
 
 .rect.bounding {
