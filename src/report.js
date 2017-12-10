@@ -1,6 +1,7 @@
 /* @flow */
 
 import Mustache from 'mustache';
+import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
@@ -79,7 +80,7 @@ const createHTMLReport = (params) => {
 function createXimdiffWorker(params: ReportParams) {
   const file = path.join(__dirname, '../template/worker_pre.js');
   const moduleJs = fs.readFileSync(path.join(__dirname, '../report/dist/worker.js'), 'utf8');
-  const wasmLoaderJs = fs.readFileSync(path.join(__dirname, '../report/assets/cv-wasm_browser.js'), 'utf8');
+  const wasmLoaderJs = fs.readFileSync(detectDiff.getBrowserJsPath(), 'utf8');
   const template = fs.readFileSync(file);
   const ximgdiffWasmUrl = `${params.urlPrefix}detector.wasm`;
   return Mustache.render(template.toString(), { ximgdiffWasmUrl }) + '\n' + moduleJs + '\n' + wasmLoaderJs;
@@ -93,7 +94,7 @@ export default (params: ReportParams) => {
     if (!!params.enableClientAdditionalDetection) {
       const workerjs = createXimdiffWorker(params);
       fs.writeFileSync(path.resolve(path.dirname(params.report), 'worker.js'), workerjs);
-      const wasmBuf = fs.readFileSync(path.resolve(__dirname, '../report/assets/cv-wasm_browser.wasm'));
+      const wasmBuf = fs.readFileSync(detectDiff.getBrowserWasmPath());
       fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
     }
   }
