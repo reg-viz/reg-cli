@@ -58,7 +58,7 @@
     "husky": "^0.14.0",
     "nightmare": "^2.10.0",
     "reg-keygen-git-hash-plugin": "^0.5.1",
-    "reg-notify-github-plugin": "^0.5.1",
+    "reg-notify-github-plugin": "^0.6.0",
     "reg-publish-s3-plugin": "^0.5.1",
     "reg-suit": "^0.6.0",
     "require-extension-hooks": "^0.3.0",
