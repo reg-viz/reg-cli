@@ -8,8 +8,8 @@
     "watch": "babel src --watch -d dist",
     "build": "npm run build:cli && npm run build:report",
     "build:cli": "babel src -d dist",
-    "build:report": "npm run copy:ximgdiff && webpack",
-    "dev:report": "webpack-dev-server --hot --inline --open",
+    "build:report": "webpack",
+    "dev:report": "npm run copy:ximgdiff && webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
     "prepublish": "npm run build",
@@ -38,7 +38,7 @@
     "md5-file": "^3.1.1",
     "meow": "^3.7.0",
     "mustache": "^2.3.0",
-    "x-img-diff-js": "^0.2.2"
+    "x-img-diff-js": "0.3.4"
   },
   "devDependencies": {
     "ava": "^0.22.0",
