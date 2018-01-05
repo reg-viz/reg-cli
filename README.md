@@ -1,5 +1,5 @@
-   
-      
+
+
 <p align="center"><img src ="https://github.com/reg-viz/reg-cli/blob/master/logo.png?raw=true" /></p>
 
 <p align="center">Visual regression test tool with html reporter.</p>
@@ -11,11 +11,11 @@
 <a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
 <img src="https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true" alt="Build Status" /></a>
 <a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a> 
+<img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a>
 <a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a> 
+<img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a>
 <a href="https://greenkeeper.io/">
-<img src="https://badges.greenkeeper.io/reg-viz/reg-cli.svg" /></a> 
+<img src="https://badges.greenkeeper.io/reg-viz/reg-cli.svg" /></a>
 </p>
 
 ## Table of Contents
@@ -27,13 +27,13 @@
 - [License](#license)
 
 ## Installation
- 
+
 ### Requirements
- 
+
  - Node.js v6+
- 
-`reg-cli` support Node.js v6+ 
- 
+
+`reg-cli` support Node.js v6+
+
 ``` sh
 $ npm i -D reg-cli
 ```
@@ -53,14 +53,16 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-J`, `--json` Specified json report path. If omitted `./reg.json`
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
   * `-P`, `--urlPrefix` Add prefix to all image src.
+  * `-TR`, `--thresholdRate` Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
+  * `-TP`, `--thresholdPixel` Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over `thresholdRate`.
   * `-T`, `--threshold` Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
   * `-C`, `--concurrency` How many processes launches in parallel. If omitted 4.
   * `-A`, `--enableAntialias` Enable antialias. If omitted false.
   * `-X`, `--additionalDetection`. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
-  
+
 ### html report
 
-If `-R` option set, output html report to specfied directory.  
+If `-R` option set, output html report to specified directory.
 https://reg-viz.github.io/reg-cli/
 
 ![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/screenshot.png?raw=true)
@@ -68,7 +70,7 @@ https://reg-viz.github.io/reg-cli/
 ## Test
 
 ``` sh
-$ npm t 
+$ npm t
 ```
 
 ## Contribute
