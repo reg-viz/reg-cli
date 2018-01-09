@@ -1,5 +1,6 @@
 /* @flow */
 
+// $FlowIgnore
 import Mustache from 'mustache';
 import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
