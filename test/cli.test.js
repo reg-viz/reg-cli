@@ -4,6 +4,7 @@ import path from 'path';
 import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
+// $FlowIgnore
 import spawn from 'cross-spawn';
 
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';

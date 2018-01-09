@@ -7,8 +7,9 @@ import path from 'path';
 import { range } from 'lodash';
 import log from './log';
 import createReport from './report';
-import bluebird from 'bluebird'; // $FlowIgnore
-import { EventEmitter } from 'events';
+// $FlowIgnore
+import bluebird from 'bluebird';
+import EventEmitter from 'events';
 import ProcessAdaptor from './process-adaptor';
 import type { DiffCreatorParams } from './diff';
 

@@ -1,5 +1,5 @@
-// flow-typed signature: 43c4544830c615dbbf641316eedc12f1
-// flow-typed version: b43dff3e0e/meow_v3.x.x/flow_>=v0.25.x
+// flow-typed signature: f31bb79b260c49b95de5971e0bcd777d
+// flow-typed version: 2c78418fff/meow_v3.x.x/flow_>=v0.25.x
 
 declare module 'meow' {
   declare type options = string | Array<string> | {
@@ -17,9 +17,13 @@ declare module 'meow' {
     alias?: { [arg: string]: string | Array<string> },
     default?: { [arg: string]: any },
     stopEarly?: boolean,
-    // TODO: Strings as keys don't work...
-    // '--'? boolean,
+    '--'?: boolean,
     unknown?: (param: string) => boolean
+  };
+
+  declare type Flags = {
+    '--'?: Array<string>,
+    [flag: string]: string | boolean
   };
 
   declare module.exports: (
@@ -27,7 +31,7 @@ declare module 'meow' {
     minimistOptions?: minimistOptions,
   ) => {
     input: Array<string>,
-    flags: { [flag: string]: string | boolean },
+    flags: Flags,
     pkg: Object,
     help: string,
     showHelp: Function
