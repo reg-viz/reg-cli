@@ -228,7 +228,7 @@ test.serial('should generate fail report with -T 0.00', async t => {
   }
 });
 
-test.serial('should generate fail report with -T 1.00', async t => {
+test.serial('should not generate fail report with -T 1.00', async t => {
   await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
@@ -292,7 +292,7 @@ test.serial('should generate fail report with -S 0', async t => {
   }
 });
 
-test.serial('should generate fail report with -S 10000000', async t => {
+test.serial('should not generate fail report with -S 10000000', async t => {
   await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
