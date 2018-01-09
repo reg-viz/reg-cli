@@ -53,9 +53,8 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-J`, `--json` Specified json report path. If omitted `./reg.json`
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
   * `-P`, `--urlPrefix` Add prefix to all image src.
-  * `-TR`, `--thresholdRate` Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
-  * `-TP`, `--thresholdPixel` Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over `thresholdRate`.
-  * `-T`, `--threshold` Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different)
+  * `-T`, `--thresholdRate` Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
+  * `-S`, `--thresholdPixel` Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over `thresholdRate`.
   * `-C`, `--concurrency` How many processes launches in parallel. If omitted 4.
   * `-A`, `--enableAntialias` Enable antialias. If omitted false.
   * `-X`, `--additionalDetection`. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").

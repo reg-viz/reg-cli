@@ -27,6 +27,7 @@ type RegParams = {
   json?: string;
   update?: boolean;
   urlPrefix?: string;
+  threshold?: number; // alias to thresholdRate.
   thresholdRate?: number;
   thresholdPixel?: number;
   concurrency?: number;
@@ -95,7 +96,7 @@ const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actual
 
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, json, concurrency, update,
-    report, urlPrefix, thresholdRate, thresholdPixel, enableAntialias, enableClientAdditionalDetection } = params;
+    report, urlPrefix, threshold, thresholdRate, thresholdPixel, enableAntialias, enableClientAdditionalDetection } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
@@ -112,7 +113,7 @@ module.exports = (params: RegParams) => {
     expectedImages,
     actualImages,
     dirs,
-    thresholdRate,
+    thresholdRate: thresholdRate || threshold,
     thresholdPixel,
     concurrency,
     enableAntialias: !!enableAntialias,

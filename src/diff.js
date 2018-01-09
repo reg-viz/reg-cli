@@ -32,9 +32,9 @@ const isPassed = ({ width, height, diffCount, thresholdPixel, thresholdRate }: {
   thresholdPixel?: number,
   thresholdRate?: number
 }) => {
-  if (typeof thresholdPixel !== "undefined" && !Number.isNaN(thresholdPixel)) {
+  if (typeof thresholdPixel === "number") {
     return diffCount <= thresholdPixel;
-  } else if (typeof thresholdRate !== "undefined" && !Number.isNaN(thresholdPixel)) {
+  } else if (typeof thresholdRate === "number") {
     const totalPixel = width * height;
     const ratio = diffCount / totalPixel;
     return ratio <= thresholdRate;

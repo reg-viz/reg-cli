@@ -196,6 +196,135 @@ test.serial('should generate fail report', async t => {
   }
 });
 
+test.serial('should generate fail report with -T 0.00', async t => {
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-T`, '0.00',
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`/${SAMPLE_IMAGE}`],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate fail report with -T 1.00', async t => {
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-T`, '1.00',
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [`/${SAMPLE_IMAGE}`],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate fail report with -S 0', async t => {
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-S`, '0',
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`/${SAMPLE_IMAGE}`],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate fail report with -S 10000000', async t => {
+  await new Promise((resolve) => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-S`, '100000000',
+    ]);
+    p.on('close', (code) => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`/${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [`/${SAMPLE_IMAGE}`],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+
 test.serial('should update images with `-U` option', async t => {
   let code = await new Promise((resolve) => {
     const p = spawn('./dist/cli.js', [
