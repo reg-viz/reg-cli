@@ -8,7 +8,8 @@ export type DiffCreatorParams = {
   expectedDir: string;
   diffDir: string;
   image: string;
-  threshold: number;
+  thresholdRate?: number,
+  thresholdPixel?: number,
   enableAntialias: boolean;
 }
 
@@ -24,7 +25,26 @@ const getMD5 = (file) => new Promise((resolve, reject) => {
   })
 });
 
-const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold, enableAntialias }: DiffCreatorParams) => {
+const isPassed = ({ width, height, diffCount, thresholdPixel, thresholdRate }: {
+  width: number,
+  height: number,
+  diffCount: number,
+  thresholdPixel?: number,
+  thresholdRate?: number
+}) => {
+  if (typeof thresholdPixel === "number") {
+    return diffCount <= thresholdPixel;
+  } else if (typeof thresholdRate === "number") {
+    const totalPixel = width * height;
+    const ratio = diffCount / totalPixel;
+    return ratio <= thresholdRate;
+  }
+  return diffCount === 0;
+};
+
+const createDiff = ({
+  actualDir, expectedDir, diffDir, image, thresholdRate, thresholdPixel, enableAntialias
+}: DiffCreatorParams) => {
   return Promise.all([
     getMD5(`${actualDir}${image}`),
     getMD5(`${expectedDir}${image}`),
@@ -44,10 +64,8 @@ const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold, enableA
       },
     })
       .then(({ width, height, diffCount }) => {
+        const passed = isPassed({ width, height, diffCount, thresholdPixel, thresholdRate });
         if (!process || !process.send) return;
-        const totalPixel = width * height;
-        const ratio = diffCount / totalPixel;
-        const passed = ratio <= threshold;
         process.send({ passed, image });
       })
   })
@@ -56,18 +74,3 @@ const createDiff = ({ actualDir, expectedDir, diffDir, image, threshold, enableA
 process.on('message', (data) => {
   createDiff(data);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

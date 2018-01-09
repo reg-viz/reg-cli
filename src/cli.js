@@ -29,7 +29,8 @@ const cli = meow(`
     -I, --ignoreChange If true, error will not be thrown when image change detected.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
-    -T, --threshold Threshold for detecting change. Value can range from 0.00 (no difference) to 1.00 (every pixel is different).
+    -T, --thresholdRate Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
+    -S, --thresholdPixel Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over \`thresholdRate\`.
     -C, --concurrency How many processes launches in parallel. If omitted 4.
     -A, --enableAntialias. Enable antialias. If omitted false.
     -X, --additionalDetection. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
@@ -42,7 +43,8 @@ const cli = meow(`
       I: 'ignoreChange',
       R: 'report',
       P: 'urlPrefix',
-      T: 'threshold',
+      T: 'thresholdRate',
+      S: 'thresholdPixel',
       C: 'concurrency',
       A: 'enableAntialias',
       X: 'additionalDetection',
@@ -61,8 +63,6 @@ const report = typeof cli.flags.report === 'string'
   ? cli.flags.report
   : !!cli.flags.report ? './report.html' : '';
 
-const threshold = Number(cli.flags.threshold) || 0;
-
 const actualDir = process.argv[2];
 const expectedDir = process.argv[3];
 const diffDir = process.argv[4];
@@ -77,7 +77,8 @@ const observer = compare({
   report,
   json,
   urlPrefix,
-  threshold,
+  thresholdRate: Number(cli.flags.thresholdRate),
+  thresholdPixel: Number(cli.flags.thresholdPixel),
   concurrency: Number(cli.flags.concurrency) || 4,
   enableAntialias: !!cli.flags.enableAntialias,
   enableClientAdditionalDetection: cli.flags.additionalDetection === 'client',

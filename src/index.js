@@ -27,7 +27,9 @@ type RegParams = {
   json?: string;
   update?: boolean;
   urlPrefix?: string;
-  threshold?: number;
+  threshold?: number; // alias to thresholdRate.
+  thresholdRate?: number;
+  thresholdPixel?: number;
   concurrency?: number;
   enableAntialias?: boolean;
   enableClientAdditionalDetection?: boolean;
@@ -55,7 +57,8 @@ const compareImages = (emitter, {
   expectedImages,
   actualImages,
   dirs,
-  threshold,
+  thresholdPixel,
+  thresholdRate,
   concurrency,
   enableAntialias,
 }): Promise<CompareResult[]> => {
@@ -65,7 +68,7 @@ const compareImages = (emitter, {
   return bluebird.map(images, (image) => {
     const p = processes.find(p => !p.isRunning());
     if (p) {
-      return p.run({ ...dirs, image, threshold: threshold || 0, enableAntialias });
+      return p.run({ ...dirs, image, thresholdRate, thresholdPixel, enableAntialias });
     }
   }, { concurrency }).then((result) => {
     processes.forEach((p) => p.close());
@@ -93,7 +96,7 @@ const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actual
 
 module.exports = (params: RegParams) => {
   const { actualDir, expectedDir, diffDir, json, concurrency, update,
-    report, urlPrefix, threshold, enableAntialias, enableClientAdditionalDetection } = params;
+    report, urlPrefix, threshold, thresholdRate, thresholdPixel, enableAntialias, enableClientAdditionalDetection } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
   const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, ''));
@@ -110,7 +113,8 @@ module.exports = (params: RegParams) => {
     expectedImages,
     actualImages,
     dirs,
-    threshold,
+    thresholdRate: thresholdRate || threshold,
+    thresholdPixel,
     concurrency,
     enableAntialias: !!enableAntialias,
   })
