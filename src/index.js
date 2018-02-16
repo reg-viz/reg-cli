@@ -77,8 +77,9 @@ const compareImages = (emitter, {
   }).filter(r => !!r);
 };
 
-const cleanupExpectedDir = (expectedImages, expectedDir) => {
-  expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
+const cleanupExpectedDir = (expectedDir) => {
+  const removeFiles = fs.readdirSync(expectedDir);
+  removeFiles.forEach((image) => fs.unlinkSync(`${expectedDir}/${image}`));
 };
 
 const aggregate = (result) => {
@@ -88,8 +89,8 @@ const aggregate = (result) => {
   return { passed, failed, diffItems };
 };
 
-const updateExpected = ({ actualDir, expectedDir, diffDir, expectedItems, actualItems }) => {
-  cleanupExpectedDir(expectedItems, expectedDir);
+const updateExpected = ({ actualDir, expectedDir, diffDir, actualItems }) => {
+  cleanupExpectedDir(expectedDir);
   return copyImages(actualItems, { actualDir, expectedDir, diffDir }).then(() => {
     log.success(`\nAll images are updated. `);
   });
@@ -143,7 +144,12 @@ module.exports = (params: RegParams) => {
       deletedImages.forEach((image) => emitter.emit('compare', { type: 'delete', path: image }));
       newImages.forEach((image) => emitter.emit('compare', { type: 'new', path: image }));
       if (update) {
-        return updateExpected(result)
+        return updateExpected({
+          actualDir,
+          expectedDir,
+          diffDir,
+          actualItems: result.actualItems,
+        })
           .then(() => {
             emitter.emit('update');
             return result
