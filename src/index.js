@@ -78,7 +78,8 @@ const compareImages = (emitter, {
 };
 
 const cleanupExpectedDir = (expectedImages, expectedDir) => {
-  expectedImages.forEach((image) => fs.unlinkSync(`${expectedDir}${image}`));
+  const removeFiles = fs.readdirSync(expectedDir);
+  removeFiles.forEach((image) => fs.unlinkSync(`${expectedDir}/${image}`));
 };
 
 const aggregate = (result) => {
