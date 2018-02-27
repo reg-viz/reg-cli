@@ -63,7 +63,7 @@
     "reg-suit": "^0.6.0",
     "require-extension-hooks": "^0.3.2",
     "require-extension-hooks-babel": "^0.1.1",
-    "require-extension-hooks-vue": "^0.4.1",
+    "require-extension-hooks-vue": "^1.0.0",
     "rimraf": "^2.6.2",
     "uglify-js": "^3.3.5",
     "uglifyjs-webpack-plugin": "^1.1.6",
