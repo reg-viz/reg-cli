@@ -15,7 +15,6 @@
         </div>
       </div>
     </div>
-    <div class="backdrop" v-if="isModalOpen" @click="close"></div>
     <div class="content">
       <div class="not-found" v-if="isNotFound">
         <div>

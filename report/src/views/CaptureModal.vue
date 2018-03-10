@@ -1,6 +1,6 @@
 <template>
   <div>
-    <modal name="capture" disable-backdrop>
+    <modal name="capture">
       <div class="wrapper">
         <div class="modal">
           <img :src="src" />
