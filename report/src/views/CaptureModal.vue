@@ -1,6 +1,6 @@
 <template>
   <div>
-    <modal name="capture" disable-backdrop>
+    <modal name="capture">
       <div class="wrapper">
         <div class="modal">
           <img :src="src" />
@@ -72,7 +72,7 @@ img {
 }
 
 .modal-backdrop-enter,
-.modal-backdrop-leave-active {
+.modal-backdrop-leave-to {
   opacity: 0;
 }
 
@@ -96,18 +96,14 @@ img {
   pointer-events: none;
 }
 
-.modal-content-enter-active {
+.modal-content-enter-active,
+.modal-content-leave-active {
   transition: 200ms cubic-bezier(0.51, 0.21, 0.38, 0.98);
   transition-property: opacity, transform;
 }
 
-.modal-content-leave-active {
-  transition: 0ms cubic-bezier(0.51, 0.21, 0.38, 0.98);
-  transition-property: opacity, transform;
-}
-
 .modal-content-enter,
-.modal-content-leave-active {
+.modal-content-leave-to {
   opacity: 0;
   transform: translateY(-50px);
 }
