@@ -113,7 +113,6 @@ module.exports = {
     modalSrc: "",
     modalBgSrc: null,
     isModalOpen: false,
-    scrollTop: 0,
     failedItems: searchItems('failedItems', getSearchParams()),
     passedItems: searchItems('passedItems', getSearchParams()),
     newItems: searchItems('newItems', getSearchParams()),
@@ -144,7 +143,6 @@ module.exports = {
       this.modalSrc = src;
       this.modalBgSrc = bg;
       this.isModalOpen = true;
-      this.scrollTop = window.pageYOffset;
       this.$modal.push('capture')
     },
 
@@ -158,7 +156,6 @@ module.exports = {
         expectedSrc: this.selectedSrcExpected
       });
       this.isModalOpen = true;
-      this.scrollTop = window.pageYOffset;
       this.$modal.push('comparison')
     },
 
@@ -168,9 +165,6 @@ module.exports = {
       this.selectedSrcActual = "";
       this.selectedSrcExpected = "";
       this.selectedMatchingResult = null;
-      setTimeout(() => {
-        window.scrollTo(0, this.scrollTop);
-      }, 400);
     },
 
     inputSearch(e) {
