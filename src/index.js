@@ -2,6 +2,7 @@
 
 import glob from 'glob'; // $FlowIgnore
 import mkdirp from 'make-dir'; // $FlowIgnore
+import del from 'del'; // $FlowIgnore
 import fs from 'fs';
 import path from 'path';
 import { range } from 'lodash';
@@ -77,9 +78,9 @@ const compareImages = (emitter, {
   }).filter(r => !!r);
 };
 
-const cleanupExpectedDir = (expectedDir) => {
-  const removeFiles = fs.readdirSync(expectedDir);
-  removeFiles.forEach((image) => fs.unlinkSync(`${expectedDir}/${image}`));
+const cleanupExpectedDir = (expectedDir, changedFiles) => {
+  const paths = changedFiles.map(image => `${expectedDir}/${image}`);
+  del(paths);
 };
 
 const aggregate = (result) => {
@@ -89,9 +90,16 @@ const aggregate = (result) => {
   return { passed, failed, diffItems };
 };
 
-const updateExpected = ({ actualDir, expectedDir, diffDir, actualItems }) => {
-  cleanupExpectedDir(expectedDir);
-  return copyImages(actualItems, { actualDir, expectedDir, diffDir }).then(() => {
+const updateExpected = ({
+  actualDir,
+  expectedDir,
+  diffDir,
+  deletedImages,
+  newImages,
+  diffItems
+}) => {
+  cleanupExpectedDir(expectedDir, [...deletedImages, ...diffItems]);
+  return copyImages([...newImages, ...diffItems], { actualDir, expectedDir, diffDir }).then(() => {
     log.success(`\nAll images are updated. `);
   });
 };
@@ -148,12 +156,13 @@ module.exports = (params: RegParams) => {
           actualDir,
           expectedDir,
           diffDir,
-          actualItems: result.actualItems,
-        })
-          .then(() => {
-            emitter.emit('update');
-            return result
-          });
+          deletedImages,
+          newImages,
+          diffItems: result.diffItems
+        }).then(() => {
+          emitter.emit('update');
+          return result;
+        });
       }
       return result;
     })
