@@ -6055,14 +6055,15 @@ require-extension-hooks-babel@0.1.1:
     babel-core "^6.21.0"
     babel-preset-env "^1.1.8"
 
-require-extension-hooks-vue@0.4.2:
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/require-extension-hooks-vue/-/require-extension-hooks-vue-0.4.2.tgz#c7f3382285e1e7596a7460449bdf1d6e87501492"
+require-extension-hooks-vue@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/require-extension-hooks-vue/-/require-extension-hooks-vue-1.0.0.tgz#a0837a2af8350837b3964ae821680df14737560e"
   dependencies:
     consolidate "^0.14.5"
     parse5 "^3.0.2"
     postcss "^6.0.11"
     postcss-modules-sync "^1.0.0"
+    source-map-support "^0.5.3"
     vue-template-compiler "^2.2.0"
     vue-template-es2015-compiler "^1.5.0"
 
@@ -6453,6 +6454,12 @@ source-map-support@^0.4.0, source-map-support@^0.4.15:
 source-map-support@^0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.0.tgz#2018a7ad2bdf8faf2691e5fddab26bed5a2bacab"
+  dependencies:
+    source-map "^0.6.0"
+
+source-map-support@^0.5.3:
+  version "0.5.4"
+  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.4.tgz#54456efa89caa9270af7cd624cc2f123e51fbae8"
   dependencies:
     source-map "^0.6.0"
 
