@@ -55,7 +55,7 @@
     "copyfiles": "2.0.0",
     "css-loader": "0.28.11",
     "flow-bin": "0.68.0",
-    "flow-typed": "2.2.3",
+    "flow-typed": "2.4.0",
     "husky": "0.14.3",
     "nightmare": "2.10.0",
     "reg-keygen-git-hash-plugin": "0.6.3",
