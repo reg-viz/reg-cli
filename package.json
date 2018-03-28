@@ -70,7 +70,7 @@
     "uglifyjs-webpack-plugin": "1.1.6",
     "url-loader": "0.6.2",
     "vue": "2.4.2",
-    "vue-lazyload": "1.0.6",
+    "vue-lazyload": "1.2.2",
     "vue-loader": "12.2.2",
     "vue-template-compiler": "2.4.2",
     "vue-thin-modal": "0.3.0",
