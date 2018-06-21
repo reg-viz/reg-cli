@@ -6079,9 +6079,9 @@ require-extension-hooks-babel@0.1.1:
     babel-core "^6.21.0"
     babel-preset-env "^1.1.8"
 
-require-extension-hooks-vue@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/require-extension-hooks-vue/-/require-extension-hooks-vue-1.0.0.tgz#a0837a2af8350837b3964ae821680df14737560e"
+require-extension-hooks-vue@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/require-extension-hooks-vue/-/require-extension-hooks-vue-1.0.1.tgz#4d4ae5017b13ba7b8415e57639da49326353f37f"
   dependencies:
     consolidate "^0.14.5"
     parse5 "^3.0.2"
