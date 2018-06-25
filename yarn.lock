@@ -5887,9 +5887,9 @@ reg-notify-github-plugin@0.7.2:
     request-promise "^4.2.1"
     tiny-commit-walker "^1.1.2"
 
-reg-publish-s3-plugin@0.7.1:
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/reg-publish-s3-plugin/-/reg-publish-s3-plugin-0.7.1.tgz#67f87d117a78ec4ad2a0847436d9e367d553f14b"
+reg-publish-s3-plugin@0.7.4:
+  version "0.7.4"
+  resolved "https://registry.yarnpkg.com/reg-publish-s3-plugin/-/reg-publish-s3-plugin-0.7.4.tgz#33011616dd984fdac170db048f693319f8796af8"
   dependencies:
     aws-sdk "^2.77.0"
     glob "^7.1.2"
