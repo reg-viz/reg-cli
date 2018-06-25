@@ -76,6 +76,7 @@
 <script>
 const SEARCH_DEBOUNCE_MSEC = 50;
 const debounce = require('lodash.debounce');
+const path = require('path');
 const workerClient = require('./worker-client').default;
 const CaptureModal = require('./views/CaptureModal.vue');
 const ComparisonModal = require('./views/ComparisonModal.vue');
@@ -147,8 +148,8 @@ module.exports = {
 
     openComparison(src) {
       this.modalSrc = src;
-      this.selectedSrcActual = this.actualDir + src;
-      this.selectedSrcExpected = this.expectedDir + src;
+      this.selectedSrcActual = path.join(this.actualDir || '', src || '');
+      this.selectedSrcExpected = path.join(this.expectedDir || '', src || '');
       this.lastRequestSequence = workerClient.requestCalc({
         raw: src,
         actualSrc: this.selectedSrcActual,
