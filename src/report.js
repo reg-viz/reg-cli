@@ -9,30 +9,37 @@ import path from 'path';
 import log from './log';
 
 export type ReportParams = {
-  passedItems: string[];
-  failedItems: string[];
-  newItems: string[];
-  deletedItems: string[];
-  expectedItems: string[];
-  previousExpectedImages: string[];
-  actualItems: string[];
-  diffItems: string[];
-  json: string;
-  actualDir: string;
-  expectedDir: string;
-  diffDir: string;
-  report: string;
-  urlPrefix: string;
-  enableClientAdditionalDetection: boolean;
-}
+  passedItems: string[],
+  failedItems: string[],
+  newItems: string[],
+  deletedItems: string[],
+  expectedItems: string[],
+  previousExpectedImages: string[],
+  actualItems: string[],
+  diffItems: string[],
+  json: string,
+  actualDir: string,
+  expectedDir: string,
+  diffDir: string,
+  report: string,
+  urlPrefix: string,
+  enableClientAdditionalDetection: boolean,
+};
 
-const loadFaviconAsDataURL = (type) => {
+const loadFaviconAsDataURL = type => {
   const fname = path.resolve(__dirname, `../report/assets/favicon_${type}.png`);
   const buffer = fs.readFileSync(fname);
   return 'data:image/png;base64,' + buffer.toString('base64');
-}
+};
 
-const createJSONReport = (params) => {
+const encodeFilePath = filePath => {
+  return filePath
+    .split(path.sep)
+    .map(p => encodeURIComponent(p))
+    .join(path.sep);
+};
+
+const createJSONReport = params => {
   return {
     failedItems: params.failedItems,
     newItems: params.newItems,
@@ -47,20 +54,20 @@ const createJSONReport = (params) => {
   };
 };
 
-const createHTMLReport = (params) => {
+const createHTMLReport = params => {
   const file = path.join(__dirname, '../template/template.html');
   const js = fs.readFileSync(path.join(__dirname, '../report/dist/build.js'));
   const template = fs.readFileSync(file);
   const json = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
     hasNew: params.newItems.length > 0,
-    newItems: params.newItems.map(item => ({ raw: item, encoded: encodeURIComponent(item) })),
+    newItems: params.newItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
     hasDeleted: params.deletedItems.length > 0,
-    deletedItems: params.deletedItems.map(item => ({ raw: item, encoded: encodeURIComponent(item) })),
+    deletedItems: params.deletedItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
     hasPassed: params.passedItems.length > 0,
-    passedItems: params.passedItems.map(item => ({ raw: item, encoded: encodeURIComponent(item) })),
+    passedItems: params.passedItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
     hasFailed: params.failedItems.length > 0,
-    failedItems: params.failedItems.map(item => ({ raw: item, encoded: encodeURIComponent(item) })),
+    failedItems: params.failedItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
     actualDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
     expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
     diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
@@ -69,7 +76,7 @@ const createHTMLReport = (params) => {
       workerUrl: `${params.urlPrefix}worker.js`,
     },
   };
-  const faviconType = (json.hasFailed || json.hasNew || json.hasDeleted) ? 'failure' : 'success';
+  const faviconType = json.hasFailed || json.hasNew || json.hasDeleted ? 'failure' : 'success';
   const view = {
     js,
     report: JSON.stringify(json),
@@ -103,4 +110,4 @@ export default (params: ReportParams) => {
   mkdirp.sync(path.dirname(params.json));
   fs.writeFileSync(params.json, JSON.stringify(json));
   return json;
-}
+};

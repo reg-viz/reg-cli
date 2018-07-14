@@ -4,6 +4,7 @@
 
 import { Spinner } from 'cli-spinner';
 import meow from 'meow';
+import path from 'path';
 import compare from './';
 import log from './log';
 // import notifier from './notifier';
@@ -86,13 +87,14 @@ const observer = compare({
 
 observer.once('start', () => spinner.start());
 
-observer.on('compare', ({ type, path }) => {
+observer.on('compare', (params) => {
   spinner.stop(true);
-  switch (type) {
-    case 'delete': return log.warn(`${MINUS} delete  ${actualDir}${path}`);
-    case 'new': return log.info(`${GREEK_CROSS} append  ${actualDir}${path}`);
-    case 'pass': return log.success(`${CHECK_MARK} pass    ${actualDir}${path}`);
-    case 'fail': return log.fail(`${BALLOT_X} change  ${actualDir}${path}`);
+  const file = path.join(`${actualDir}`, `${params.path}`);
+  switch (params.type) {
+    case 'delete': return log.warn(`${MINUS} delete  ${file}`);
+    case 'new': return log.info(`${GREEK_CROSS} append  ${file}`);
+    case 'pass': return log.success(`${CHECK_MARK} pass    ${file}`);
+    case 'fail': return log.fail(`${BALLOT_X} change  ${file}`);
   }
   spinner.start();
 });

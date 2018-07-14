@@ -132,8 +132,8 @@ module.exports = (params: RegParams) => {
   } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
-  const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(file => path.basename(file));
-  const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`).map(file => path.basename(file));
+  const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(path => path.replace(expectedDir, '')).map(p => p[0] === path.sep ? p.slice(1) : p);
+  const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`).map(path => path.replace(actualDir, '')).map(p => p[0] === path.sep ? p.slice(1) : p);
   const deletedImages = difference(expectedImages, actualImages);
   const newImages = difference(actualImages, expectedImages);
   mkdirp.sync(expectedDir);
