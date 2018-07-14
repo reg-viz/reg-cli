@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
 mkdirp.sync(`${root}/screenshot/actual`);
 
 nightmare
-  .viewport(1200, 2400)
+  .viewport(1200, 3000)
   .goto(`file://${root}/sample/index.html`)
   .wait(5000)
   .screenshot(`${root}/screenshot/actual/index.png`)
