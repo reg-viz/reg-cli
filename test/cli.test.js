@@ -180,10 +180,10 @@ test.serial('should generate fail report', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
-      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
-      failedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
       newItems: [],
       deletedItems: [],
       passedItems: [],
@@ -212,10 +212,10 @@ test.serial('should generate fail report with -T 0.00', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
-      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
-      failedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
       newItems: [],
       deletedItems: [],
       passedItems: [],
@@ -244,13 +244,13 @@ test.serial('should not generate fail report with -T 1.00', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
       diffItems: [],
       failedItems: [],
       newItems: [],
       deletedItems: [],
-      passedItems: [`/${SAMPLE_IMAGE}`],
+      passedItems: [`${SAMPLE_IMAGE}`],
       actualDir: `./${WORKSPACE}/resource/actual`,
       expectedDir: `./${WORKSPACE}/resource/expected`,
       diffDir: `./${WORKSPACE}/diff`,
@@ -276,10 +276,10 @@ test.serial('should generate fail report with -S 0', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
-      diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
-      failedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
       newItems: [],
       deletedItems: [],
       passedItems: [],
@@ -308,13 +308,13 @@ test.serial('should not generate fail report with -S 10000000', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
       diffItems: [],
       failedItems: [],
       newItems: [],
       deletedItems: [],
-      passedItems: [`/${SAMPLE_IMAGE}`],
+      passedItems: [`${SAMPLE_IMAGE}`],
       actualDir: `./${WORKSPACE}/resource/actual`,
       expectedDir: `./${WORKSPACE}/resource/expected`,
       diffDir: `./${WORKSPACE}/diff`,
@@ -341,10 +341,10 @@ test.serial('should update images with `-U` option', async t => {
   t.true(code === 0);
   const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
   const expected = {
-    actualItems: [`/${SAMPLE_IMAGE}`],
-    expectedItems: [`/${SAMPLE_IMAGE}`],
-    diffItems: [`/${SAMPLE_DIFF_IMAGE}`],
-    failedItems: [`/${SAMPLE_IMAGE}`],
+    actualItems: [`${SAMPLE_IMAGE}`],
+    expectedItems: [`${SAMPLE_IMAGE}`],
+    diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+    failedItems: [`${SAMPLE_IMAGE}`],
     newItems: [],
     deletedItems: [],
     passedItems: [],
@@ -369,13 +369,13 @@ test.serial('should generate success report', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
       diffItems: [],
       failedItems: [],
       newItems: [],
       deletedItems: [],
-      passedItems: [`/${SAMPLE_IMAGE}`],
+      passedItems: [`${SAMPLE_IMAGE}`],
       actualDir: `./${WORKSPACE}/resource/expected`,
       expectedDir: `./${WORKSPACE}/resource/expected`,
       diffDir: `./${WORKSPACE}/diff`,
@@ -402,11 +402,11 @@ test.serial('should generate newItem report', async t => {
   try {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
-      actualItems: [`/${SAMPLE_IMAGE}`],
+      actualItems: [`${SAMPLE_IMAGE}`],
       expectedItems: [],
       diffItems: [],
       failedItems: [],
-      newItems: [`/${SAMPLE_IMAGE}`],
+      newItems: [`${SAMPLE_IMAGE}`],
       deletedItems: [],
       passedItems: [],
       actualDir: `./${WORKSPACE}/resource/actual`,
@@ -436,11 +436,11 @@ test.serial('should generate deletedItem report', async t => {
     const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
     const expected = {
       actualItems: [],
-      expectedItems: [`/${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
       diffItems: [],
       failedItems: [],
       newItems: [],
-      deletedItems: [`/${SAMPLE_IMAGE}`],
+      deletedItems: [`${SAMPLE_IMAGE}`],
       passedItems: [],
       actualDir: `./${WORKSPACE}/resource/actual`,
       expectedDir: `./${WORKSPACE}/resource/expected`,

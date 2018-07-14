@@ -2,6 +2,7 @@
 
 import { imgDiff } from 'img-diff-js'; // $FlowIgnore
 import md5File from 'md5-file'; // $FlowIgnore
+import path from 'path';
 
 export type DiffCreatorParams = {
   actualDir: string;
@@ -46,8 +47,8 @@ const createDiff = ({
   actualDir, expectedDir, diffDir, image, thresholdRate, thresholdPixel, enableAntialias
 }: DiffCreatorParams) => {
   return Promise.all([
-    getMD5(`${actualDir}${image}`),
-    getMD5(`${expectedDir}${image}`),
+    getMD5(path.join(actualDir, image)),
+    getMD5(path.join(expectedDir, image)),
   ]).then(([actualHash, expectedHash]) => {
     if (actualHash === expectedHash) {
       if (!process || !process.send) return;
@@ -55,9 +56,9 @@ const createDiff = ({
     }
     const diffImage = image.replace(/\.[^\.]+$/, ".png");
     return imgDiff({
-      actualFilename: `${actualDir}${image}`,
-      expectedFilename: `${expectedDir}${image}`,
-      diffFilename: `${diffDir}${diffImage}`,
+      actualFilename: path.join(actualDir, image),
+      expectedFilename: path.join(expectedDir, image),
+      diffFilename: path.join(diffDir, diffImage),
       options: {
         threshold: 0,
         includeAA: !enableAntialias,

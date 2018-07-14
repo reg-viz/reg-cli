@@ -5,14 +5,14 @@
                 <i :class="'ui icon ' + icon"></i>{{item.raw}}
             </a>
             <div class="captures">
-                <div v-if="diffDir" class="capture" v-on:click="openCapture(createSrc(diffDir, item.raw), createSrc(actualDir, item.raw))">
-                    <capture-image :src="createSrc(diffDir, item.raw)" :kind="'Diff'"></capture-image>
+                <div v-if="diffDir" class="capture" v-on:click="openCapture(createSrc(diffDir, item.encoded), createSrc(actualDir, item.encoded))">
+                    <capture-image :src="createSrc(diffDir, item.encoded)" :kind="'Diff'"></capture-image>
                 </div>
-                <div v-if="actualDir" class="capture" v-on:click="open(item.raw, actualDir)">
-                    <capture-image :src="createSrc(actualDir, item.raw)" :kind="'After'"></capture-image>
+                <div v-if="actualDir" class="capture" v-on:click="open(item.encoded, actualDir)">
+                    <capture-image :src="createSrc(actualDir, item.encoded)" :kind="'After'"></capture-image>
                 </div>
-                <div v-if="expectedDir" class="capture" v-on:click="open(item.raw, expectedDir)">
-                    <capture-image :src="createSrc(expectedDir, item.raw)" :kind="'Before'"></capture-image>
+                <div v-if="expectedDir" class="capture" v-on:click="open(item.encoded, expectedDir)">
+                    <capture-image :src="createSrc(expectedDir, item.encoded)" :kind="'Before'"></capture-image>
                 </div>
             </div>
         </div>
