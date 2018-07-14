@@ -2542,9 +2542,9 @@ electron@2.0.2:
     electron-download "^3.0.1"
     extract-zip "^1.0.3"
 
-electron@^1.7.11:
-  version "1.8.4"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-1.8.4.tgz#cca8d0e6889f238f55b414ad224f03e03b226a38"
+electron@^1.8.4:
+  version "1.8.7"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-1.8.7.tgz#373c1dc4589d7ab4acd49aff8db4a1c0a6c3bcc1"
   dependencies:
     "@types/node" "^8.0.24"
     electron-download "^3.0.1"
@@ -4711,14 +4711,14 @@ nice-try@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/nice-try/-/nice-try-1.0.4.tgz#d93962f6c52f2c1558c0fbda6d512819f1efe1c4"
 
-nightmare@3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/nightmare/-/nightmare-3.0.0.tgz#6a534decd1eeff901aa51abd126f3117fb60ad48"
+nightmare@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/nightmare/-/nightmare-3.0.1.tgz#a474761b2f0e08c2b75af24a66c201668e5c53d3"
   dependencies:
     debug "^2.2.0"
     deep-defaults "^1.0.3"
     defaults "^1.0.2"
-    electron "^1.7.11"
+    electron "^1.8.4"
     enqueue "^1.0.2"
     function-source "^0.1.0"
     jsesc "^0.5.0"
