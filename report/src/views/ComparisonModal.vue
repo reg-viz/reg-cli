@@ -1,36 +1,12 @@
 <template>
   <div>
-    <modal name="comparison">
-      <div class="wrapper">
-        <div class="modal">
-          <div class="markers-area">
-            <img :src="srcActual" />
-            <div v-if="matching">
-              <div class="markers" v-for="m in matching.matches">
-                <div class="rect bounding" v-bind:style="{ left: sx1(m[0].bounding), top: sy1(m[0].bounding), width: sw1(m[0].bounding), height: sh1(m[0].bounding) }"></div>
-                <div v-for="r in m[0].diffMarkers">
-                  <div class="rect diff" v-bind:style="{ left: sx1(r), top: sy1(r), width: sw1(r), height: sh1(r) }"></div>
-                </div>
-              </div>
-              <div v-for="r in matching.strayingRects[0]">
-                <div class="rect straying" v-bind:style="{ left: sx1(r), top: sy1(r), width: sw1(r), height: sh1(r) }"></div>
-              </div>
-            </div>
-          </div>
-          <div class="markers-area">
-            <img :src="srcExpected" />
-            <div v-if="matching">
-              <div class="markers" v-for="m in matching.matches">
-                <div class="rect bounding" v-bind:style="{ left: sx1(m[1].bounding), top: sy1(m[1].bounding), width: sw1(m[1].bounding), height: sh1(m[1].bounding) }"></div>
-                <div v-for="r in m[1].diffMarkers">
-                  <div class="rect diff" v-bind:style="{ left: sx2(r), top: sy2(r), width: sw2(r), height: sh2(r) }"></div>
-                </div>
-              </div>
-              <div v-for="r in matching.strayingRects[1]">
-                <div class="rect straying" v-bind:style="{ left: sx2(r), top: sy2(r), width: sw2(r), height: sh2(r) }"></div>
-              </div>
-            </div>
-          </div>
+    <modal name="comparison" disable-backdrop>
+      <div class="wrapper" v-on:click.self="closeModal">
+        <div class="comparisonModes">
+          <comparisonModeSwitcher v-bind:comparisonModes="comparisonModes" v-model="currentComparisonMode" v-on:input="saveComparisonMode"/>
+        </div>
+        <div class="comparison" v-on:click.self="closeModal">
+          <component v-bind:is="currentComparisonMode" v-bind="comparisonProps" v-on:backgroundClicked="closeModal"/>
         </div>
       </div>
     </modal>
@@ -38,99 +14,77 @@
 </template>
 
 <script>
+
+const ComparisonModeSwitcher = require('./ComparisonModeSwitcher.vue');
+const SideBySideComparison = require('./comparison/SideBySideComparison.vue');
+const SlideComparison = require('./comparison/SlideComparison.vue');
+const BlendComparison = require('./comparison/BlendComparison.vue');
+const ToggleComparison = require('./comparison/ToggleComparison.vue');
+
 module.exports = {
   name: 'ComparisonModal',
   props: ['srcActual', 'srcExpected', 'matching'],
+  components: {
+    'comparisonModeSwitcher': ComparisonModeSwitcher,
+    // These components names must match comparisonMode IDs
+    'sideBySide': SideBySideComparison,
+    'slide': SlideComparison,
+    'blend': BlendComparison,
+    'toggle': ToggleComparison,
+  },
+  data: function() {
+    return {
+      comparisonModes: {
+        sideBySide: 'Side-by-side',
+        slide: 'Slide',
+        blend: 'Blend',
+        toggle: 'Toggle',
+      },
+      currentComparisonMode: 'sideBySide'
+    }
+  },
   computed: {
-    w1: function () {
-      return this.matching ? this.matching.images[0].width : 100;
-    },
-    w2: function () {
-      return this.matching ? this.matching.images[1].width : 100;
-    },
-    h: function () {
-      return this.matching ? Math.max(this.matching.images[0].height, this.matching.images[1].height) : 100;
+    comparisonProps: function() {
+      return {
+        srcActual: this.srcActual,
+        srcExpected: this.srcExpected,
+        matching: this.matching,
+      }
     },
   },
+  mounted: function() {
+    this.loadComparisonMode();
+  },
   methods: {
-    sx1: function(rect) {
-      return `${rect.x / this.w1 * 100}%`;
+    closeModal: function(event) {
+      this.$modal.pop();
     },
-    sy1: function(rect) {
-      return `${rect.y / this.h * 100}%`;
+    loadComparisonMode: function() {
+      const storedComparisonMode = window.localStorage.getItem('reg-cli-comparisonMode');
+      if(Object.keys(this.comparisonModes).indexOf(storedComparisonMode) > -1) {
+        this.currentComparisonMode = storedComparisonMode;
+      }
     },
-    sw1: function(rect) {
-      return `${rect.width / this.w1 * 100}%`;
+    saveComparisonMode: function() {
+      window.localStorage.setItem('reg-cli-comparisonMode', this.currentComparisonMode);
     },
-    sh1: function(rect) {
-      return `${rect.height / this.h * 100}%`;
-    },
-    sx2: function(rect) {
-      return `${rect.x / this.w2 * 100}%`;
-    },
-    sy2: function(rect) {
-      return `${rect.y / this.h * 100}%`;
-    },
-    sw2: function(rect) {
-      return `${rect.width / this.w2 * 100}%`;
-    },
-    sh2: function(rect) {
-      return `${rect.height / this.h * 100}%`;
-    },
-  }
+  },
 }
 </script>
 
 <style scoped>
 .wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding: 60px;
-  font-size: 0;
+  /* font-size: 0; */ /* TODO: Why was this needed? */
+  padding: 20px 60px;
+  height: 100%;
+  pointer-events: all;
 }
 
-.modal {
-  display: flex;
-}
-
-.modal > *:first-child {
-  margin-right: 30px;
-}
-
-img {
-  max-width: calc(50vw - 75px);
-}
-
-.markers-area {
-  position: relative;
-  line-height: 0;
-}
-
-.markers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10;
-}
-
-.rect {
-  position: absolute;
-  outline: 2px solid currentColor;
-}
-
-.rect.bounding {
-  outline-width: 1px;
-  color: #4183C4;
-}
-
-.rect.diff {
-  color: #DB2828;
-}
-
-.rect.straying {
-  color: #B413EC;
+.comparisonModes {
+  display: inline-block;
+  margin-bottom: 10px;
 }
 </style>

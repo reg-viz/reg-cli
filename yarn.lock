@@ -7276,6 +7276,10 @@ vue-hot-reload-api@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/vue-hot-reload-api/-/vue-hot-reload-api-2.1.0.tgz#9ca58a6e0df9078554ce1708688b6578754d86de"
 
+vue-image-compare@0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/vue-image-compare/-/vue-image-compare-0.6.1.tgz#9e4d9646dd22a1024640ed81e0f52bf98adac7e2"
+
 vue-lazyload@1.2.2:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/vue-lazyload/-/vue-lazyload-1.2.2.tgz#73335ed32db25264f5957df1a21d277823423743"

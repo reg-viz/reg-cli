@@ -1,10 +1,12 @@
 import Vue from 'vue';
+import VueImageCompare from 'vue-image-compare';
 import VueLazyload from 'vue-lazyload';
 import VueThinModal from 'vue-thin-modal';
 import workerClient from './worker-client';
 
 const App = require('./App.vue');
 
+Vue.use(VueImageCompare);
 Vue.use(VueThinModal);
 Vue.use(VueLazyload, {
   preLoad: 1.3,
