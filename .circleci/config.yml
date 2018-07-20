@@ -1,9 +1,7 @@
 defaults: &defaults
   working_directory: ~/reg-cli
   docker:
-    - image: quramy/node-nightmare:latest@sha256:e527e87f8dc37634b953594ff3fe1302068e67129dcffca51ebfa786507c379a
-      environment:
-        DISPLAY: ":99"
+    - image: regviz/node-xcb
 
 version: 2
 jobs:
@@ -25,11 +23,9 @@ jobs:
       - run:
           name: Test
           command: |
-            xvfbd start
             yarn run flow
             yarn run test
             yarn reg-suit run
-            xvfbd stop          
   patch_release:
     <<: *defaults
     steps:

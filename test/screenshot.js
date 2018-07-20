@@ -1,25 +1,25 @@
-const Nightmare = require("nightmare");
-const nightmare = Nightmare({
-  show: false, width: 1200, height: 2600, webPreferences: {
-    nodeIntegration: true,
-  }
-});
-const mkdirp = require("mkdirp");
-const path = require("path");
+const puppeteer = require('puppeteer');
+const path = require('path');
+
+const DEVICE_PROFILE = {
+  viewport: {
+    width: 1280,
+    height: 800,
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
+    isLandscape: false,
+  },
+  userAgent:
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.101 Safari/537.36',
+};
 const root = path.resolve(__dirname, '..');
 
-mkdirp.sync(`${root}/screenshot/actual`);
-
-nightmare
-  .viewport(1200, 3000)
-  .goto(`file://${root}/sample/index.html`)
-  .wait(5000)
-  .screenshot(`${root}/screenshot/actual/index.png`)
-  .end()
-  .then(() => {
-    console.log("Captured screenshot")
-  })
-  .catch(x => {
-    console.error(x);
-    process.exit(1);
-  });
+(async () => {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.emulate(DEVICE_PROFILE);
+  await page.goto(`file://${root}/sample/index.html`);
+  await page.screenshot({ path: `${root}/screenshot/actual/index.png`, fullPage: true });
+  await browser.close();
+})();
