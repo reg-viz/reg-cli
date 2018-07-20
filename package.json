@@ -7,8 +7,8 @@
   "scripts": {
     "watch": "babel src --watch -d dist",
     "build": "npm run build:cli && npm run build:report",
-    "build:cli": "babel src -d dist",
-    "build:report": "webpack",
+    "build:cli": "NODE_ENV=production babel src -d dist",
+    "build:report": "NODE_ENV=production webpack",
     "dev:report": "npm run copy:ximgdiff && webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
@@ -71,6 +71,7 @@
     "uglifyjs-webpack-plugin": "1.1.6",
     "url-loader": "0.6.2",
     "vue": "2.4.2",
+    "vue-image-compare": "0.6.1",
     "vue-lazyload": "1.2.2",
     "vue-loader": "12.2.2",
     "vue-template-compiler": "2.4.2",

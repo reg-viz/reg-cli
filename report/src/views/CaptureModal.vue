@@ -1,7 +1,7 @@
 <template>
   <div>
-    <modal name="capture">
-      <div class="wrapper">
+    <modal name="capture" disable-backdrop>
+      <div class="wrapper" v-on:click.self="closeModal">
         <div class="modal">
           <img :src="src" />
         </div>
@@ -14,6 +14,11 @@
 module.exports = {
   name: 'CaptureModal',
   props: ['src'],
+  methods: {
+    closeModal: function(event) {
+      this.$modal.pop();
+    },
+  },
 }
 </script>
 
@@ -23,6 +28,7 @@ module.exports = {
   justify-content: center;
   align-items: center;
   padding: 60px;
+  pointer-events: all;
 }
 
 .bg {
