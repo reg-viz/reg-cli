@@ -56,7 +56,7 @@
     "css-loader": "0.28.11",
     "electron": "^2.0.5",
     "flow-bin": "0.77.0",
-    "flow-typed": "2.4.0",
+    "flow-typed": "2.5.1",
     "husky": "0.14.3",
     "nightmare": "3.0.1",
     "reg-keygen-git-hash-plugin": "0.7.1",
