@@ -30,6 +30,7 @@ const cli = meow(`
     -I, --ignoreChange If true, error will not be thrown when image change detected.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
+    -M, --matchingThreshold Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
     -T, --thresholdRate Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
     -S, --thresholdPixel Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over \`thresholdRate\`.
     -C, --concurrency How many processes launches in parallel. If omitted 4.
@@ -44,6 +45,7 @@ const cli = meow(`
       I: 'ignoreChange',
       R: 'report',
       P: 'urlPrefix',
+      M: 'matchingThreshold',
       T: 'thresholdRate',
       S: 'thresholdPixel',
       C: 'concurrency',
@@ -78,6 +80,7 @@ const observer = compare({
   report,
   json,
   urlPrefix,
+  matchingThreshold: Number(cli.flags.matchingThreshold),
   thresholdRate: Number(cli.flags.thresholdRate),
   thresholdPixel: Number(cli.flags.thresholdPixel),
   concurrency: Number(cli.flags.concurrency) || 4,

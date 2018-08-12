@@ -29,6 +29,7 @@ type RegParams = {
   json?: string,
   update?: boolean,
   urlPrefix?: string,
+  matchingThreshold?: number,
   threshold?: number, // alias to thresholdRate.
   thresholdRate?: number,
   thresholdPixel?: number,
@@ -62,7 +63,7 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
 
 const compareImages = (
   emitter,
-  { expectedImages, actualImages, dirs, thresholdPixel, thresholdRate, concurrency, enableAntialias },
+  { expectedImages, actualImages, dirs, matchingThreshold, thresholdPixel, thresholdRate, concurrency, enableAntialias },
 ): Promise<CompareResult[]> => {
   const images = actualImages.filter(actualImage => expectedImages.includes(actualImage));
   concurrency = images.length < 20 ? 1 : concurrency || 4;
@@ -76,6 +77,7 @@ const compareImages = (
           return p.run({
             ...dirs,
             image,
+            matchingThreshold,
             thresholdRate,
             thresholdPixel,
             enableAntialias,
@@ -125,6 +127,7 @@ module.exports = (params: RegParams) => {
     report,
     urlPrefix,
     threshold,
+    matchingThreshold,
     thresholdRate,
     thresholdPixel,
     enableAntialias,
@@ -144,6 +147,7 @@ module.exports = (params: RegParams) => {
     expectedImages,
     actualImages,
     dirs,
+    matchingThreshold,
     thresholdRate: thresholdRate || threshold,
     thresholdPixel,
     concurrency,

@@ -9,6 +9,7 @@ export type DiffCreatorParams = {
   expectedDir: string;
   diffDir: string;
   image: string;
+  matchingThreshold: number,
   thresholdRate?: number,
   thresholdPixel?: number,
   enableAntialias: boolean;
@@ -44,7 +45,7 @@ const isPassed = ({ width, height, diffCount, thresholdPixel, thresholdRate }: {
 };
 
 const createDiff = ({
-  actualDir, expectedDir, diffDir, image, thresholdRate, thresholdPixel, enableAntialias
+  actualDir, expectedDir, diffDir, image, matchingThreshold, thresholdRate, thresholdPixel, enableAntialias
 }: DiffCreatorParams) => {
   return Promise.all([
     getMD5(path.join(actualDir, image)),
@@ -60,7 +61,7 @@ const createDiff = ({
       expectedFilename: path.join(expectedDir, image),
       diffFilename: path.join(diffDir, diffImage),
       options: {
-        threshold: 0,
+        threshold: matchingThreshold,
         includeAA: !enableAntialias,
       },
     })
