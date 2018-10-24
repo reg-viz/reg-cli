@@ -77,7 +77,7 @@
     "vue-template-compiler": "2.4.2",
     "vue-thin-modal": "0.3.1",
     "webpack": "3.11.0",
-    "webpack-dev-server": "2.11.2"
+    "webpack-dev-server": "3.1.10"
   },
   "files": [
     "dist",
