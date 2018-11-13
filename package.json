@@ -59,7 +59,7 @@
     "flow-typed": "2.4.0",
     "husky": "0.14.3",
     "nightmare": "3.0.1",
-    "reg-keygen-git-hash-plugin": "0.7.1",
+    "reg-keygen-git-hash-plugin": "0.7.16",
     "reg-notify-github-plugin": "0.7.2",
     "reg-publish-s3-plugin": "0.7.4",
     "reg-suit": "0.7.2",
