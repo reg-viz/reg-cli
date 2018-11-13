@@ -1451,21 +1451,6 @@ buf-compare@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/buf-compare/-/buf-compare-1.0.1.tgz#fef28da8b8113a0a0db4430b0b6467b69730b34a"
 
-buffer-alloc-unsafe@^0.1.0:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/buffer-alloc-unsafe/-/buffer-alloc-unsafe-0.1.1.tgz#ffe1f67551dd055737de253337bfe853dfab1a6a"
-
-buffer-alloc@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/buffer-alloc/-/buffer-alloc-1.1.0.tgz#05514d33bf1656d3540c684f65b1202e90eca303"
-  dependencies:
-    buffer-alloc-unsafe "^0.1.0"
-    buffer-fill "^0.1.0"
-
-buffer-fill@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/buffer-fill/-/buffer-fill-0.1.0.tgz#ca9470e8d4d1b977fd7543f4e2ab6a7dc95101a8"
-
 buffer-indexof-polyfill@~1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/buffer-indexof-polyfill/-/buffer-indexof-polyfill-1.0.1.tgz#a9fb806ce8145d5428510ce72f278bb363a638bf"
@@ -2135,7 +2120,7 @@ create-hmac@^1.1.0, create-hmac@^1.1.2, create-hmac@^1.1.4:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
-cross-spawn@^5.0.1, cross-spawn@^5.1.0:
+cross-spawn@^5.0.1:
   version "5.1.0"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-5.1.0.tgz#e8bd0efee58fcff6f8f94510a0a554bbfa235449"
   dependencies:
@@ -4410,12 +4395,6 @@ math-expression-evaluator@^1.2.14:
   version "1.2.17"
   resolved "https://registry.yarnpkg.com/math-expression-evaluator/-/math-expression-evaluator-1.2.17.tgz#de819fdbcd84dccd8fae59c6aeb79615b9d266ac"
 
-md5-file@^3.2.3:
-  version "3.2.3"
-  resolved "https://registry.yarnpkg.com/md5-file/-/md5-file-3.2.3.tgz#f9bceb941eca2214a4c0727f5e700314e770f06f"
-  dependencies:
-    buffer-alloc "^1.1.0"
-
 md5-file@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/md5-file/-/md5-file-4.0.0.tgz#f3f7ba1e2dd1144d5bf1de698d0e5f44a4409584"
@@ -5861,20 +5840,20 @@ reduce-function-call@^1.0.1:
   dependencies:
     balanced-match "^0.4.2"
 
-reg-cli@^0.11.0:
-  version "0.11.4"
-  resolved "https://registry.yarnpkg.com/reg-cli/-/reg-cli-0.11.4.tgz#856c6f5f1ec912d1524707c94f9069a43214119c"
+reg-cli@^0.12.1:
+  version "0.12.1"
+  resolved "https://registry.yarnpkg.com/reg-cli/-/reg-cli-0.12.1.tgz#a9fefbc6f3a039db7affe2bdf1c399852fab36e3"
   dependencies:
     bluebird "^3.5.1"
     chalk "^2.3.0"
     cli-spinner "^0.2.7"
-    cross-spawn "^5.1.0"
+    cross-spawn "^6.0.0"
     del "^3.0.0"
     glob "^7.1.2"
     img-diff-js "^0.4.0"
     lodash "^4.17.4"
     make-dir "^1.1.0"
-    md5-file "^3.2.3"
+    md5-file "^4.0.0"
     meow "^3.7.0"
     mustache "^2.3.0"
     x-img-diff-js "0.3.5"
@@ -5906,13 +5885,13 @@ reg-publish-s3-plugin@0.7.4:
     mkdirp "^0.5.1"
     uuid "^3.1.0"
 
-reg-suit-core@^0.7.2:
-  version "0.7.2"
-  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.7.2.tgz#82c804d52c6dd55727a511f12cc280641c4ebeea"
+reg-suit-core@^0.7.16:
+  version "0.7.16"
+  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.7.16.tgz#8dfd8cb355fc1092abf6356e06080fc9d03d903b"
   dependencies:
     cpx "^1.5.0"
-    reg-cli "^0.11.0"
-    reg-suit-util "^0.7.1"
+    reg-cli "^0.12.1"
+    reg-suit-util "^0.7.16"
     rimraf "^2.6.1"
 
 reg-suit-util@^0.7.1:
@@ -5923,15 +5902,27 @@ reg-suit-util@^0.7.1:
     cli-progress "^1.4.1"
     cli-spinner "^0.2.6"
 
-reg-suit@0.7.2:
-  version "0.7.2"
-  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.7.2.tgz#5499829622f3ec3bb2923a764018f3b7668970f8"
+reg-suit-util@^0.7.16:
+  version "0.7.16"
+  resolved "https://registry.yarnpkg.com/reg-suit-util/-/reg-suit-util-0.7.16.tgz#b16b03970dde074b093c385aaa0d1a2c4ec3157f"
+  dependencies:
+    chalk "^2.0.1"
+    cli-progress "^1.4.1"
+    cli-spinner "^0.2.6"
+    glob "^7.1.2"
+    lodash "^4.17.4"
+    mime-types "^2.1.15"
+    mkdirp "^0.5.1"
+
+reg-suit@0.7.16:
+  version "0.7.16"
+  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.7.16.tgz#2b4137cb68d69a7a200d1eb821c436585d6af818"
   dependencies:
     cp-file "^4.2.0"
     ignore "^3.3.7"
     inquirer "^3.1.1"
-    reg-suit-core "^0.7.2"
-    reg-suit-util "^0.7.1"
+    reg-suit-core "^0.7.16"
+    reg-suit-util "^0.7.16"
     yargs "^8.0.2"
 
 regenerate@^1.2.1:
