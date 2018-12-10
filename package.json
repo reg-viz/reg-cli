@@ -74,7 +74,7 @@
     "vue-image-compare": "0.6.1",
     "vue-lazyload": "1.2.2",
     "vue-loader": "12.2.2",
-    "vue-template-compiler": "2.4.2",
+    "vue-template-compiler": "2.5.20",
     "vue-thin-modal": "0.3.1",
     "webpack": "3.11.0",
     "webpack-dev-server": "2.11.2"
