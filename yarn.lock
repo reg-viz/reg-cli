@@ -7324,9 +7324,9 @@ vue-thin-modal@0.3.1:
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/vue-thin-modal/-/vue-thin-modal-0.3.1.tgz#11b25d4f3429acbcce21282da8f3a58eb07513f3"
 
-vue@2.4.2:
-  version "2.4.2"
-  resolved "https://registry.yarnpkg.com/vue/-/vue-2.4.2.tgz#a9855261f191c978cc0dc1150531b8d08149b58c"
+vue@2.5.20:
+  version "2.5.20"
+  resolved "https://registry.yarnpkg.com/vue/-/vue-2.5.20.tgz#79fff9ccaa10cc37e7a7239b4c7adfac94df81ba"
 
 watchpack@^1.4.0:
   version "1.4.0"
