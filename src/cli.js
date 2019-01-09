@@ -28,6 +28,7 @@ const cli = meow(`
     -U, --update Update expected images.(Copy \`actual images\` to \`expected images\`).
     -J, --json Specified json report path. If omitted ./reg.json.
     -I, --ignoreChange If true, error will not be thrown when image change detected.
+    -E, --extendedErrors If true, also added/deleted images will throw an error.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
     -M, --matchingThreshold Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
@@ -43,6 +44,7 @@ const cli = meow(`
       U: 'update',
       J: 'json',
       I: 'ignoreChange',
+      E: 'extendedErrors',
       R: 'report',
       P: 'urlPrefix',
       M: 'matchingThreshold',
@@ -111,7 +113,7 @@ observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems })
   if (deletedItems.length) log.warn(`${MINUS} ${deletedItems.length} file(s) deleted.`);
   if (newItems.length) log.info(`${GREEK_CROSS} ${newItems.length} file(s) appended.`);
   if (passedItems.length) log.success(`${CHECK_MARK} ${passedItems.length} file(s) passed.`);
-  if (!update && failedItems.length > 0) {
+  if (!update && (failedItems.length > 0 || (extendedErrors && (newItems.length > 0 || deletedItems.length > 0)))) {
     log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
     if (!ignoreChange) process.exit(1);
   }

@@ -82,6 +82,37 @@ test.serial('should exit process without error when ignore change option set', a
   t.true(code === 0);
 });
 
+test.serial('should exit with code 1 when extended error option set and file added', async t => {
+  const code = await new Promise(async (resolve) => {
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E'
+      ]);
+      p.on('close', (code) => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 1);
+});
+
+test.serial('should exit with code 1 when extended error option set and file deleted', async t => {
+  const code = await new Promise(async (resolve) => {
+    rimraf(`${WORKSPACE}/resource/actual`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E'
+      ]);
+      p.on('close', (code) => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 1);
+});
 
 test.serial('should generate report json to `./reg.json` when not specified dist path', async t => {
   await new Promise((resolve) => {
