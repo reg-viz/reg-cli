@@ -14,7 +14,7 @@
 
 <script>
 
-module.exports = {
+export default {
   name: 'ComparisonModeSwitcher',
   props: ['comparisonModes', 'value'],
 }

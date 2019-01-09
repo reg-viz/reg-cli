@@ -4,7 +4,7 @@ import VueLazyload from 'vue-lazyload';
 import VueThinModal from 'vue-thin-modal';
 import workerClient from './worker-client';
 
-const App = require('./App.vue');
+import App from './App.vue';
 
 Vue.use(VueImageCompare);
 Vue.use(VueThinModal);
@@ -13,9 +13,8 @@ Vue.use(VueLazyload, {
   loading: 'https://github.com/reg-viz/reg-cli/blob/master/docs/image.png?raw=true',
   error: 'https://github.com/reg-viz/reg-cli/blob/master/docs/image.png?raw=true',
   filter: {
-    filter(props) {
-    }
-  }
+    filter(props) {},
+  },
 });
 
 new Vue({

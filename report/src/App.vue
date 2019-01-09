@@ -74,14 +74,16 @@
 </template>
 
 <script>
+import CaptureModal from './views/CaptureModal.vue';
+import ComparisonModal from './views/ComparisonModal.vue';
+import ItemSummaries from './views/ItemSummaries.vue';
+import ItemDetails from './views/ItemDetails.vue';
+
 const SEARCH_DEBOUNCE_MSEC = 50;
 const debounce = require('lodash.debounce');
 const path = require('path');
 const workerClient = require('./worker-client').default;
-const CaptureModal = require('./views/CaptureModal.vue');
-const ComparisonModal = require('./views/ComparisonModal.vue');
-const ItemSummaries = require('./views/ItemSummaries.vue');
-const ItemDetails = require('./views/ItemDetails.vue');
+
 
 function searchItems(type, search) {
   return window['__reg__'][type]
@@ -97,7 +99,7 @@ function getSearchParams() {
   return decodeURIComponent(s[1]) || "";
 }
 
-module.exports = {
+export default {
   name: 'App',
   components: {
     'capture-modal': CaptureModal,

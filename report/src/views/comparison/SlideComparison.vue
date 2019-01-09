@@ -24,9 +24,9 @@
 
 <script>
 
-const Markers = require('./Markers.vue');
+import Markers from './Markers.vue';
 
-module.exports = {
+export default {
   name: 'SlideComparison',
   props: ['srcActual', 'srcExpected', 'matching'],
   components: {

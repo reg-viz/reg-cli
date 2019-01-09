@@ -15,13 +15,13 @@
 
 <script>
 
-const ComparisonModeSwitcher = require('./ComparisonModeSwitcher.vue');
-const SideBySideComparison = require('./comparison/SideBySideComparison.vue');
-const SlideComparison = require('./comparison/SlideComparison.vue');
-const BlendComparison = require('./comparison/BlendComparison.vue');
-const ToggleComparison = require('./comparison/ToggleComparison.vue');
+import ComparisonModeSwitcher from './ComparisonModeSwitcher.vue';
+import SideBySideComparison from './comparison/SideBySideComparison.vue';
+import SlideComparison from './comparison/SlideComparison.vue';
+import BlendComparison from './comparison/BlendComparison.vue';
+import ToggleComparison from './comparison/ToggleComparison.vue';
 
-module.exports = {
+export default {
   name: 'ComparisonModal',
   props: ['srcActual', 'srcExpected', 'matching'],
   components: {
