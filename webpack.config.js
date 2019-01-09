@@ -3,6 +3,7 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const VueLoaderPlugin = require('vue-loader/lib/plugin')
 
 module.exports = {
+  mode: "development",
   entry: {
     build: './report/src/main.js',
     worker: './report/src/worker-main.js',
