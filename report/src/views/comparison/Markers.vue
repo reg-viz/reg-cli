@@ -26,7 +26,7 @@
 </template>
 
 <script>
-module.exports = {
+export default {
   name: 'Markers',
   props: { 
     'forActual': Boolean,

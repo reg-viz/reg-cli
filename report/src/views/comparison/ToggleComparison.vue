@@ -17,9 +17,9 @@
 
 <script>
 
-const Markers = require('./Markers.vue');
+import Markers from './Markers.vue';
 
-module.exports = {
+export default {
   name: 'ToggleComparison',
   props: ['srcActual', 'srcExpected', 'matching'],
   components: {

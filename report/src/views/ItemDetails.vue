@@ -20,10 +20,10 @@
 </template>
 
 <script>
+import CaptureImage from './CaptureImage.vue';
 const path = require('path');
-const CaptureImage = require('./CaptureImage.vue');
 
-module.exports = {
+export default {
   name: 'ItemDetails',
   components: {
       'capture-image': CaptureImage,

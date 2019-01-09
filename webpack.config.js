@@ -1,7 +1,9 @@
 const path = require('path');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 
 module.exports = {
+  mode: "development",
   entry: {
     build: './report/src/main.js',
     worker: './report/src/worker-main.js',
@@ -9,14 +11,11 @@ module.exports = {
   output: {
     path: path.join(__dirname, '/report/dist'),
     publicPath: '/static',
-    filename: '[name].js'
+    filename: '[name].js',
+    globalObject: 'this'
   },
   module: {
     rules: [
-      {
-        test: /\.vue$/,
-        use: ["vue-loader"],
-      },
       {
         test: /\.js$/,
         use: "babel-loader",
@@ -26,6 +25,17 @@ module.exports = {
         test: /\.(svg)$/,
         use: ["url-loader"],
       },
+      {
+        test: /\.vue$/,
+        loader: 'vue-loader'
+      },
+      {
+        test: /\.css$/,
+        use: [
+          'vue-style-loader',
+          'css-loader'
+        ]
+      }
     ]
   },
   devServer: {
@@ -33,6 +43,7 @@ module.exports = {
     port: 5555
   },
   plugins: [
-    new UglifyJSPlugin()
+    new UglifyJSPlugin(),
+    new VueLoaderPlugin()
   ]
 }

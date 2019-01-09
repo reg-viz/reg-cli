@@ -17,7 +17,7 @@
 
 <script>
 
-module.exports = {
+export default {
     name: 'ItemSummaries',
     props: ['color', 'title', 'items', 'icon'],
     data: () => ({

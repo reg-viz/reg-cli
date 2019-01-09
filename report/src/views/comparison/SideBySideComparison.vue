@@ -29,7 +29,7 @@
 
 <script>
 
-const Markers = require('./Markers.vue');
+import Markers from './Markers.vue';
 
 const px = function(val) {
   return val + 'px';
@@ -43,7 +43,7 @@ const invisibleStyle = {
   visibility: 'hidden'
 }
 
-module.exports = {
+export default {
   name: 'SideBySideComparison',
   props: ['srcActual', 'srcExpected', 'matching'],
   components: {
