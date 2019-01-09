@@ -14,9 +14,6 @@
 <img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a>
 <a href="https://www.npmjs.com/package/reg-cli">
 <img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a>
-<a href="https://greenkeeper.io/">
-<img src="https://badges.greenkeeper.io/reg-viz/reg-cli.svg" /></a>
-</p>
 
 ## Table of Contents
 
