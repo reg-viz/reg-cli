@@ -3,11 +3,10 @@ os:
 
 language: node_js
 node_js:
+  - '11'
   - '10'
   - '9'
   - '8'
-  - '7'
-  - '6'
 addons:
   apt:
     packages:

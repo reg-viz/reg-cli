@@ -30,7 +30,7 @@
 
 ### Requirements
 
- - Node.js v6+
+ - Node.js v8+
 
 `reg-cli` support Node.js v6+
 
