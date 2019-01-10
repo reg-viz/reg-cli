@@ -49,6 +49,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-R`, `--report` Output html report to specified directory.
   * `-J`, `--json` Specified json report path. If omitted `./reg.json`
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
+  * `-E`, `--extendedErrors` If true, also added/deleted images will throw an error.
   * `-P`, `--urlPrefix` Add prefix to all image src.
   * `-M`, `--matchingThreshold` Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
   * `-T`, `--thresholdRate` Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change. Applied after `matchingThreshold`.
