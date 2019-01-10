@@ -54,7 +54,7 @@
     "babel-preset-stage-2": "6.24.1",
     "copyfiles": "2.1.0",
     "css-loader": "2.1.0",
-    "electron": "2.0.5",
+    "electron": "4.0.1",
     "flow-bin": "0.77.0",
     "flow-typed": "2.5.1",
     "husky": "0.14.3",
