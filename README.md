@@ -29,7 +29,7 @@
 
  - Node.js v8+
 
-`reg-cli` support Node.js v6+
+`reg-cli` support Node.js v8+
 
 ``` sh
 $ npm i -D reg-cli
