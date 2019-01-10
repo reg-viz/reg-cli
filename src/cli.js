@@ -28,7 +28,7 @@ const cli = meow(`
     -U, --update Update expected images.(Copy \`actual images\` to \`expected images\`).
     -J, --json Specified json report path. If omitted ./reg.json.
     -I, --ignoreChange If true, error will not be thrown when image change detected.
-    -E, --extendedErrors If true, also added/deleted images will throw an error.
+    -E, --extendedErrors If true, also added/deleted images will throw an error. If omitted false.
     -R, --report Output html report to specified directory.
     -P, --urlPrefix Add prefix to all image src.
     -M, --matchingThreshold Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
@@ -72,6 +72,7 @@ const actualDir = process.argv[2];
 const expectedDir = process.argv[3];
 const diffDir = process.argv[4];
 const update = !!cli.flags.update;
+const extendedErrors = !!cli.flags.extendedErrors;
 const ignoreChange = !!cli.flags.ignoreChange;
 
 const observer = compare({
