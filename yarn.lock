@@ -2837,6 +2837,18 @@ del@^3.0.0:
     pify "^3.0.0"
     rimraf "^2.2.8"
 
+del@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/del/-/del-4.0.0.tgz#4fa27e92c366cb45b9bdaa56a9b8703dced17437"
+  integrity sha512-/BnSJ+SuZyLu7xMn48kZY0nMXDi+5KNmR4g8n21Wivsl8+B9njV6/5kcTNE9juSprp0zRWBU28JuHUq0FqK1Nw==
+  dependencies:
+    globby "^6.1.0"
+    is-path-cwd "^2.0.0"
+    is-path-in-cwd "^2.0.0"
+    p-map "^2.0.0"
+    pify "^4.0.1"
+    rimraf "^2.6.2"
+
 delayed-stream@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
@@ -4746,10 +4758,22 @@ is-path-cwd@^1.0.0:
   resolved "https://registry.yarnpkg.com/is-path-cwd/-/is-path-cwd-1.0.0.tgz#d225ec23132e89edd38fda767472e62e65f1106d"
   integrity sha1-0iXsIxMuie3Tj9p2dHLmLmXxEG0=
 
+is-path-cwd@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/is-path-cwd/-/is-path-cwd-2.0.0.tgz#d4777a8e227a00096a31f030db3770f84b116c02"
+  integrity sha512-m5dHHzpOXEiv18JEORttBO64UgTEypx99vCxQLjbBvGhOJxnTNglYoFXxwo6AbsQb79sqqycQEHv2hWkHZAijA==
+
 is-path-in-cwd@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/is-path-in-cwd/-/is-path-in-cwd-1.0.0.tgz#6477582b8214d602346094567003be8a9eac04dc"
   integrity sha1-ZHdYK4IU1gI0YJRWcAO+ip6sBNw=
+  dependencies:
+    is-path-inside "^1.0.0"
+
+is-path-in-cwd@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/is-path-in-cwd/-/is-path-in-cwd-2.0.0.tgz#68e452a6eec260500cec21e029c0a44cc0dcd2ea"
+  integrity sha512-6Vz5Gc9s/sDA3JBVu0FzWufm8xaBsqy1zn8Q6gmvGP6nSDMw78aS4poBNeatWjaRpTpxxLn1WOndAiOlk+qY8A==
   dependencies:
     is-path-inside "^1.0.0"
 
@@ -6199,6 +6223,11 @@ p-map@^1.1.1:
   resolved "https://registry.yarnpkg.com/p-map/-/p-map-1.1.1.tgz#05f5e4ae97a068371bc2a5cc86bfbdbc19c4ae7a"
   integrity sha1-BfXkrpegaDcbwqXMhr+9vBnErno=
 
+p-map@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/p-map/-/p-map-2.0.0.tgz#be18c5a5adeb8e156460651421aceca56c213a50"
+  integrity sha512-GO107XdrSUmtHxVoi60qc9tUl/KkNKm+X2CF4P9amalpGxv5YqVPJNfSb0wcA+syCopkZvYYIzW8OVTQW59x/w==
+
 p-timeout@^1.1.1:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/p-timeout/-/p-timeout-1.2.0.tgz#9820f99434c5817868b4f34809ee5291660d5b6c"
@@ -6403,6 +6432,11 @@ pify@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-3.0.0.tgz#e5a4acd2c101fdf3d9a4d07f0dbc4db49dd28176"
   integrity sha1-5aSs0sEB/fPZpNB/DbxNtJ3SgXY=
+
+pify@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/pify/-/pify-4.0.1.tgz#4b2cd25c50d598735c50292224fd8c6df41e3231"
+  integrity sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==
 
 pinkie-promise@^1.0.0:
   version "1.0.0"
