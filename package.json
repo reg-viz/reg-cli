@@ -42,7 +42,7 @@
     "x-img-diff-js": "0.3.5"
   },
   "devDependencies": {
-    "ava": "0.25.0",
+    "ava": "1.4.1",
     "avaron": "0.2.0",
     "babel-cli": "6.26.0",
     "babel-loader": "7.1.5",
