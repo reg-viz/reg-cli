@@ -15,7 +15,7 @@
     "prepublish": "npm run build",
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html -T 0.01 -X client",
     "screenshot": "node test/screenshot.js",
-    "test:cli": "chmod +x dist/cli.js && avaron test/cli.test.js",
+    "test:cli": "chmod +x dist/cli.js && ava test/cli.test.js",
     "test:screenshot": "npm run build:report && npm run reg && npm run screenshot",
     "test": "npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
   },
@@ -42,7 +42,6 @@
   },
   "devDependencies": {
     "ava": "0.25.0",
-    "avaron": "0.2.0",
     "babel-cli": "6.26.0",
     "babel-loader": "7.1.5",
     "babel-plugin-transform-es2015-block-scoping": "6.26.0",
