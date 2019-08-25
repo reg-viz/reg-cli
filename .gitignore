@@ -1,6 +1,7 @@
 /node_modules/*
 reg.json
 report/assets/cv-wasm_browser.*
+report/ui
 /test/__workspace__/*
 .DS_Store
 report.html
