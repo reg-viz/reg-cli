@@ -56,7 +56,7 @@ const createJSONReport = params => {
 
 const createHTMLReport = params => {
   const file = path.join(__dirname, '../template/template.html');
-  const js = fs.readFileSync(path.join(__dirname, '../report/dist/build.js'));
+  const js = fs.readFileSync(path.join(__dirname, '../report/ui/dist/report.js'));
   const template = fs.readFileSync(file);
   const json = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
@@ -87,7 +87,7 @@ const createHTMLReport = params => {
 
 function createXimdiffWorker(params: ReportParams) {
   const file = path.join(__dirname, '../template/worker_pre.js');
-  const moduleJs = fs.readFileSync(path.join(__dirname, '../report/dist/worker.js'), 'utf8');
+  const moduleJs = fs.readFileSync(path.join(__dirname, '../report/ui/dist/worker.js'), 'utf8');
   const wasmLoaderJs = fs.readFileSync(detectDiff.getBrowserJsPath(), 'utf8');
   const template = fs.readFileSync(file);
   const ximgdiffWasmUrl = `${params.urlPrefix}detector.wasm`;
