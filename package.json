@@ -79,11 +79,5 @@
   ],
   "bin": {
     "reg-cli": "./dist/cli.js"
-  },
-  "avaron": {
-    "require": [
-      "./test/helpers/setup.js"
-    ],
-    "fixture": "fixture.html"
   }
 }
