@@ -64,7 +64,7 @@
     "require-extension-hooks": "0.3.3",
     "require-extension-hooks-babel": "0.1.1",
     "require-extension-hooks-vue": "2.0.0",
-    "rimraf": "2.6.3",
+    "rimraf": "2.7.1",
     "uglify-js": "3.4.9",
     "uglifyjs-webpack-plugin": "2.1.1",
     "url-loader": "0.6.2",
