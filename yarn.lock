@@ -2865,10 +2865,10 @@ electron-to-chromium@^1.3.18:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.3.18.tgz#3dcc99da3e6b665f6abbc71c28ad51a2cd731a9c"
   integrity sha1-PcyZ2j5rZl9qu8ccKK1Ros1zGpw=
 
-electron@^1.8.4:
-  version "1.8.7"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-1.8.7.tgz#373c1dc4589d7ab4acd49aff8db4a1c0a6c3bcc1"
-  integrity sha512-q6dn8bspX8u8z6tNU4bEas6ZrdNavnrjJ6d/oz49Nb4zFIPrdh8p29AFjFlSAavypGwAVR/PhYOAGwzZSQSSVQ==
+electron@^2.0.18:
+  version "2.0.18"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-2.0.18.tgz#52f1b248c3cc013b5a870094de3b6ba5de313a0f"
+  integrity sha512-PQRHtFvLxHdJzMMIwTddUtkS+Te/fZIs+PHO+zPmTUTBE76V3Od3WRGzMQwiJHxN679licmCKhJpMyxZfDEVWQ==
   dependencies:
     "@types/node" "^8.0.24"
     electron-download "^3.0.1"
@@ -5598,15 +5598,15 @@ nice-try@^1.0.4:
   resolved "https://registry.yarnpkg.com/nice-try/-/nice-try-1.0.4.tgz#d93962f6c52f2c1558c0fbda6d512819f1efe1c4"
   integrity sha512-2NpiFHqC87y/zFke0fC0spBXL3bBsoh/p5H1EFhshxjCR5+0g2d6BiXbUFz9v1sAcxsk2htp2eQnNIci2dIYcA==
 
-nightmare@3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/nightmare/-/nightmare-3.0.1.tgz#a474761b2f0e08c2b75af24a66c201668e5c53d3"
-  integrity sha512-WptvyPfp5mHRRYHzt6+4xazaR9cc437BuLJI6cLFnqwwgxgdtsFImfBVDeTUCPAeLrkp5VryX5jlw7Wwg+UnFQ==
+nightmare@3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/nightmare/-/nightmare-3.0.2.tgz#fb4613259e7b9c05303ae9469e77b1b901351259"
+  integrity sha512-z6Sr7k71pFcNHFH0orejum9xMzrsdU1lcxlbvNGRsKgDltmu4r52sK5opDnoqfyWS+w9SNthj/4Bbt5zNofzhw==
   dependencies:
     debug "^2.2.0"
     deep-defaults "^1.0.3"
     defaults "^1.0.2"
-    electron "^1.8.4"
+    electron "^2.0.18"
     enqueue "^1.0.2"
     function-source "^0.1.0"
     jsesc "^0.5.0"
