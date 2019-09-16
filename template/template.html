@@ -1,22 +1,20 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Comparison Report - REG</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.7/semantic.min.css">
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="format-detection" content="telephone=no,address=no,email=no" />
+    <meta name="theme-color" content="#2C3552" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700|Work+Sans:400,600&display=swap" rel="stylesheet" />
     <link rel="shortcut icon" href="{{&faviconData}}">
-    <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Lato:300,400" rel="stylesheet">
-</head>
-<body>
-    <div id="app">
-    </div>
-    <script type="text/javascript">
-        window['__reg__'] = {{&report}};
-    </script>
-    <script type="text/javascript">
-        {{&js}}
-    </script>
-</body>
-
+    <title>Comparison Report - REG</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=ResizeObserver%2CIntersectionObserverEntry%2CIntersectionObserver"></script>
+    <script type="text/javascript">window['__reg__'] = {{&report}};</script>
+    <script type="text/javascript">{{&js}}</script>
+  </body>
 </html>

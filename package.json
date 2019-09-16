@@ -8,17 +8,16 @@
     "watch": "babel src --watch -d dist",
     "build": "npm run build:cli && npm run build:report",
     "build:cli": "babel src -d dist",
-    "build:report": "webpack --mode production",
+    "build:report": "sh ./scripts/build-ui.sh v0.0.2",
     "dev:report": "npm run copy:ximgdiff && webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
-    "prepublish": "npm run build",
+    "prepare": "npm run build",
     "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html -T 0.01 -X client",
     "screenshot": "node test/screenshot.js",
-    "test:cli": "chmod +x dist/cli.js && avaron test/cli.test.js",
-    "test:report": "avaron test/report/*.test.js --renderer",
+    "test:cli": "chmod +x dist/cli.js && ava test/cli.test.js",
     "test:screenshot": "npm run build:report && npm run reg && npm run screenshot",
-    "test": "npm run build:report && npm run build && npm run test:cli && npm run test:report && npm run test:screenshot"
+    "test": "cross-env NODE_ENV=\"debug\"  npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
   },
   "repository": {
     "type": "git",
@@ -43,7 +42,6 @@
   },
   "devDependencies": {
     "ava": "0.25.0",
-    "avaron": "0.2.0",
     "babel-cli": "6.26.0",
     "babel-loader": "7.1.5",
     "babel-plugin-transform-es2015-block-scoping": "6.26.0",
@@ -53,8 +51,8 @@
     "babel-preset-es2017": "6.24.1",
     "babel-preset-stage-2": "6.24.1",
     "copyfiles": "2.1.0",
+    "cross-env": "^5.2.0",
     "css-loader": "2.1.0",
-    "electron": "4.0.1",
     "flow-bin": "0.77.0",
     "flow-typed": "2.5.1",
     "husky": "0.14.3",
@@ -70,12 +68,6 @@
     "uglify-js": "3.4.9",
     "uglifyjs-webpack-plugin": "2.1.1",
     "url-loader": "0.6.2",
-    "vue": "2.5.21",
-    "vue-image-compare": "0.6.1",
-    "vue-lazyload": "1.2.6",
-    "vue-loader": "15.6.2",
-    "vue-template-compiler": "2.5.21",
-    "vue-thin-modal": "1.3.0",
     "webpack": "4.29.0",
     "webpack-cli": "3.2.1",
     "webpack-dev-server": "3.1.14"
@@ -87,11 +79,5 @@
   ],
   "bin": {
     "reg-cli": "./dist/cli.js"
-  },
-  "avaron": {
-    "require": [
-      "./test/helpers/setup.js"
-    ],
-    "fixture": "fixture.html"
   }
 }
