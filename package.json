@@ -60,7 +60,7 @@
     "reg-keygen-git-hash-plugin": "0.7.16",
     "reg-notify-github-plugin": "0.7.19",
     "reg-publish-s3-plugin": "0.7.18",
-    "reg-suit": "0.7.17",
+    "reg-suit": "0.8.0",
     "require-extension-hooks": "0.3.3",
     "require-extension-hooks-babel": "0.1.1",
     "require-extension-hooks-vue": "2.0.0",
