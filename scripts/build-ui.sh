@@ -13,3 +13,4 @@ fi
 
 yarn install --frozen-lockfile
 yarn build
+sed -i -e "s/\/dist/# \/dist/g" $DIR/.gitignore
