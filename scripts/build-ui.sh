@@ -12,4 +12,6 @@ else
 fi
 
 yarn install --frozen-lockfile
+
 yarn build
+
