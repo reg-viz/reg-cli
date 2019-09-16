@@ -1,6 +1,15 @@
 #!/bin/sh
-# TODO Add Git tag (e.g. `-b v1.0.0`)
-git clone https://github.com/reg-viz/reg-cli-report-ui.git report/ui --depth 1
-cd report/ui
+VERSION=$1
+DIR=report/ui
+
+if [ -e "$DIR" ]; then
+  cd $DIR
+  git fetch origin
+  git checkout refs/tags/$VERSION
+else
+  git clone https://github.com/reg-viz/reg-cli-report-ui.git -b $VERSION $DIR --depth 1
+  cd $DIR
+fi
+
 yarn install --frozen-lockfile
 yarn build
