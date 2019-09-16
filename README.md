@@ -63,7 +63,11 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 If `-R` option set, output html report to specified directory.
 https://reg-viz.github.io/reg-cli/
 
-![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/screenshot.png?raw=true)
+![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/open.png?raw=true)
+
+![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/close.png?raw=true)
+
+![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/viewer.png?raw=true)
 
 ## Test
 
