@@ -68,7 +68,7 @@
     "uglify-js": "3.4.9",
     "uglifyjs-webpack-plugin": "2.1.1",
     "url-loader": "0.6.2",
-    "webpack": "4.29.0",
+    "webpack": "4.40.2",
     "webpack-cli": "3.2.1",
     "webpack-dev-server": "3.1.14"
   },
