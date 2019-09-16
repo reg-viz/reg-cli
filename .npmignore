@@ -1,2 +1,4 @@
 test/
 sample/
+node_modules/
+report/ui/node_modules/
