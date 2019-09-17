@@ -4,7 +4,7 @@ const http = require('http');
 const serveStatic = require('serve-static');
 
 const root = path.resolve(__dirname, '..');
-const serve = serveStatic(`${root}/resource`, { index: ['report.html'] });
+const serve = serveStatic(`${root}/sample`, { index: ['index.html'] });
 
 const server = http.createServer((req, res) => {
   serve(req, res, finalhandler(req, res));

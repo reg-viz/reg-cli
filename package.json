@@ -30,8 +30,7 @@
     "**/randomatic": "3.0.0",
     "**/deep-extend": "0.5.1",
     "**/cryptiles": "4.1.2",
-    "**/hoek": "4.2.1",
-    "**/lodash": "4.17.15"
+    "**/hoek": "4.2.1"
   },
   "dependencies": {
     "bluebird": "3.5.5",
@@ -70,6 +69,7 @@
     "reg-publish-s3-plugin": "0.7.25",
     "reg-suit": "0.8.0",
     "rimraf": "3.0.0",
+    "serve-static": "^1.14.1",
     "webpack": "4.40.2",
     "webpack-cli": "3.3.9",
     "webpack-dev-server": "3.8.1"
