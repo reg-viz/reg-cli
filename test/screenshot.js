@@ -1,25 +1,40 @@
-const Nightmare = require("nightmare");
-const nightmare = Nightmare({
-  show: false, width: 1200, height: 2600, webPreferences: {
-    nodeIntegration: true,
-  }
-});
-const mkdirp = require("mkdirp");
-const path = require("path");
+const path = require('path');
+const finalhandler = require('finalhandler');
+const http = require('http');
+const serveStatic = require('serve-static');
+
 const root = path.resolve(__dirname, '..');
+const serve = serveStatic(`${root}/resource`, { index: ['report.html'] });
+
+const server = http.createServer((req, res) => {
+  serve(req, res, finalhandler(req, res));
+});
+
+server.listen(3000);
+
+const mkdirp = require('mkdirp');
+
+const puppeteer = require('puppeteer');
 
 mkdirp.sync(`${root}/screenshot/actual`);
 
-nightmare
-  .viewport(1200, 3000)
-  .goto(`file://${root}/sample/index.html`)
-  .wait(5000)
-  .screenshot(`${root}/screenshot/actual/index.png`)
-  .end()
-  .then(() => {
-    console.log("Captured screenshot")
-  })
-  .catch(x => {
-    console.error(x);
-    process.exit(1);
+(async () => {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
+  const page = await browser.newPage();
+  await page.setViewport({
+    width: 1200,
+    height: 800,
+  });
+
+  await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded' });
+
+  await page.screenshot({
+    path: `${root}/screenshot/actual/index.png`,
+  });
+
+  await page.close();
+  process.exit(0);
+})();
