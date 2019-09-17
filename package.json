@@ -25,6 +25,13 @@
   },
   "author": "bokuweb",
   "license": "MIT",
+  "resolutions": {
+    "**/set-value": "2.0.1",
+    "**/randomatic": "3.0.0",
+    "**/deep-extend": "0.5.1",
+    "**/cryptiles": "4.1.2",
+    "**/hoek": "4.2.1"
+  },
   "dependencies": {
     "bluebird": "^3.5.5",
     "chalk": "^2.4.2",
