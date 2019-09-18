@@ -8,7 +8,7 @@
     "watch": "babel src --watch -d dist",
     "build": "npm run build:cli && npm run build:report",
     "build:cli": "babel src -d dist",
-    "build:report": "sh ./scripts/build-ui.sh v0.0.3",
+    "build:report": "sh ./scripts/build-ui.sh v0.0.2",
     "dev:report": "npm run copy:ximgdiff && webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
