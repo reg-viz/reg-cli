@@ -48,7 +48,7 @@
     "x-img-diff-js": "0.3.5"
   },
   "devDependencies": {
-    "ava": "0.25.0",
+    "ava": "2.4.0",
     "babel-cli": "6.26.0",
     "babel-loader": "8.0.6",
     "babel-plugin-transform-es2015-block-scoping": "6.26.0",
