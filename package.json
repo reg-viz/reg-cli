@@ -81,7 +81,8 @@
     "report/ui/dist/worker.js",
     "report/assets/favicon_failure.png",
     "report/assets/favicon_success.png",
-    "report/assets/reglogo.svg"
+    "report/assets/reglogo.svg",
+    "report/sample"
   ],
   "bin": {
     "reg-cli": "./dist/cli.js"
