@@ -1,19 +1,12 @@
+![reg-cli](./docs/reg-cli.jpg)
 
+![[Build Status](https://circleci.com/gh/reg-viz/reg-cli/tree/master)](https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg)
+![[Build Status](https://travis-ci.org/reg-viz/reg-cli)](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)
+![[Build Status](https://ci.appveyor.com/project/bokuweb/reg-cli)](https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true)
+![[npm package](https://www.npmjs.com/package/reg-cli)](https://img.shields.io/npm/v/reg-cli.svg)
+![[npm package downloads](https://www.npmjs.com/package/reg-cli)](https://img.shields.io/npm/dm/reg-cli.svg)
 
-<p align="center"><img src ="https://github.com/reg-viz/reg-cli/blob/master/logo.png?raw=true" /></p>
-
-<p align="center">Visual regression test tool with html reporter.</p>
-
-<p align="center"><a href="https://circleci.com/gh/reg-viz/reg-cli/tree/master">
-<img src="https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg" alt="Build Status" /></a>
-<a href="https://travis-ci.org/reg-viz/reg-cli">
-<img src="https://travis-ci.org/reg-viz/reg-cli.svg?branch=master" alt="Build Status" /></a>
-<a href="https://ci.appveyor.com/project/bokuweb/reg-cli">
-<img src="https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true" alt="Build Status" /></a>
-<a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/v/reg-cli.svg" alt="Build Status" /></a>
-<a href="https://www.npmjs.com/package/reg-cli">
-<img src="https://img.shields.io/npm/dm/reg-cli.svg" /></a>
+> Visual regression test tool with html reporter.
 
 ## Table of Contents
 
@@ -63,15 +56,13 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 If `-R` option set, output html report to specified directory.
 https://reg-viz.github.io/reg-cli/
 
-![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/open.png?raw=true)
-
-![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/close.png?raw=true)
-
-![screenshot](https://github.com/reg-viz/reg-cli/blob/master/docs/viewer.png?raw=true)
+![open](./docs/open.png)
+![close](./docs/close.png)
+![viewer](./docs/viewer.png)
 
 ## Test
 
-``` sh
+```sh
 $ npm t
 ```
 
@@ -91,3 +82,4 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+![reg-viz](https://raw.githubusercontent.com/reg-viz/artwork/master/repository/footer.png)
