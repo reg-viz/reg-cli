@@ -1,5 +1,4 @@
 /node_modules/*
-reg.json
 report/assets/cv-wasm_browser.*
 report/ui
 /test/__workspace__/*
@@ -10,3 +9,4 @@ report.html
 /report/dist/*
 /screenshot/*
 sample/index.html
+from-json.html

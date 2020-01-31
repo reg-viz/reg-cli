@@ -13,8 +13,7 @@ import bluebird from 'bluebird';
 import EventEmitter from 'events';
 import ProcessAdaptor from './process-adaptor';
 import type { DiffCreatorParams } from './diff';
-
-const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
+import { findImages } from './image-finder';
 
 type CompareResult = {
   passed: boolean,
@@ -37,8 +36,6 @@ type RegParams = {
   enableAntialias?: boolean,
   enableClientAdditionalDetection?: boolean,
 };
-
-const difference = (arrA, arrB) => arrA.filter(a => !arrB.includes(a));
 
 const copyImages = (actualImages, { expectedDir, actualDir }) => {
   return Promise.all(
@@ -63,7 +60,16 @@ const copyImages = (actualImages, { expectedDir, actualDir }) => {
 
 const compareImages = (
   emitter,
-  { expectedImages, actualImages, dirs, matchingThreshold, thresholdPixel, thresholdRate, concurrency, enableAntialias },
+  {
+    expectedImages,
+    actualImages,
+    dirs,
+    matchingThreshold,
+    thresholdPixel,
+    thresholdRate,
+    concurrency,
+    enableAntialias,
+  },
 ): Promise<CompareResult[]> => {
   const images = actualImages.filter(actualImage => expectedImages.includes(actualImage));
   concurrency = images.length < 20 ? 1 : concurrency || 4;
@@ -135,10 +141,9 @@ module.exports = (params: RegParams) => {
   } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
-  const expectedImages = glob.sync(`${expectedDir}${IMAGE_FILES}`).map(p => path.relative(expectedDir, p)).map(p => p[0] === path.sep ? p.slice(1) : p);
-  const actualImages = glob.sync(`${actualDir}${IMAGE_FILES}`).map(p => path.relative(actualDir, p)).map(p => p[0] === path.sep ? p.slice(1) : p);
-  const deletedImages = difference(expectedImages, actualImages);
-  const newImages = difference(actualImages, expectedImages);
+
+  const { expectedImages, actualImages, deletedImages, newImages } = findImages(expectedDir, actualDir);
+
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
 
@@ -161,7 +166,6 @@ module.exports = (params: RegParams) => {
         newItems: newImages,
         deletedItems: deletedImages,
         expectedItems: update ? actualImages : expectedImages,
-        previousExpectedImages: expectedImages,
         actualItems: actualImages,
         diffItems,
         json: json || './reg.json',

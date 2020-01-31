@@ -7,21 +7,17 @@ import meow from 'meow';
 import path from 'path';
 import compare from './';
 import log from './log';
-// import notifier from './notifier';
-import { BALLOT_X, CHECK_MARK, TEARDROP, MULTIPLICATION_X, GREEK_CROSS, MINUS } from './icon';
+import fs from 'fs';
 
-const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
+// import notifier from './notifier';
+import { BALLOT_X, CHECK_MARK, GREEK_CROSS, MINUS } from './icon';
+import createReport from './report';
 
 const spinner = new Spinner();
 spinner.setSpinnerString(18);
 
-if (!process.argv[2] || !process.argv[3] || !process.argv[4]) {
-  log.fail('please specify actual, expected and diff images directory.');
-  log.fail('e.g.: $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir');
-  process.exit(1);
-}
-
-const cli = meow(`
+const cli = meow(
+  `
   Usage
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir
   Options
@@ -37,9 +33,11 @@ const cli = meow(`
     -C, --concurrency How many processes launches in parallel. If omitted 4.
     -A, --enableAntialias. Enable antialias. If omitted false.
     -X, --additionalDetection. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
+    -F, --from Generate report from json. Please specify json file. If set, only report will be output without comparing images.
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
-`, {
+`,
+  {
     alias: {
       U: 'update',
       J: 'json',
@@ -53,20 +51,23 @@ const cli = meow(`
       C: 'concurrency',
       A: 'enableAntialias',
       X: 'additionalDetection',
+      F: 'from',
     },
-  });
+  },
+);
+if (!cli.flags.from) {
+  if (!process.argv[2] || !process.argv[3] || !process.argv[4]) {
+    log.fail('please specify actual, expected and diff images directory.');
+    log.fail('e.g.: $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir');
+    process.exit(1);
+  }
+}
 
-const json = cli.flags.json
-  ? cli.flags.json.toString()
-  : './reg.json'; // default output path
+const json = cli.flags.json ? cli.flags.json.toString() : './reg.json'; // default output path
 
-const urlPrefix = typeof cli.flags.urlPrefix === 'string'
-  ? cli.flags.urlPrefix
-  : './';
+const urlPrefix = typeof cli.flags.urlPrefix === 'string' ? cli.flags.urlPrefix : './';
 
-const report = typeof cli.flags.report === 'string'
-  ? cli.flags.report
-  : !!cli.flags.report ? './report.html' : '';
+const report = typeof cli.flags.report === 'string' ? cli.flags.report : !!cli.flags.report ? './report.html' : '';
 
 const actualDir = process.argv[2];
 const expectedDir = process.argv[3];
@@ -74,6 +75,37 @@ const diffDir = process.argv[4];
 const update = !!cli.flags.update;
 const extendedErrors = !!cli.flags.extendedErrors;
 const ignoreChange = !!cli.flags.ignoreChange;
+const enableClientAdditionalDetection = cli.flags.additionalDetection === 'client';
+const from = String(cli.flags.from || '');
+
+// If from option specified, generate report from json and exit.
+if (from) {
+  let json: string = '';
+  try {
+    json = fs.readFileSync(from, { encoding: 'utf8' });
+  } catch (e) {
+    log.fail('Failed to read specify json.');
+    log.fail(e);
+    process.exit(1);
+  }
+
+  try {
+    const params = JSON.parse(json);
+    createReport({
+      ...params,
+      json: json || './reg.json',
+      report: report || './report.html',
+      urlPrefix: urlPrefix || '',
+      enableClientAdditionalDetection,
+      fromJSON: true,
+    });
+    process.exit(0);
+  } catch (e) {
+    log.fail('Failed to parse json. Please specify valid json.');
+    log.fail(e);
+    process.exit(1);
+  }
+}
 
 const observer = compare({
   actualDir,
@@ -88,19 +120,23 @@ const observer = compare({
   thresholdPixel: Number(cli.flags.thresholdPixel),
   concurrency: Number(cli.flags.concurrency) || 4,
   enableAntialias: !!cli.flags.enableAntialias,
-  enableClientAdditionalDetection: cli.flags.additionalDetection === 'client',
+  enableClientAdditionalDetection,
 });
 
 observer.once('start', () => spinner.start());
 
-observer.on('compare', (params) => {
+observer.on('compare', params => {
   spinner.stop(true);
   const file = path.join(`${actualDir}`, `${params.path}`);
   switch (params.type) {
-    case 'delete': return log.warn(`${MINUS} delete  ${file}`);
-    case 'new': return log.info(`${GREEK_CROSS} append  ${file}`);
-    case 'pass': return log.success(`${CHECK_MARK} pass    ${file}`);
-    case 'fail': return log.fail(`${BALLOT_X} change  ${file}`);
+    case 'delete':
+      return log.warn(`${MINUS} delete  ${file}`);
+    case 'new':
+      return log.info(`${GREEK_CROSS} append  ${file}`);
+    case 'pass':
+      return log.success(`${CHECK_MARK} pass    ${file}`);
+    case 'fail':
+      return log.fail(`${BALLOT_X} change  ${file}`);
   }
   spinner.start();
 });
@@ -121,8 +157,7 @@ observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems })
   return process.exit(0);
 });
 
-observer.once('error', (error) => {
+observer.once('error', error => {
   log.fail(error);
   process.exit(1);
 });
-

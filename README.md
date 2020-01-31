@@ -50,6 +50,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-C`, `--concurrency` How many processes launches in parallel. If omitted 4.
   * `-A`, `--enableAntialias` Enable antialias. If omitted false.
   * `-X`, `--additionalDetection`. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
+  * `-F`, `--from` Generate report from json. Please specify json file. If set, only report will be output without comparing images.
 
 ### html report
 
@@ -59,6 +60,30 @@ https://reg-viz.github.io/reg-cli/
 ![open](./docs/open.png)
 ![close](./docs/close.png)
 ![viewer](./docs/viewer.png)
+
+### from json
+
+If `-F` option set, only report will be output without comparing images.
+
+```
+reg-cli.js -F ./sample/reg.json -R ./sample/index.html"
+```
+
+- json format
+```
+{
+    "failedItems": ["sample.png"],
+    "newItems":[],
+    "deletedItems":[],
+    "passedItems":[],
+    "expectedItems":["sample.png"],
+    "actualItems":["sample.png"],
+    "diffItems":["sample.png"],
+    "actualDir":"./actual",
+    "expectedDir":"./expected",
+    "diffDir":"./diff"
+}
+```
 
 ## Test
 
