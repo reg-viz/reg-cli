@@ -6,7 +6,6 @@ import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
-import log from './log';
 
 export type ReportParams = {
   passedItems: string[],
@@ -14,7 +13,6 @@ export type ReportParams = {
   newItems: string[],
   deletedItems: string[],
   expectedItems: string[],
-  previousExpectedImages: string[],
   actualItems: string[],
   diffItems: string[],
   json: string,
@@ -24,6 +22,7 @@ export type ReportParams = {
   report: string,
   urlPrefix: string,
   enableClientAdditionalDetection: boolean,
+  fromJSON?: boolean,
 };
 
 const loadFaviconAsDataURL = type => {
@@ -68,9 +67,15 @@ const createHTMLReport = params => {
     passedItems: params.passedItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
     hasFailed: params.failedItems.length > 0,
     failedItems: params.failedItems.map(item => ({ raw: item, encoded: encodeFilePath(item) })),
-    actualDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
-    expectedDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
-    diffDir: `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
+    actualDir: params.fromJSON
+      ? params.actualDir
+      : `${params.urlPrefix}${path.relative(path.dirname(params.report), params.actualDir)}`,
+    expectedDir: params.fromJSON
+      ? params.expectedDir
+      : `${params.urlPrefix}${path.relative(path.dirname(params.report), params.expectedDir)}`,
+    diffDir: params.fromJSON
+      ? params.diffDir
+      : `${params.urlPrefix}${path.relative(path.dirname(params.report), params.diffDir)}`,
     ximgdiffConfig: {
       enabled: params.enableClientAdditionalDetection,
       workerUrl: `${params.urlPrefix}worker.js`,
@@ -106,8 +111,11 @@ export default (params: ReportParams) => {
       fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
     }
   }
+
   const json = createJSONReport(params);
-  mkdirp.sync(path.dirname(params.json));
-  fs.writeFileSync(params.json, JSON.stringify(json));
+  if (!params.fromJSON) {
+    mkdirp.sync(path.dirname(params.json));
+    fs.writeFileSync(params.json, JSON.stringify(json));
+  }
   return json;
 };

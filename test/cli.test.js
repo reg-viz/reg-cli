@@ -1,7 +1,6 @@
 import test from 'ava';
 import fs from 'fs';
 import path from 'path';
-import glob from 'glob';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
 // $FlowIgnore
@@ -15,20 +14,19 @@ const SAMPLE_DIFF_IMAGE = 'sample.png';
 
 const replaceReportPath = report => {
   Object.keys(report).forEach(key => {
-    report[key] = typeof report[key] === 'string'
-      ? report[key].replace(/\\/g, '/')
-      : report[key].map(r => r.replace(/\\/g, '/'));
+    report[key] =
+      typeof report[key] === 'string' ? report[key].replace(/\\/g, '/') : report[key].map(r => r.replace(/\\/g, '/'));
   });
   return report;
-}
+};
 
 test.beforeEach(async t => {
-  await new Promise((resolve) => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
-})
-
+  await new Promise(resolve => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
+  await new Promise(resolve => copyfiles([`${RESOURCE}/reg.json`, WORKSPACE], resolve));
+});
 
 test.serial('should display error message when passing only 1 argument', async t => {
-  const stdout = await new Promise((resolve) => {
+  const stdout = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', ['./sample/actual']);
     p.stdout.on('data', data => resolve(data));
     p.stderr.on('data', data => console.error(data));
@@ -37,44 +35,44 @@ test.serial('should display error message when passing only 1 argument', async t
 });
 
 test.serial('should display error message when passing only 2 argument', async t => {
-  const stdout = await new Promise((resolve) => {
+  const stdout = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', ['./sample/actual', './sample/expected']);
     p.stdout.on('data', data => resolve(data));
     p.stderr.on('data', data => console.error(data));
-  })
+  });
   t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
 
 test.serial('should generate image diff with exit code 1', async t => {
-  const code = await new Promise((resolve) => {
+  const code = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
   });
   t.true(code === 1);
   try {
     fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_DIFF_IMAGE}`);
     t.pass();
   } catch (e) {
-    console.log(e)
+    console.log(e);
     t.fail();
   }
 });
 
 test.serial('should exit process without error when ignore change option set', async t => {
-  const code = await new Promise((resolve) => {
+  const code = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      '-I'
+      '-I',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
-    p.on('error', (e) => {
+    p.on('error', e => {
       t.fail();
       console.error(e);
     });
@@ -83,15 +81,15 @@ test.serial('should exit process without error when ignore change option set', a
 });
 
 test.serial('should exit with code 1 when extended error option set and file added', async t => {
-  const code = await new Promise(async (resolve) => {
+  const code = await new Promise(async resolve => {
     rimraf(`${WORKSPACE}/resource/expected`, () => {
       const p = spawn('./dist/cli.js', [
         `${WORKSPACE}/resource/actual`,
         `${WORKSPACE}/resource/expected`,
         `${WORKSPACE}/diff`,
-        '-E'
+        '-E',
       ]);
-      p.on('close', (code) => resolve(code));
+      p.on('close', code => resolve(code));
       p.stderr.on('data', data => console.error(data));
     });
   });
@@ -99,15 +97,15 @@ test.serial('should exit with code 1 when extended error option set and file add
 });
 
 test.serial('should exit with code 1 when extended error option set and file deleted', async t => {
-  const code = await new Promise(async (resolve) => {
+  const code = await new Promise(async resolve => {
     rimraf(`${WORKSPACE}/resource/actual`, () => {
       const p = spawn('./dist/cli.js', [
         `${WORKSPACE}/resource/actual`,
         `${WORKSPACE}/resource/expected`,
         `${WORKSPACE}/diff`,
-        '-E'
+        '-E',
       ]);
-      p.on('close', (code) => resolve(code));
+      p.on('close', code => resolve(code));
       p.stderr.on('data', data => console.error(data));
     });
   });
@@ -115,13 +113,13 @@ test.serial('should exit with code 1 when extended error option set and file del
 });
 
 test.serial('should generate report json to `./reg.json` when not specified dist path', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
   try {
@@ -133,7 +131,7 @@ test.serial('should generate report json to `./reg.json` when not specified dist
 });
 
 test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when dist path specified', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
@@ -141,7 +139,7 @@ test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when di
       `-J`,
       `${WORKSPACE}/dist/reg.json`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -154,7 +152,7 @@ test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when di
 });
 
 test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when `-R` option enabled', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
@@ -162,7 +160,7 @@ test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when
       `-R`,
       `${WORKSPACE}/dist/report.html`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -175,36 +173,41 @@ test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when
   }
 });
 
-test.serial('should generate worker js and wasm files under `${WORKSPACE}/dist` when `-R -X` option enabled', async t => {
-  await new Promise((resolve) => {
-    const p = spawn('./dist/cli.js', [
-      `${WORKSPACE}/resource/actual`,
-      `${WORKSPACE}/resource/expected`,
-      `${WORKSPACE}/diff`,
-      `-R`, `${WORKSPACE}/dist/report.html`,
-      `-X`, 'client',
-    ]);
-    p.on('close', (code) => resolve(code));
-    p.stderr.on('data', data => console.error(data));
-  });
+test.serial(
+  'should generate worker js and wasm files under `${WORKSPACE}/dist` when `-R -X` option enabled',
+  async t => {
+    await new Promise(resolve => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        `-R`,
+        `${WORKSPACE}/dist/report.html`,
+        `-X`,
+        'client',
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
 
-  try {
-    t.truthy(fs.existsSync(`${WORKSPACE}/dist/worker.js`));
-    t.truthy(fs.existsSync(`${WORKSPACE}/dist/detector.wasm`));
-  } catch (e) {
-    console.error(e);
-    t.fail();
-  }
-});
+    try {
+      t.truthy(fs.existsSync(`${WORKSPACE}/dist/worker.js`));
+      t.truthy(fs.existsSync(`${WORKSPACE}/dist/detector.wasm`));
+    } catch (e) {
+      console.error(e);
+      t.fail();
+    }
+  },
+);
 
 test.serial('should generate fail report', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -229,14 +232,15 @@ test.serial('should generate fail report', async t => {
 });
 
 test.serial('should generate fail report with -T 0.00', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      `-T`, '0.00',
+      `-T`,
+      '0.00',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -261,14 +265,15 @@ test.serial('should generate fail report with -T 0.00', async t => {
 });
 
 test.serial('should not generate fail report with -T 1.00', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      `-T`, '1.00',
+      `-T`,
+      '1.00',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -293,14 +298,15 @@ test.serial('should not generate fail report with -T 1.00', async t => {
 });
 
 test.serial('should generate fail report with -S 0', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      `-S`, '0',
+      `-S`,
+      '0',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -325,14 +331,15 @@ test.serial('should generate fail report with -S 0', async t => {
 });
 
 test.serial('should not generate fail report with -S 10000000', async t => {
-  await new Promise((resolve) => {
+  await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      `-S`, '100000000',
+      `-S`,
+      '100000000',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -356,16 +363,15 @@ test.serial('should not generate fail report with -S 10000000', async t => {
   }
 });
 
-
 test.serial('should update images with `-U` option', async t => {
-  let code = await new Promise((resolve) => {
+  let code = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/actual`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
-      '-U'
+      '-U',
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     // p.stdout.on('data', data => console.log(data.toString()));
     p.stderr.on('data', data => console.error(data));
   });
@@ -387,13 +393,13 @@ test.serial('should update images with `-U` option', async t => {
 });
 
 test.serial('should generate success report', async t => {
-  const stdout = await new Promise((resolve) => {
+  const stdout = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/resource/expected`,
       `${WORKSPACE}/diff`,
     ]);
-    p.on('close', (code) => resolve(code));
+    p.on('close', code => resolve(code));
     p.stderr.on('data', data => console.error(data));
   });
 
@@ -418,14 +424,14 @@ test.serial('should generate success report', async t => {
 });
 
 test.serial('should generate newItem report', async t => {
-  const stdout = await new Promise(async (resolve) => {
+  const stdout = await new Promise(async resolve => {
     rimraf(`${WORKSPACE}/resource/expected`, () => {
       const p = spawn('./dist/cli.js', [
         `${WORKSPACE}/resource/actual`,
         `${WORKSPACE}/resource/expected`,
         `${WORKSPACE}/diff`,
       ]);
-      p.on('close', (code) => resolve(code));
+      p.on('close', code => resolve(code));
       p.stderr.on('data', data => console.error(data));
     });
   });
@@ -451,14 +457,14 @@ test.serial('should generate newItem report', async t => {
 });
 
 test.serial('should generate deletedItem report', async t => {
-  const stdout = await new Promise(async (resolve) => {
+  const stdout = await new Promise(async resolve => {
     rimraf(`${WORKSPACE}/resource/actual`, () => {
       const p = spawn('./dist/cli.js', [
         `${WORKSPACE}/resource/actual`,
         `${WORKSPACE}/resource/expected`,
         `${WORKSPACE}/diff`,
       ]);
-      p.on('close', (code) => resolve(code));
+      p.on('close', code => resolve(code));
       p.stderr.on('data', data => console.error(data));
     });
   });
@@ -483,30 +489,50 @@ test.serial('should generate deletedItem report', async t => {
   }
 });
 
+test.serial('should generate report from json', async t => {
+  await new Promise((resolve, reject) => {
+    const p = spawn('./dist/cli.js', [`-F`, `${WORKSPACE}/resource/reg.json`, `-R`, `./from-json.html`]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => reject(data));
+  });
+
+  try {
+    const report = fs.readFileSync(`./from-json.html`);
+    t.true(!!report);
+  } catch (e) {
+    console.log(e);
+    t.fail();
+  }
+});
+
 test.serial('perf', async t => {
   const copy = (s, d, done) => {
     const r = fs.createReadStream(s);
     const w = fs.createWriteStream(d);
     r.pipe(w);
-    w.on("close", (ex) => {
+    w.on('close', ex => {
       done();
     });
-  }
+  };
   for (let i = 0; i < 100; i++) {
     await Promise.all([
-      new Promise((resolve) => copy(`${WORKSPACE}/resource/actual/sample.png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve)),
-      new Promise((resolve) => copy(`${WORKSPACE}/resource/expected/sample.png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve)),
+      new Promise(resolve =>
+        copy(`${WORKSPACE}/resource/actual/sample.png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve),
+      ),
+      new Promise(resolve =>
+        copy(`${WORKSPACE}/resource/expected/sample.png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve),
+      ),
     ]);
   }
 
   console.time('100images');
-  await new Promise((resolve) => {
-    const p = spawn('./dist/cli.js', [
-      `${WORKSPACE}/resource/actual`,
-      `${WORKSPACE}/resource/expected`,
-      `${WORKSPACE}/diff`,
-    ], { cwd: path.resolve(__dirname, "../") });
-    p.on('close', (code) => resolve(code));
+  await new Promise(resolve => {
+    const p = spawn(
+      './dist/cli.js',
+      [`${WORKSPACE}/resource/actual`, `${WORKSPACE}/resource/expected`, `${WORKSPACE}/diff`],
+      { cwd: path.resolve(__dirname, '../') },
+    );
+    p.on('close', code => resolve(code));
     // p.stdout.on('data', data => console.log(data));
     p.stderr.on('data', data => {
       console.error(data.toString());
@@ -516,9 +542,7 @@ test.serial('perf', async t => {
   t.pass();
 });
 
-
 test.afterEach.always(async t => {
-  await new Promise((done) => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
-  await new Promise((done) => rimraf(`./reg.json`, done));
+  await new Promise(done => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
+  await new Promise(done => rimraf(`./reg.json`, done));
 });
-
