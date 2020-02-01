@@ -65,12 +65,12 @@ https://reg-viz.github.io/reg-cli/
 
 If `-F` option set, only report will be output without comparing images.
 
-```
+``` sh
 reg-cli.js -F ./sample/reg.json -R ./sample/index.html"
 ```
 
 - json format
-```
+``` json
 {
     "failedItems": ["sample.png"],
     "newItems":[],
