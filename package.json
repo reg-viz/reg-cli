@@ -44,7 +44,7 @@
     "lodash": "4.17.15",
     "make-dir": "3.0.0",
     "md5-file": "4.0.0",
-    "meow": "3.7.0",
+    "meow": "6.1.0",
     "mustache": "3.1.0",
     "x-img-diff-js": "0.3.5"
   },
