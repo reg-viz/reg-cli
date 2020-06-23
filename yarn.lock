@@ -2428,16 +2428,15 @@ cosmiconfig@^5.2.1:
     js-yaml "^3.13.1"
     parse-json "^4.0.0"
 
-cp-file@^4.2.0:
-  version "4.2.0"
-  resolved "https://registry.yarnpkg.com/cp-file/-/cp-file-4.2.0.tgz#715361663b71ede0b6dddbc3c80e2ba02e725ec3"
-  integrity sha1-cVNhZjtx7eC23dvDyA4roC5yXsM=
+cp-file@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/cp-file/-/cp-file-7.0.0.tgz#b9454cfd07fe3b974ab9ea0e5f29655791a9b8cd"
+  integrity sha512-0Cbj7gyvFVApzpK/uhCtQ/9kE9UnYpxMzaq5nQQC/Dh4iaj5fxp7iEFIullrYwzj8nf0qnsI1Qsx34hAeAebvw==
   dependencies:
     graceful-fs "^4.1.2"
-    make-dir "^1.0.0"
+    make-dir "^3.0.0"
     nested-error-stacks "^2.0.0"
-    pify "^2.3.0"
-    safe-buffer "^5.0.1"
+    p-event "^4.1.0"
 
 cpx@^1.5.0:
   version "1.5.0"
@@ -5193,6 +5192,13 @@ make-dir@^2.0.0:
     pify "^4.0.1"
     semver "^5.6.0"
 
+make-dir@^3.0.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/make-dir/-/make-dir-3.1.0.tgz#415e967046b3a7f1d185277d84aa58203726a13f"
+  integrity sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==
+  dependencies:
+    semver "^6.0.0"
+
 mamacro@^0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/mamacro/-/mamacro-0.0.3.tgz#ad2c9576197c9f1abf308d0787865bd975a3f3e4"
@@ -6030,6 +6036,13 @@ p-defer@^1.0.0:
   resolved "https://registry.yarnpkg.com/p-defer/-/p-defer-1.0.0.tgz#9f6eb182f6c9aa8cd743004a7d4f96b196b0fb0c"
   integrity sha1-n26xgvbJqozXQwBKfU+WsZaw+ww=
 
+p-event@^4.1.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/p-event/-/p-event-4.2.0.tgz#af4b049c8acd91ae81083ebd1e6f5cae2044c1b5"
+  integrity sha512-KXatOjCRXXkSePPb1Nbi0p0m+gQAwdlbhi4wQKJPI1HsMQS9g+Sqp2o+QHziPr7eYJyOZet836KoHEVM1mwOrQ==
+  dependencies:
+    p-timeout "^3.1.0"
+
 p-finally@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/p-finally/-/p-finally-1.0.0.tgz#3fbcfb15b899a44123b34b6dcc18b724336a2cae"
@@ -6101,6 +6114,13 @@ p-timeout@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/p-timeout/-/p-timeout-2.0.1.tgz#d8dd1979595d2dc0139e1fe46b8b646cb3cdf038"
   integrity sha512-88em58dDVB/KzPEx1X0N3LwFfYZPyDc4B6eF38M1rk9VTZMbxXXgjugz8mmwpS9Ox4BDZ+t6t3QP5+/gazweIA==
+  dependencies:
+    p-finally "^1.0.0"
+
+p-timeout@^3.1.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/p-timeout/-/p-timeout-3.2.0.tgz#c7e17abc971d2a7962ef83626b35d635acf23dfe"
+  integrity sha512-rhIwUycgwwKcP9yTOOFK/AKsAopjjCakVqLHePO3CC6Mir1Z99xT+R63jZxAT5lFZLa2inS5h+ZS2GvR99/FBg==
   dependencies:
     p-finally "^1.0.0"
 
@@ -6804,10 +6824,10 @@ redent@^1.0.0:
     indent-string "^2.1.0"
     strip-indent "^1.0.1"
 
-reg-cli@^0.15.7:
-  version "0.15.7"
-  resolved "https://registry.yarnpkg.com/reg-cli/-/reg-cli-0.15.7.tgz#d577b3346683a1df3f55dc2469c8efd339dfe0c0"
-  integrity sha512-4IDZsvY6kgUWwRYv7I1BKSGkn2MhS8EIHRdqGp16Yu9CQcqcGoKbrRkx4LrAuIAID3ftyAZI9r696Vg8e6cprQ==
+reg-cli@^0.16.1:
+  version "0.16.1"
+  resolved "https://registry.yarnpkg.com/reg-cli/-/reg-cli-0.16.1.tgz#4f1d447742c4120d110783e84e2f85ee9dc18247"
+  integrity sha512-e9Afa1ajOCKrmdDuQye6nzt8L6pfxD+hGQ/acHPyzoLKfXHaFfDPgq8iJNjf/chJ5CBKA7w5M4YTNH02pzjkSw==
   dependencies:
     bluebird "3.5.5"
     chalk "2.4.2"
@@ -6857,14 +6877,14 @@ reg-publish-s3-plugin@0.7.25:
     reg-suit-util "^0.7.25"
     uuid "^3.1.0"
 
-reg-suit-core@^0.8.1:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.8.1.tgz#ecf66ebcd6a3cf1ea9e66ef67cb60c3401aeb97d"
-  integrity sha512-IiPbU5PuW1bJ7Q/WLf+dEVQfuSdL0BLFqVwqj5nTpbrhrhtc09MQPOJrovXBxmbOWJdx2v7fjR3LhiYwt4k+xQ==
+reg-suit-core@^0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.10.2.tgz#dcd29de22500c411b456e2067594003770ecc2ba"
+  integrity sha512-k/yPA/NEmV8MdJa8dvXjE89yzI3x5OD7Ur2f7UbporZX7z3lZHD64sIJdOFfzv5DfmlR2muMRtAvLp5krBYaXA==
   dependencies:
     cpx "^1.5.0"
-    reg-cli "^0.15.7"
-    reg-suit-util "^0.7.25"
+    reg-cli "^0.16.1"
+    reg-suit-util "^0.8.5"
     rimraf "^2.6.1"
 
 reg-suit-util@^0.7.25:
@@ -6880,16 +6900,29 @@ reg-suit-util@^0.7.25:
     mime-types "^2.1.15"
     mkdirp "^0.5.1"
 
-reg-suit@0.8.1:
-  version "0.8.1"
-  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.8.1.tgz#e86c4dec079546ca7132002d3cf245899b8f260e"
-  integrity sha512-7VzJf3Bdt2DlLpX4VfD8SvlXHiKeupD51laYCL/Zy2UZp+ix0HkXOFNdwLFfgyo52uMrtWUZSHDIp1qAn/IaVw==
+reg-suit-util@^0.8.5:
+  version "0.8.5"
+  resolved "https://registry.yarnpkg.com/reg-suit-util/-/reg-suit-util-0.8.5.tgz#a86eeacb032b5550fb98a0c696822e8a0ef072ef"
+  integrity sha512-9SdOTaXpTMAVurch5fP6u5kd9pADktUZgKYEbCIh4ud4tAObl6sKGPtD+bnsjkN4cymj7PBZSNXijgrW7lCV2w==
   dependencies:
-    cp-file "^4.2.0"
+    chalk "^2.0.1"
+    cli-progress "^1.4.1"
+    cli-spinner "^0.2.6"
+    glob "^7.1.2"
+    lodash "^4.17.4"
+    mime-types "^2.1.15"
+    mkdirp "^0.5.1"
+
+reg-suit@0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.10.2.tgz#bb6fe6385a8ddc55b835ffc112e4a3e726fd8d80"
+  integrity sha512-Tq5rzBo46wMOzjYmOFscbwwb19yPAZ3y7kPdC8TxmlX1Wzkc4rTqlz57Ej8Ao2M1oQyY+0zf8HDaNJk2HS61YA==
+  dependencies:
+    cp-file "^7.0.0"
     ignore "^3.3.7"
     inquirer "^3.1.1"
-    reg-suit-core "^0.8.1"
-    reg-suit-util "^0.7.25"
+    reg-suit-core "^0.10.2"
+    reg-suit-util "^0.8.5"
     yargs "^8.0.2"
 
 regenerate@^1.2.1:
