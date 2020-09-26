@@ -59,7 +59,7 @@
     "babel-preset-es2017": "6.24.1",
     "babel-preset-stage-2": "6.24.1",
     "copyfiles": "2.1.1",
-    "cross-env": "5.2.1",
+    "cross-env": "7.0.2",
     "finalhandler": "1.1.2",
     "flow-bin": "0.77.0",
     "flow-typed": "2.6.1",
