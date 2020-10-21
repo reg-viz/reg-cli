@@ -40,7 +40,7 @@
     "cross-spawn": "7.0.0",
     "del": "3.0.0",
     "glob": "7.1.4",
-    "img-diff-js": "0.4.1",
+    "img-diff-js": "0.5.0",
     "lodash": "4.17.20",
     "make-dir": "3.0.0",
     "md5-file": "4.0.0",
