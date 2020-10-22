@@ -42,7 +42,7 @@
     "cli-spinner": "0.2.10",
     "cross-spawn": "7.0.3",
     "del": "3.0.0",
-    "glob": "7.1.4",
+    "glob": "7.1.6",
     "img-diff-js": "0.5.0",
     "lodash": "4.17.20",
     "make-dir": "3.1.0",
