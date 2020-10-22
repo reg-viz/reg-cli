@@ -37,7 +37,7 @@
     "**/serialize-javascript": "^3.1.0"
   },
   "dependencies": {
-    "bluebird": "3.5.5",
+    "bluebird": "3.7.2",
     "chalk": "2.4.2",
     "cli-spinner": "0.2.10",
     "cross-spawn": "7.0.3",
