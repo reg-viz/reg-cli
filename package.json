@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "bluebird": "3.7.2",
-    "chalk": "2.4.2",
+    "chalk": "4.1.0",
     "cli-spinner": "0.2.10",
     "cross-spawn": "7.0.3",
     "del": "3.0.0",
