@@ -392,6 +392,39 @@ test.serial('should update images with `-U` option', async t => {
   t.deepEqual(report, expected);
 });
 
+test.serial('should delete from /expected when they are missing from /actual with `-U` option', async t => {
+  const code = await new Promise(resolve => {
+    rimraf(`${WORKSPACE}/resource/actual/${SAMPLE_IMAGE}`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-U',
+      ]);
+      p.on('close', code => resolve(code));
+      // p.stdout.on('data', data => console.log(data.toString()));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 0);
+  const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+  const expected = {
+    actualItems: [],
+    expectedItems: [],
+    diffItems: [],
+    failedItems: [],
+    newItems: [],
+    deletedItems: [`${SAMPLE_IMAGE}`],
+    passedItems: [],
+    actualDir: `./${WORKSPACE}/resource/actual`,
+    expectedDir: `./${WORKSPACE}/resource/expected`,
+    diffDir: `./${WORKSPACE}/diff`,
+  };
+  t.deepEqual(report, expected);
+  const wasDeleted = !fs.existsSync(`${WORKSPACE}/resource/expected/${SAMPLE_IMAGE}`);
+  t.true(wasDeleted, `File ${SAMPLE_IMAGE} was not deleted from /expected`);
+});
+
 test.serial('should generate success report', async t => {
   const stdout = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', [
