@@ -101,7 +101,8 @@ const compareImages = (
 
 const cleanupExpectedDir = (expectedDir, changedFiles) => {
   const paths = changedFiles.map(image => path.join(expectedDir, image));
-  del(paths);
+  // force: true needed to allow deleting outside working directory
+  return del(paths, { force: true });
 };
 
 const aggregate = result => {
@@ -112,14 +113,17 @@ const aggregate = result => {
 };
 
 const updateExpected = ({ actualDir, expectedDir, diffDir, deletedImages, newImages, diffItems }) => {
-  cleanupExpectedDir(expectedDir, [...deletedImages, ...diffItems]);
-  return copyImages([...newImages, ...diffItems], {
-    actualDir,
-    expectedDir,
-    diffDir,
-  }).then(() => {
-    log.success(`\nAll images are updated. `);
-  });
+  return cleanupExpectedDir(expectedDir, [...deletedImages, ...diffItems])
+    .then(() =>
+      copyImages([...newImages, ...diffItems], {
+        actualDir,
+        expectedDir,
+        diffDir,
+      }),
+    )
+    .then(() => {
+      log.success(`\nAll images are updated. `);
+    });
 };
 
 module.exports = (params: RegParams) => {
