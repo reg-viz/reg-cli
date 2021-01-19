@@ -67,7 +67,7 @@
     "flow-bin": "0.77.0",
     "flow-typed": "3.2.1",
     "husky": "4.3.0",
-    "puppeteer": "1.20.0",
+    "puppeteer": "5.5.0",
     "reg-keygen-git-hash-plugin": "0.10.11",
     "reg-notify-github-plugin": "0.10.10",
     "reg-publish-s3-plugin": "0.10.10",
