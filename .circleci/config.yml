@@ -1,7 +1,7 @@
 defaults: &defaults
   working_directory: ~/reg-cli
   docker:
-    - image: bokuweb/node-go-with-browser:latest
+    - image: docker pull buildkite/puppeteer:latest
       environment:
         DISPLAY: ":99"
 
