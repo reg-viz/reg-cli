@@ -66,7 +66,7 @@
     "finalhandler": "1.1.2",
     "flow-bin": "0.77.0",
     "flow-typed": "3.2.1",
-    "husky": "4.3.0",
+    "husky": "6.0.0",
     "puppeteer": "1.20.0",
     "reg-keygen-git-hash-plugin": "0.10.11",
     "reg-notify-github-plugin": "0.10.10",
