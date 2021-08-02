@@ -27,7 +27,6 @@ jobs:
           command: |
             yarn run flow
             yarn run test
-            yarn reg-suit run
   patch_release:
     <<: *defaults
     steps:

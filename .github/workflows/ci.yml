@@ -1,0 +1,17 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@master
+        with:
+          node-version: 14
+      - name: yarn
+        run: yarn --frozen-lockfile
+      - name: flow
+        run: yarn run flow
+      - name: test
+        run: yarn run test
