@@ -20,9 +20,9 @@
 
 ### Requirements
 
- - Node.js v8+
+ - Node.js v12+
 
-`reg-cli` support Node.js v8+
+`reg-cli` support Node.js v12+
 
 ``` sh
 $ npm i -D reg-cli
