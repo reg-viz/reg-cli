@@ -313,10 +313,10 @@
   dependencies:
     "@types/node" "*"
 
-"@types/pngjs@^3.4.2":
-  version "3.4.2"
-  resolved "https://registry.yarnpkg.com/@types/pngjs/-/pngjs-3.4.2.tgz#8dc49b45fbcf18a5873179e3664f049388e39ecf"
-  integrity sha512-LJVPDraJ5YFEnMHnzxTN4psdWz1M61MtaAAWPn3qnDk5fvs7BAmmQ9pd3KPlrdrvozMyne4ktanD4pg0L7x1Pw==
+"@types/pngjs@^6.0.0":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@types/pngjs/-/pngjs-6.0.1.tgz#c711ec3fbbf077fed274ecccaf85dd4673130072"
+  integrity sha512-J39njbdW1U/6YyVXvC9+1iflZghP8jgRf2ndYghdJb5xL49LYDB+1EuAxfbuJ2IBbWIL3AjHPQhgaTxT3YaYeg==
   dependencies:
     "@types/node" "*"
 
@@ -4396,20 +4396,20 @@ ignore@^5.1.4:
   resolved "https://registry.yarnpkg.com/ignore/-/ignore-5.1.8.tgz#f150a8b50a34289b33e22f5889abd4d8016f0e57"
   integrity sha512-BMpfD7PpiETpBl/A6S498BaIJ6Y/ABT93ETbby2fP00v4EbvPBXWEoaR1UBPKs3iR53pJY7EtZk5KACI57i1Uw==
 
-img-diff-js@0.5.1:
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.5.1.tgz#4490fe198832dbb55958fd2576cb35138bf7f57b"
-  integrity sha512-znFsjy9tyD+9w8fiL5u9GyS8pmxFHSpjdtgFedkQwUHW7Rok5zHyj9qdM4PkxpkSnt+0NXNR4KgnpwsCFmrqPQ==
+img-diff-js@0.5.2:
+  version "0.5.2"
+  resolved "https://registry.yarnpkg.com/img-diff-js/-/img-diff-js-0.5.2.tgz#3db3c2af92d92cfc39be45ae83372d7ad2d59df2"
+  integrity sha512-edvMoyVOrEFC/evz/DYBJ0tmvQ0YeQ+qQZdN4r6LIFxDq1vBd/Pt/+pPOlu9h/whBDiAdQrDkNWtnrpyBMpFOw==
   dependencies:
     "@types/mkdirp" "^1.0.1"
     "@types/node" "^14.11.2"
     "@types/pixelmatch" "^5.2.2"
-    "@types/pngjs" "^3.4.2"
+    "@types/pngjs" "^6.0.0"
     decode-tiff "^0.2.0"
     jpeg-js "^0.4.2"
     mkdirp "^1.0.4"
     pixelmatch "^5.2.1"
-    pngjs "^5.0.0"
+    pngjs "^6.0.0"
 
 import-fresh@^3.2.1:
   version "3.2.1"
@@ -6530,10 +6530,10 @@ pngjs@^4.0.1:
   resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-4.0.1.tgz#f803869bb2fc1bfe1bf99aa4ec21c108117cfdbe"
   integrity sha512-rf5+2/ioHeQxR6IxuYNYGFytUyG3lma/WW1nsmjeHlWwtb2aByla6dkVc8pmJ9nplzkTA0q2xx7mMWrOTqT4Gg==
 
-pngjs@^5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-5.0.0.tgz#e79dd2b215767fd9c04561c01236df960bce7fbb"
-  integrity sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==
+pngjs@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-6.0.0.tgz#ca9e5d2aa48db0228a52c419c3308e87720da821"
+  integrity sha512-TRzzuFRRmEoSW/p1KVAmiOgPco2Irlah+bGFCeNfJXxxYGwSw7YwAOAcd7X28K/m5bjBWKsC29KyoMfHbypayg==
 
 portfinder@^1.0.26:
   version "1.0.28"
