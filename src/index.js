@@ -100,9 +100,22 @@ const compareImages = (
 };
 
 const cleanupExpectedDir = (expectedDir, changedFiles) => {
-  const paths = changedFiles.map(image => path.join(expectedDir, image));
+  const paths = changedFiles.map(image => path.join(escapeGlob(expectedDir), escapeGlob(image)));
   // force: true needed to allow deleting outside working directory
   return del(paths, { force: true });
+};
+
+const escapeGlob = fileName => {
+  return fileName
+    .replace(/\*/g, '\\*')
+    .replace(/\?/g, '\\?')
+    .replace(/\[/g, '\\[')
+    .replace(/\]/g, '\\]')
+    .replace(/\{/g, '\\{')
+    .replace(/\}/g, '\\}')
+    .replace(/\)/g, '\\)')
+    .replace(/\(/g, '\\(')
+    .replace(/\!/g, '\\!');
 };
 
 const aggregate = result => {
