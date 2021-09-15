@@ -30,7 +30,7 @@
   "author": "bokuweb",
   "license": "MIT",
   "resolutions": {
-    "**/set-value": "4.0.0",
+    "**/set-value": "4.0.1",
     "**/randomatic": "3.1.1",
     "**/deep-extend": "0.6.0",
     "**/cryptiles": "4.1.3",
