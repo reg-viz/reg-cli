@@ -9,8 +9,8 @@ import spawn from 'cross-spawn';
 const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
 const WORKSPACE = 'test/__workspace__';
 const RESOURCE = 'resource';
-const SAMPLE_IMAGE = 'sample.png';
-const SAMPLE_DIFF_IMAGE = 'sample.png';
+const SAMPLE_IMAGE = 'sample(cal).png';
+const SAMPLE_DIFF_IMAGE = 'sample(cal).png';
 
 const replaceReportPath = report => {
   Object.keys(report).forEach(key => {
@@ -550,10 +550,10 @@ test.serial('perf', async t => {
   for (let i = 0; i < 100; i++) {
     await Promise.all([
       new Promise(resolve =>
-        copy(`${WORKSPACE}/resource/actual/sample.png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve),
+        copy(`${WORKSPACE}/resource/actual/sample(cal).png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve),
       ),
       new Promise(resolve =>
-        copy(`${WORKSPACE}/resource/expected/sample.png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve),
+        copy(`${WORKSPACE}/resource/expected/sample(cal).png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve),
       ),
     ]);
   }
