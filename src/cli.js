@@ -115,10 +115,10 @@ const observer = compare({
   report,
   json,
   urlPrefix,
-  matchingThreshold: Number(cli.flags.matchingThreshold),
+  matchingThreshold: Number(cli.flags.matchingThreshold || 0),
   thresholdRate: Number(cli.flags.thresholdRate),
   thresholdPixel: Number(cli.flags.thresholdPixel),
-  concurrency: Number(cli.flags.concurrency) || 4,
+  concurrency: Number(cli.flags.concurrency || 4),
   enableAntialias: !!cli.flags.enableAntialias,
   enableClientAdditionalDetection,
 });
