@@ -31,6 +31,8 @@
   "license": "MIT",
   "resolutions": {
     "**/set-value": "4.1.0",
+    "**/tar": "^4.4.18",
+    "**/kind-of": "^6.0.3",
     "**/randomatic": "3.1.1",
     "**/deep-extend": "0.6.0",
     "**/cryptiles": "4.1.3",
