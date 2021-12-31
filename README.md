@@ -44,7 +44,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
   * `-E`, `--extendedErrors` If true, also added/deleted images will throw an error.
   * `-P`, `--urlPrefix` Add prefix to all image src.
-  * `-M`, `--matchingThreshold` Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
+  * `-M`, `--matchingThreshold` Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default. Specifically, you can set how much of a difference in the YIQ difference metric should be considered a different pixel. If there is a difference between pixels, it will be treated as "same pixel" if it is within this threshold.
   * `-T`, `--thresholdRate` Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change. Applied after `matchingThreshold`. 0 by default.
   * `-S`, `--thresholdPixel` Pixel threshold for detecting change. When the difference pixel of the image is larger than the set pixel detects the change. This value takes precedence over `thresholdRate`. Applied after `matchingThreshold`. 0 by default.
   * `-C`, `--concurrency` How many processes launches in parallel. If omitted 4.
