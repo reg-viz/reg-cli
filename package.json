@@ -9,7 +9,6 @@
     "build": "npm run build:cli && npm run build:report",
     "build:cli": "babel src -d dist",
     "build:report": "sh ./scripts/build-ui.sh v0.2.1",
-    "dev:report": "npm run copy:ximgdiff && webpack-dev-server --hot --inline --open",
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
     "prepublishOnly": "npm run build",
@@ -48,6 +47,7 @@
     "**/node-forge": "^1.0.0",
     "**/serialize-javascript": "^6.0.0",
     "**/y18n": "^5.0.0",
+    "**/braces": "^2.3.2",
     "**/trim-newlines": "^3.0.1"
   },
   "dependencies": {
@@ -84,10 +84,7 @@
     "flow-typed": "3.2.1",
     "puppeteer": "13.4.1",
     "rimraf": "3.0.2",
-    "serve-static": "1.14.2",
-    "webpack": "4.40.2",
-    "webpack-cli": "3.3.9",
-    "webpack-dev-server": "3.11.3"
+    "serve-static": "1.14.2"
   },
   "files": [
     "dist",
