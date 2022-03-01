@@ -1,6 +1,5 @@
 ![reg-cli](./docs/reg-cli.jpg)
 
-![[Build Status](https://circleci.com/gh/reg-viz/reg-cli/tree/master)](https://circleci.com/gh/reg-viz/reg-cli/tree/master.svg?style=svg)
 ![[Build Status](https://travis-ci.org/reg-viz/reg-cli)](https://travis-ci.org/reg-viz/reg-cli.svg?branch=master)
 ![[Build Status](https://ci.appveyor.com/project/bokuweb/reg-cli)](https://ci.appveyor.com/api/projects/status/ir907qbc633q9na4?svg=true)
 ![[npm package](https://www.npmjs.com/package/reg-cli)](https://img.shields.io/npm/v/reg-cli.svg)
