@@ -87,7 +87,7 @@
     "serve-static": "1.14.2",
     "webpack": "4.40.2",
     "webpack-cli": "3.3.9",
-    "webpack-dev-server": "3.11.3"
+    "webpack-dev-server": "4.7.4"
   },
   "files": [
     "dist",
