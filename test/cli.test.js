@@ -25,6 +25,49 @@ test.beforeEach(async t => {
   await new Promise(resolve => copyfiles([`${RESOURCE}/reg.json`, WORKSPACE], resolve));
 });
 
+test.serial('should display default diff message', async t => {
+  const stdout = await new Promise(async resolve => {
+    const chunks = [];
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+      ]);
+      p.stdout.on('data', chunk => {
+        chunks.push(Buffer.from(chunk));
+      });
+      p.on('close', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+    });
+  });
+  t.true(stdout.indexOf('Inspect your code changes, re-run with `-U` to update them') !== -1);
+});
+
+test.serial.only('should display custom diff message', async t => {
+  const stdout = await new Promise(async resolve => {
+    const chunks = [];
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+        '-D Custom diff message',
+      ]);
+      p.stdout.on('data', chunk => {
+        chunks.push(Buffer.from(chunk));
+      });
+      p.on('close', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+    });
+  });
+  t.true(stdout.indexOf('Custom diff message') !== -1);
+});
+
 test.serial('should display error message when passing only 1 argument', async t => {
   const stdout = await new Promise(resolve => {
     const p = spawn('./dist/cli.js', ['./sample/actual']);
@@ -553,7 +596,11 @@ test.serial('perf', async t => {
         copy(`${WORKSPACE}/resource/actual/sample(cal).png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve),
       ),
       new Promise(resolve =>
-        copy(`${WORKSPACE}/resource/expected/sample(cal).png`, `${WORKSPACE}/resource/expected/sample${i}.png`, resolve),
+        copy(
+          `${WORKSPACE}/resource/expected/sample(cal).png`,
+          `${WORKSPACE}/resource/expected/sample${i}.png`,
+          resolve,
+        ),
       ),
     ]);
   }

@@ -34,6 +34,7 @@ const cli = meow(
     -A, --enableAntialias. Enable antialias. If omitted false.
     -X, --additionalDetection. Enable additional difference detection(highly experimental). Select "none" or "client" (default: "none").
     -F, --from Generate report from json. Please specify json file. If set, only report will be output without comparing images.
+    -D, --customDiffMessage Pass custom massage that will logged to the terminal when there is a diff.
   Examples
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `,
@@ -52,6 +53,7 @@ const cli = meow(
       A: 'enableAntialias',
       X: 'additionalDetection',
       F: 'from',
+      D: 'customDiffMessage'
     },
   },
 );
@@ -77,6 +79,7 @@ const extendedErrors = !!cli.flags.extendedErrors;
 const ignoreChange = !!cli.flags.ignoreChange;
 const enableClientAdditionalDetection = cli.flags.additionalDetection === 'client';
 const from = String(cli.flags.from || '');
+const customDiffMessage = String(cli.flags.customDiffMessage || `\nInspect your code changes, re-run with \`-U\` to update them. `);
 
 // If from option specified, generate report from json and exit.
 if (from) {
@@ -151,7 +154,7 @@ observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems })
   if (newItems.length) log.info(`${GREEK_CROSS} ${newItems.length} file(s) appended.`);
   if (passedItems.length) log.success(`${CHECK_MARK} ${passedItems.length} file(s) passed.`);
   if (!update && (failedItems.length > 0 || (extendedErrors && (newItems.length > 0 || deletedItems.length > 0)))) {
-    log.fail(`\nInspect your code changes, re-run with \`-U\` to update them. `);
+    log.fail(customDiffMessage);
     if (!ignoreChange) process.exit(1);
   }
   return process.exit(0);
