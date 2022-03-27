@@ -79,7 +79,7 @@
     "babel-preset-stage-2": "6.24.1",
     "copyfiles": "2.4.1",
     "cross-env": "7.0.3",
-    "finalhandler": "1.1.2",
+    "finalhandler": "1.2.0",
     "flow-bin": "0.77.0",
     "flow-typed": "3.7.0",
     "puppeteer": "13.5.1",
