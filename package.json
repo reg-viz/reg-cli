@@ -55,7 +55,7 @@
     "chalk": "4.1.2",
     "cli-spinner": "0.2.10",
     "cross-spawn": "7.0.3",
-    "del": "6.0.0",
+    "del": "6.1.1",
     "glob": "7.2.0",
     "img-diff-js": "0.5.2",
     "jpeg-js": "^0.4.0",
