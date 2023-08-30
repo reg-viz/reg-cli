@@ -65,6 +65,7 @@
     "meow": "3.7.0",
     "mustache": "4.2.0",
     "x-img-diff-js": "0.3.5",
+    "xmlbuilder2": "^3.1.1",
     "yargs-parser": "^21.0.1"
   },
   "devDependencies": {
