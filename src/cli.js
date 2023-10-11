@@ -26,6 +26,7 @@ const cli = meow(
     -I, --ignoreChange If true, error will not be thrown when image change detected.
     -E, --extendedErrors If true, also added/deleted images will throw an error. If omitted false.
     -R, --report Output html report to specified directory.
+    --junit Output junit report to specified file.
     -P, --urlPrefix Add prefix to all image src.
     -M, --matchingThreshold Matching threshold, ranges from 0 to 1. Smaller values make the comparison more sensitive. 0 by default.
     -T, --thresholdRate Rate threshold for detecting change. When the difference ratio of the image is larger than the set rate detects the change.
@@ -70,7 +71,7 @@ const json = cli.flags.json ? cli.flags.json.toString() : './reg.json'; // defau
 const urlPrefix = typeof cli.flags.urlPrefix === 'string' ? cli.flags.urlPrefix : './';
 
 const report = typeof cli.flags.report === 'string' ? cli.flags.report : !!cli.flags.report ? './report.html' : '';
-
+const junitReport = typeof cli.flags.junit === 'string' ? cli.flags.junit : !!cli.flags.junit ? './junit.xml' : '';
 const actualDir = process.argv[2];
 const expectedDir = process.argv[3];
 const diffDir = process.argv[4];
@@ -98,6 +99,8 @@ if (from) {
       ...params,
       json: json || './reg.json',
       report: report || './report.html',
+      junitReport: junitReport || '',
+      extendedErrors,
       urlPrefix: urlPrefix || '',
       enableClientAdditionalDetection,
       fromJSON: true,
@@ -116,6 +119,8 @@ const observer = compare({
   diffDir,
   update,
   report,
+  junitReport,
+  extendedErrors,
   json,
   urlPrefix,
   matchingThreshold: Number(cli.flags.matchingThreshold || 0),

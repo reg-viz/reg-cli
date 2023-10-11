@@ -216,6 +216,37 @@ test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when
   }
 });
 
+test.serial('should generate junit report xml to `${WORKSPACE}/dist/report.xml` when `--junit` option enabled', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `--junit`,
+      `${WORKSPACE}/dist/report.xml`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    let report = fs.readFileSync(`${WORKSPACE}/dist/report.xml`);
+    t.is(report.toString(),
+      `<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="1" failures="1">
+  <testsuite name="reg-cli" tests="1" failures="1">
+    <testcase name="sample(cal).png">
+      <failure message="failed"/>
+    </testcase>
+  </testsuite>
+</testsuites>`);
+    t.pass();
+  } catch (e) {
+    console.error(e);
+    t.fail();
+  }
+});
+
 test.serial(
   'should generate worker js and wasm files under `${WORKSPACE}/dist` when `-R -X` option enabled',
   async t => {
@@ -575,6 +606,32 @@ test.serial('should generate report from json', async t => {
   try {
     const report = fs.readFileSync(`./from-json.html`);
     t.true(!!report);
+  } catch (e) {
+    console.log(e);
+    t.fail();
+  }
+});
+
+
+test.serial('should generate Junit report from json', async t => {
+  await new Promise((resolve, reject) => {
+    const p = spawn('./dist/cli.js', [`-F`, `${WORKSPACE}/resource/reg.json`, '--junit','./from-json.xml']);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => reject(data));
+  });
+
+  try {
+    const report = fs.readFileSync(`./from-json.xml`);
+    t.true(!!report);
+    t.is(report.toString(),
+      `<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="1" failures="1">
+  <testsuite name="reg-cli" tests="1" failures="1">
+    <testcase name="sample.png">
+      <failure message="failed"/>
+    </testcase>
+  </testsuite>
+</testsuites>`);
   } catch (e) {
     console.log(e);
     t.fail();

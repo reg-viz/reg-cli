@@ -152,6 +152,8 @@ module.exports = (params: RegParams) => {
     concurrency = 4,
     update,
     report,
+    junitReport,
+    extendedErrors,
     urlPrefix,
     threshold,
     matchingThreshold = 0,
@@ -194,6 +196,8 @@ module.exports = (params: RegParams) => {
         expectedDir,
         diffDir,
         report: report || '',
+        junitReport: junitReport || '',
+        extendedErrors,
         urlPrefix: urlPrefix || '',
         enableClientAdditionalDetection: !!enableClientAdditionalDetection,
       });

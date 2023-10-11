@@ -6,6 +6,7 @@ import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
 import path from 'path';
+import * as xmlBuilder from 'xmlbuilder2';
 
 export type ReportParams = {
   passedItems: string[],
@@ -20,6 +21,8 @@ export type ReportParams = {
   expectedDir: string,
   diffDir: string,
   report: string,
+  junitReport: string,
+  extendedErrors: boolean,
   urlPrefix: string,
   enableClientAdditionalDetection: boolean,
   fromJSON?: boolean,
@@ -90,6 +93,43 @@ const createHTMLReport = params => {
   return Mustache.render(template.toString(), view);
 };
 
+const createJunitReport = params => {
+  const failedTests = params.failedItems.length + params.newItems.length + params.deletedItems.length;
+  const numberOfTests = failedTests + params.passedItems.length;
+  const doc = xmlBuilder.create({ version: '1.0' });
+  const testsuitesElement = doc.ele('testsuites', { name: 'reg-cli tests', tests: numberOfTests, failures: failedTests });
+  const testsuiteElement = testsuitesElement.ele('testsuite', { name: 'reg-cli', tests: numberOfTests, failures: failedTests });
+  params.failedItems.forEach(item => {
+    addFailedJunitTestElement(testsuiteElement, item, 'failed');
+  });
+  params.newItems.forEach(item => {
+    if (params.extendedErrors) {
+      addFailedJunitTestElement(testsuiteElement, item, 'newItem');
+    } else {
+      addPassedJunitTestElement(testsuiteElement, item);
+    }
+  });
+  params.deletedItems.forEach(item => {
+    if (params.extendedErrors) {
+      addFailedJunitTestElement(testsuiteElement, item, 'deletedItem');
+    } else {
+      addPassedJunitTestElement(testsuiteElement, item);
+    }
+  });
+  params.passedItems.forEach(item => {
+    addPassedJunitTestElement(testsuiteElement, item);
+  });
+  return doc.end({ prettyPrint: true });
+};
+
+function addPassedJunitTestElement(testsuiteElement, item: string) {
+  testsuiteElement.ele('testcase', { name: item });
+}
+
+function addFailedJunitTestElement(testsuiteElement, item: string, reason: string) {
+  testsuiteElement.ele('testcase', { name: item }).ele('failure', { message: reason });
+}
+
 function createXimdiffWorker(params: ReportParams) {
   const file = path.join(__dirname, '../template/worker_pre.js');
   const moduleJs = fs.readFileSync(path.join(__dirname, '../report/ui/dist/worker.js'), 'utf8');
@@ -110,6 +150,11 @@ export default (params: ReportParams) => {
       const wasmBuf = fs.readFileSync(detectDiff.getBrowserWasmPath());
       fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
     }
+  }
+  if (!!params.junitReport) {
+    const junitXml = createJunitReport(params);
+    mkdirp.sync(path.dirname(params.junitReport));
+    fs.writeFileSync(params.junitReport, junitXml);
   }
 
   const json = createJSONReport(params);
