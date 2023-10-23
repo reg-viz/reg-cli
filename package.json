@@ -69,7 +69,7 @@
     "yargs-parser": "^21.0.1"
   },
   "devDependencies": {
-    "ava": "0.25.0",
+    "ava": "5.3.1",
     "babel-cli": "6.26.0",
     "babel-loader": "8.2.4",
     "babel-plugin-transform-es2015-block-scoping": "6.26.0",
