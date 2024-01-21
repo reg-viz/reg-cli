@@ -40,21 +40,72 @@ const cli = meow(
     $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -U -D ./reg.json
 `,
   {
-    alias: {
-      U: 'update',
-      J: 'json',
-      I: 'ignoreChange',
-      E: 'extendedErrors',
-      R: 'report',
-      P: 'urlPrefix',
-      M: 'matchingThreshold',
-      T: 'thresholdRate',
-      S: 'thresholdPixel',
-      C: 'concurrency',
-      A: 'enableAntialias',
-      X: 'additionalDetection',
-      F: 'from',
-      D: 'customDiffMessage'
+    flags: {
+      update: {
+        type: 'boolean',
+        alias: 'U',
+      },
+      json: {
+        type: 'string',
+        alias: 'J',
+        default: './reg.json',
+      },
+      ignoreChange: {
+        type: 'boolean',
+        alias: 'I',
+      },
+      extendedErrors: {
+        type: 'boolean',
+        alias: 'E',
+        default: false,
+      },
+      report: {
+        type: 'string',
+        alias: 'R',
+      },
+      junit: {
+        type: 'string',
+      },
+      urlPrefix: {
+        type: 'string',
+        alias: 'P',
+      },
+      matchingThreshold: {
+        type: 'number',
+        alias: 'M',
+        default: 0,
+      },
+      thresholdRate: {
+        type: 'number',
+        alias: 'T',
+      },
+      thresholdPixel: {
+        type: 'number',
+        alias: 'S',
+      },
+      concurrency: {
+        type: 'number',
+        alias: 'C',
+        default: 4,
+      },
+      enableAntialias: {
+        type: 'boolean',
+        alias: 'A',
+        default: false,
+      },
+      additionalDetection: {
+        type: 'string',
+        alias: 'X',
+        default: 'none',
+      },
+      from: {
+        type: 'string',
+        alias: 'F',
+      },
+      customDiffMessage: {
+        type: 'string',
+        alias: 'D',
+      },
     },
   },
 );
@@ -80,11 +131,13 @@ const extendedErrors = !!cli.flags.extendedErrors;
 const ignoreChange = !!cli.flags.ignoreChange;
 const enableClientAdditionalDetection = cli.flags.additionalDetection === 'client';
 const from = String(cli.flags.from || '');
-const customDiffMessage = String(cli.flags.customDiffMessage || `\nInspect your code changes, re-run with \`-U\` to update them. `);
+const customDiffMessage = String(
+  cli.flags.customDiffMessage || `\nInspect your code changes, re-run with \`-U\` to update them. `,
+);
 
 // If from option specified, generate report from json and exit.
 if (from) {
-  let json: string = '';
+  let json = '';
   try {
     json = fs.readFileSync(from, { encoding: 'utf8' });
   } catch (e) {
