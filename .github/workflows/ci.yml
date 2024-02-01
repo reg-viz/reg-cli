@@ -3,12 +3,12 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@master
       - uses: actions/setup-node@master
         with:
-          node-version: 14
+          node-version: 16
       - name: yarn
         run: yarn --frozen-lockfile
       - name: flow

@@ -4,7 +4,7 @@
 import Mustache from 'mustache';
 import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
-import mkdirp from 'mkdirp';
+import mkdirp from 'make-dir'; // $FlowIgnore
 import path from 'path';
 import * as xmlBuilder from 'xmlbuilder2';
 
