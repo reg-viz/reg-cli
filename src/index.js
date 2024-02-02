@@ -25,8 +25,10 @@ type RegParams = {
   expectedDir: string,
   diffDir: string,
   report?: string,
+  junitReport?: string,
   json?: string,
   update?: boolean,
+  extendedErrors?: boolean,
   urlPrefix?: string,
   matchingThreshold?: number,
   threshold?: number, // alias to thresholdRate.
@@ -197,7 +199,7 @@ module.exports = (params: RegParams) => {
         diffDir,
         report: report || '',
         junitReport: junitReport || '',
-        extendedErrors,
+        extendedErrors: !!extendedErrors,
         urlPrefix: urlPrefix || '',
         enableClientAdditionalDetection: !!enableClientAdditionalDetection,
       });
