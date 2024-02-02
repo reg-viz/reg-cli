@@ -17,15 +17,18 @@
     "screenshot": "node test/screenshot.js",
     "test:cli": "chmod +x dist/cli.js && ava test/cli.test.mjs",
     "test:screenshot": "npm run build:report && npm run reg && npm run screenshot",
-    "test": "cross-env NODE_ENV=\"debug\" npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
+    "test": "export NODE_OPTIONS=--openssl-legacy-provider && cross-env NODE_ENV=\"debug\" npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/reg-viz/reg-cli/"
   },
+	"ava": {
+    "workerThreads": false
+	},
   "author": "bokuweb",
   "license": "MIT",
   "resolutions": {
