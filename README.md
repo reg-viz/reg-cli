@@ -19,9 +19,9 @@
 
 ### Requirements
 
- - Node.js v12+
+ - Node.js v18+
 
-`reg-cli` support Node.js v12+
+`reg-cli` support Node.js v18+
 
 ``` sh
 $ npm i -D reg-cli
