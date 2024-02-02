@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@master
       - uses: actions/setup-node@master
         with:
-          node-version: 16
+          node-version: 18
       - name: yarn
         run: yarn --frozen-lockfile
       - name: flow
