@@ -6,6 +6,7 @@ import * as detectDiff from 'x-img-diff-js';
 import fs from 'fs';
 import mkdirp from 'make-dir'; // $FlowIgnore
 import path from 'path';
+// $FlowIgnore
 import * as xmlBuilder from 'xmlbuilder2';
 
 export type ReportParams = {
