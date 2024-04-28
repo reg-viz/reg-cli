@@ -60,6 +60,7 @@ const createJSONReport = params => {
 const createHTMLReport = params => {
   const file = path.join(__dirname, '../template/template.html');
   const js = fs.readFileSync(path.join(__dirname, '../report/ui/dist/report.js'));
+  const css = fs.readFileSync(path.join(__dirname, '../report/ui/dist/style.css'));
   const template = fs.readFileSync(file);
   const json = {
     type: params.failedItems.length === 0 ? 'success' : 'danger',
@@ -88,6 +89,7 @@ const createHTMLReport = params => {
   const faviconType = json.hasFailed || json.hasNew || json.hasDeleted ? 'failure' : 'success';
   const view = {
     js,
+    css,
     report: JSON.stringify(json),
     faviconData: loadFaviconAsDataURL(faviconType),
   };
@@ -98,8 +100,16 @@ const createJunitReport = params => {
   const failedTests = params.failedItems.length + params.newItems.length + params.deletedItems.length;
   const numberOfTests = failedTests + params.passedItems.length;
   const doc = xmlBuilder.create({ version: '1.0' });
-  const testsuitesElement = doc.ele('testsuites', { name: 'reg-cli tests', tests: numberOfTests, failures: failedTests });
-  const testsuiteElement = testsuitesElement.ele('testsuite', { name: 'reg-cli', tests: numberOfTests, failures: failedTests });
+  const testsuitesElement = doc.ele('testsuites', {
+    name: 'reg-cli tests',
+    tests: numberOfTests,
+    failures: failedTests,
+  });
+  const testsuiteElement = testsuitesElement.ele('testsuite', {
+    name: 'reg-cli',
+    tests: numberOfTests,
+    failures: failedTests,
+  });
   params.failedItems.forEach(item => {
     addFailedJunitTestElement(testsuiteElement, item, 'failed');
   });
