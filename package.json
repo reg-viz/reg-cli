@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.18.2",
+  "version": "0.18.5",
   "description": "",
   "main": "./dist/index.js",
   "start": "node ./dist/cli.js",
@@ -95,6 +95,7 @@
     "template",
     "report/ui/dist/report.js",
     "report/ui/dist/worker.js",
+    "report/ui/dist/style.css",
     "report/assets/favicon_failure.png",
     "report/assets/favicon_success.png",
     "report/sample"
