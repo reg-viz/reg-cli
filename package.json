@@ -87,7 +87,7 @@
     "flow-bin": "0.77.0",
     "flow-typed": "3.9.0",
     "puppeteer": "13.7.0",
-    "rimraf": "3.0.2",
+    "rimraf": "5.0.8",
     "serve-static": "1.15.0"
   },
   "files": [
