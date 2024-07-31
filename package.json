@@ -86,7 +86,7 @@
     "finalhandler": "1.2.0",
     "flow-bin": "0.77.0",
     "flow-typed": "3.9.0",
-    "puppeteer": "13.7.0",
+    "puppeteer": "22.15.0",
     "rimraf": "3.0.2",
     "serve-static": "1.15.0"
   },
