@@ -97,6 +97,7 @@ impl Report {
     pub fn create(input: ReportInput) -> ReportBuffers {
         let template = include_str!("../../../template/template.html");
         let js = include_str!("../../../report/ui/dist/report.js");
+        let css = include_str!("../../../report/ui/dist/style.css");
 
         let json = ReportJson {
             r#type: if input.failed.is_empty() {
@@ -129,6 +130,7 @@ impl Report {
         //     faviconData: loadFaviconAsDataURL(faviconType),
         let data = MapBuilder::new()
             .insert_str("js", js)
+            .insert_str("css", css)
             .insert_str(
                 "report",
                 serde_json::to_string(&json).expect("should convert."),
