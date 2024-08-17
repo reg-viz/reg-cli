@@ -6,7 +6,6 @@ import type EventEmitter from 'events';
 import type { DiffCreatorParams, DiffResult } from './diff';
 
 export default class ProcessAdaptor {
-
   _isRunning: boolean;
   _process: child_process$ChildProcess;
   _emitter: EventEmitter;
@@ -26,10 +25,12 @@ export default class ProcessAdaptor {
       this._isRunning = true;
       if (!this._process || !this._process.send) resolve();
       this._process.send(params);
-      this._process.once('message', (result) => {
+      this._process.once('message', result => {
+        console.log({ result });
         this._isRunning = false;
         this._emitter.emit('compare', {
-          type: result.passed ? 'pass' : 'fail', path: result.image,
+          type: result.passed ? 'pass' : 'fail',
+          path: result.image,
         });
         resolve(result);
       });
