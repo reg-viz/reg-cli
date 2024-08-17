@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use bytes::Bytes;
 use mustache::MapBuilder;
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::Serialize;
 
 pub(crate) struct Report;
@@ -16,18 +16,18 @@ pub(crate) enum ReportStatus {
     Danger,
 }
 
-pub(crate) struct ReportInput {
+pub(crate) struct ReportInput<'a> {
     pub(crate) passed: BTreeSet<PathBuf>,
     pub(crate) failed: BTreeSet<PathBuf>,
     pub(crate) new: BTreeSet<PathBuf>,
-    // pub(crate) deleted: Vec<PathBuf>,
-    // pub(crate) expected: Vec<PathBuf>,
-    // pub(crate) actual: Vec<PathBuf>,
-    pub(crate) differences: Vec<PathBuf>,
+    pub(crate) deleted: BTreeSet<PathBuf>,
+    // pub(crate) expected: BTreeSet<PathBuf>,
+    // pub(crate) actual: BTreeSet<PathBuf>,
+    pub(crate) differences: BTreeSet<PathBuf>,
     // json: string,
-    pub(crate) actual_dir: PathBuf,
-    pub(crate) expected_dir: PathBuf,
-    pub(crate) diff_dir: PathBuf,
+    pub(crate) actual_dir: &'a Path,
+    pub(crate) expected_dir: &'a Path,
+    pub(crate) diff_dir: &'a Path,
     // report: string,
     // junitReport: string,
     // extendedErrors: boolean,
@@ -53,16 +53,6 @@ impl From<PathBuf> for ReportItem {
     }
 }
 
-// impl From<BTreeset<PathBuf>> for ReportItem {
-//   fn from(item: PathBuf) -> Self {
-//       let encoded = encode_file_path(&item);
-//       ReportItem {
-//           raw: item.display().to_string(),
-//           encoded,
-//       }
-//   }
-// }
-//
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct XimgdiffConfig {
@@ -85,6 +75,7 @@ pub(crate) struct ReportJson {
     actual_dir: PathBuf,
     expected_dir: PathBuf,
     diff_dir: PathBuf,
+    diff_image_extention: &'static str,
     ximgdiff_config: XimgdiffConfig,
 }
 
@@ -93,13 +84,17 @@ fn encode_file_path(file_path: &Path) -> String {
         .display()
         .to_string()
         .split(std::path::MAIN_SEPARATOR)
-        .map(|p| utf8_percent_encode(p, NON_ALPHANUMERIC).to_string())
+        .map(|p| urlencoding::encode(p).into())
         .collect::<Vec<String>>()
         .join(std::path::MAIN_SEPARATOR_STR)
 }
 
+pub(crate) struct ReportBuffers {
+    pub(crate) html: Bytes,
+}
+
 impl Report {
-    pub fn create(input: ReportInput) -> Vec<u8> {
+    pub fn create(input: ReportInput) -> ReportBuffers {
         let template = include_str!("../../../template/template.html");
         let js = include_str!("../../../report/ui/dist/report.js");
 
@@ -111,8 +106,8 @@ impl Report {
             },
             has_new: !input.new.is_empty(),
             new_items: input.new.into_iter().map(ReportItem::from).collect(),
-            has_deleted: false,
-            deleted_items: vec![],
+            has_deleted: !input.deleted.is_empty(),
+            deleted_items: input.deleted.into_iter().map(ReportItem::from).collect(),
             has_passed: !input.passed.is_empty(),
             passed_items: input.passed.into_iter().map(ReportItem::from).collect(),
             has_failed: !input.differences.is_empty(),
@@ -121,9 +116,10 @@ impl Report {
                 .into_iter()
                 .map(ReportItem::from)
                 .collect(),
-            actual_dir: input.actual_dir,
-            expected_dir: input.expected_dir,
-            diff_dir: input.diff_dir,
+            actual_dir: input.actual_dir.into(),
+            expected_dir: input.expected_dir.into(),
+            diff_dir: input.diff_dir.into(),
+            diff_image_extention: "webp",
             ximgdiff_config: XimgdiffConfig {
                 enabled: false,
                 worker_url: "TODO:".to_string(),
@@ -139,10 +135,10 @@ impl Report {
             )
             .build();
         let template = mustache::compile_str(template).expect("should compile template.");
-        let mut report = vec![];
+        let mut html = vec![];
         template
-            .render_data(&mut report, &data)
+            .render_data(&mut html, &data)
             .expect("should render report.");
-        report
+        ReportBuffers { html: html.into() }
     }
 }

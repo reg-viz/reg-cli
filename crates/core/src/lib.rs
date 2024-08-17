@@ -2,6 +2,7 @@ mod report;
 
 use image_diff_rs::{DiffOption, DiffOutput};
 use rayon::prelude::*;
+use report::Report;
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
@@ -58,9 +59,9 @@ pub fn run(
     diff_dir: impl AsRef<Path>,
     options: Options,
 ) {
-    let actual_dir = actual_dir.as_ref().to_owned();
-    let expected_dir = expected_dir.as_ref().to_owned();
-    let diff_dir = diff_dir.as_ref().to_owned();
+    let actual_dir = actual_dir.as_ref();
+    let expected_dir = expected_dir.as_ref();
+    let diff_dir = diff_dir.as_ref();
 
     let detected = find_images(&expected_dir, &actual_dir);
 
@@ -92,7 +93,7 @@ pub fn run(
 
     let result = result.expect("TODO:");
 
-    let mut differences = vec![];
+    let mut differences = BTreeSet::new();
     let mut passed = BTreeSet::new();
     let mut failed = BTreeSet::new();
 
@@ -109,19 +110,26 @@ pub fn run(
             let mut diff_image = image_name.clone();
             failed.insert(image_name.clone());
             diff_image.set_extension("webp");
-            differences.push(diff_image);
+            // TODO:
+            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone()).expect("TODO:");
+            differences.insert(diff_image);
         }
     }
 
-    report::Report::create(report::ReportInput {
+    let report = Report::create(report::ReportInput {
         passed,
         failed,
         new: detected.new,
+        deleted: detected.deleted,
+        // actual: detected.actual,
+        // expected: detected.expected,
         differences,
         actual_dir,
         expected_dir,
         diff_dir,
     });
+
+    std::fs::write("./report.html", report.html).expect("TODO:");
 }
 
 pub(crate) fn find_images(
