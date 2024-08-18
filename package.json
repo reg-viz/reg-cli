@@ -12,7 +12,7 @@
     "flow": "flow",
     "copy:ximgdiff": "copyfiles -u 3 node_modules/x-img-diff-js/build/cv-wasm_browser.* report/assets",
     "prepublishOnly": "npm run build",
-    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ./sample/index.html -T 0.01",
+    "reg": "node dist/cli.js ./sample/actual ./sample/expected ./sample/diff -I -R ../index.html -T 0.01",
     "reg:from": "node dist/cli.js -F ./sample/reg.json -R ./sample/index.html",
     "screenshot": "node test/screenshot.js",
     "test:cli": "chmod +x dist/cli.js && ava test/cli.test.mjs",

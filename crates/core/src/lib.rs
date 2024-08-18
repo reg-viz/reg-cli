@@ -1,6 +1,9 @@
+mod dir;
 mod report;
 
+use dir::resolve_dir;
 use image_diff_rs::{DiffOption, DiffOutput};
+use path_clean::PathClean;
 use rayon::prelude::*;
 use report::Report;
 use std::{
@@ -28,24 +31,25 @@ pub(crate) struct DetectedImages {
 }
 
 #[derive(Debug)]
-pub struct Options {
-    // report?: string,
+pub struct Options<'a> {
+    pub report: Option<&'a Path>,
     // junitReport?: string,
     // json?: string,
     // update?: boolean,
     // extendedErrors?: boolean,
     // urlPrefix?: string,
     // matchingThreshold?: number,
-    threshold_rate: Option<f32>,
-    threshold_pixel: Option<u64>,
+    pub threshold_rate: Option<f32>,
+    pub threshold_pixel: Option<u64>,
     // concurrency?: number,
-    enable_antialias: Option<bool>,
+    pub enable_antialias: Option<bool>,
     // enableClientAdditionalDetection?: boolean,
 }
 
-impl Default for Options {
+impl<'a> Default for Options<'a> {
     fn default() -> Self {
         Self {
+            report: None,
             threshold_rate: None,
             threshold_pixel: None,
             enable_antialias: None,
@@ -109,10 +113,10 @@ pub fn run(
         } else {
             let mut diff_image = image_name.clone();
             failed.insert(image_name.clone());
-            diff_image.set_extension("webp");
+            differences.insert(diff_image.clone());
             // TODO:
+            diff_image.set_extension("webp");
             std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone()).expect("TODO:");
-            differences.insert(diff_image);
         }
     }
 
@@ -123,13 +127,17 @@ pub fn run(
         deleted: detected.deleted,
         // actual: detected.actual,
         // expected: detected.expected,
+        report: options.report,
         differences,
         actual_dir,
         expected_dir,
         diff_dir,
+        from_json: false,
     });
 
-    std::fs::write("./report.html", report.html).expect("TODO:");
+    if let Some(html) = report.html {
+        std::fs::write("./report.html", html).expect("TODO:");
+    }
 }
 
 pub(crate) fn find_images(
@@ -143,8 +151,12 @@ pub(crate) fn find_images(
         .expect("the pattern should be correct.")
         .flatten()
         .filter_map(|p| {
-            is_supported_extension(&p)
-                .then_some(p.strip_prefix(expected_dir).unwrap().to_path_buf())
+            is_supported_extension(&p).then_some(
+                p.clean()
+                    .strip_prefix(expected_dir.clean())
+                    .unwrap()
+                    .to_path_buf(),
+            )
         })
         .collect();
 
@@ -152,7 +164,12 @@ pub(crate) fn find_images(
         .expect("the pattern should be correct.")
         .flatten()
         .filter_map(|p| {
-            is_supported_extension(&p).then_some(p.strip_prefix(actual_dir).unwrap().to_path_buf())
+            is_supported_extension(&p).then_some(
+                p.clean()
+                    .strip_prefix(actual_dir.clean())
+                    .unwrap()
+                    .to_path_buf(),
+            )
         })
         .collect();
 

@@ -7,6 +7,8 @@ use bytes::Bytes;
 use mustache::MapBuilder;
 use serde::Serialize;
 
+use crate::dir::resolve_dir;
+
 pub(crate) struct Report;
 
 #[derive(Debug, Serialize)]
@@ -28,12 +30,12 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) actual_dir: &'a Path,
     pub(crate) expected_dir: &'a Path,
     pub(crate) diff_dir: &'a Path,
-    // report: string,
+    pub(crate) report: Option<&'a Path>,
     // junitReport: string,
     // extendedErrors: boolean,
     // urlPrefix: string,
     // enableClientAdditionalDetection: boolean,
-    // fromJSON?: boolean,
+    pub(crate) from_json: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,57 +92,75 @@ fn encode_file_path(file_path: &Path) -> String {
 }
 
 pub(crate) struct ReportBuffers {
-    pub(crate) html: Bytes,
+    pub(crate) html: Option<Bytes>,
 }
 
 impl Report {
     pub fn create(input: ReportInput) -> ReportBuffers {
-        let template = include_str!("../../../template/template.html");
-        let js = include_str!("../../../report/ui/dist/report.js");
-        let css = include_str!("../../../report/ui/dist/style.css");
+        let html = if let Some(report) = input.report {
+            let template = include_str!("../../../template/template.html");
+            let js = include_str!("../../../report/ui/dist/report.js");
+            let css = include_str!("../../../report/ui/dist/style.css");
 
-        let json = ReportJson {
-            r#type: if input.failed.is_empty() {
-                ReportStatus::Success
-            } else {
-                ReportStatus::Danger
-            },
-            has_new: !input.new.is_empty(),
-            new_items: input.new.into_iter().map(ReportItem::from).collect(),
-            has_deleted: !input.deleted.is_empty(),
-            deleted_items: input.deleted.into_iter().map(ReportItem::from).collect(),
-            has_passed: !input.passed.is_empty(),
-            passed_items: input.passed.into_iter().map(ReportItem::from).collect(),
-            has_failed: !input.differences.is_empty(),
-            failed_items: input
-                .differences
-                .into_iter()
-                .map(ReportItem::from)
-                .collect(),
-            actual_dir: input.actual_dir.into(),
-            expected_dir: input.expected_dir.into(),
-            diff_dir: input.diff_dir.into(),
-            diff_image_extention: "webp",
-            ximgdiff_config: XimgdiffConfig {
-                enabled: false,
-                worker_url: "TODO:".to_string(),
-            },
+            let json = ReportJson {
+                r#type: if input.failed.is_empty() {
+                    ReportStatus::Success
+                } else {
+                    ReportStatus::Danger
+                },
+                has_new: !input.new.is_empty(),
+                new_items: input.new.into_iter().map(ReportItem::from).collect(),
+                has_deleted: !input.deleted.is_empty(),
+                deleted_items: input.deleted.into_iter().map(ReportItem::from).collect(),
+                has_passed: !input.passed.is_empty(),
+                passed_items: input.passed.into_iter().map(ReportItem::from).collect(),
+                has_failed: !input.differences.is_empty(),
+                failed_items: input
+                    .differences
+                    .into_iter()
+                    .map(ReportItem::from)
+                    .collect(),
+                actual_dir: if input.from_json {
+                    input.actual_dir.into()
+                } else {
+                    resolve_dir(report, input.actual_dir).into()
+                },
+                expected_dir: if input.from_json {
+                    input.expected_dir.into()
+                } else {
+                    resolve_dir(report, input.expected_dir).into()
+                },
+                diff_dir: if input.from_json {
+                    input.diff_dir.into()
+                } else {
+                    resolve_dir(report, input.diff_dir).into()
+                },
+                diff_image_extention: "webp",
+                ximgdiff_config: XimgdiffConfig {
+                    enabled: false,
+                    worker_url: "TODO:".to_string(),
+                },
+            };
+            // TODO: add favivon data
+            //     faviconData: loadFaviconAsDataURL(faviconType),
+            let data = MapBuilder::new()
+                .insert_str("js", js)
+                .insert_str("css", css)
+                .insert_str(
+                    "report",
+                    serde_json::to_string(&json).expect("should convert."),
+                )
+                .build();
+            let template = mustache::compile_str(template).expect("should compile template.");
+            let mut html = vec![];
+            template
+                .render_data(&mut html, &data)
+                .expect("should render report.");
+            Some(html.into())
+        } else {
+            None
         };
-        // TODO: add favivon data
-        //     faviconData: loadFaviconAsDataURL(faviconType),
-        let data = MapBuilder::new()
-            .insert_str("js", js)
-            .insert_str("css", css)
-            .insert_str(
-                "report",
-                serde_json::to_string(&json).expect("should convert."),
-            )
-            .build();
-        let template = mustache::compile_str(template).expect("should compile template.");
-        let mut html = vec![];
-        template
-            .render_data(&mut html, &data)
-            .expect("should render report.");
-        ReportBuffers { html: html.into() }
+
+        ReportBuffers { html }
     }
 }
