@@ -29,6 +29,14 @@ pub(crate) struct DetectedImages {
     pub(crate) new: BTreeSet<PathBuf>,
 }
 
+/// Options for configuring the comparison process.
+///
+/// # Fields
+///
+/// * `report` - An optional path to a report file.
+/// * `threshold_rate` - An optional threshold rate for comparison.
+/// * `threshold_pixel` - An optional threshold pixel count for comparison.
+/// * `enable_antialias` - An optional flag to enable or disable antialiasing.
 #[derive(Debug)]
 pub struct Options<'a> {
     pub report: Option<&'a Path>,
@@ -56,6 +64,14 @@ impl<'a> Default for Options<'a> {
     }
 }
 
+/// Runs the comparison process.
+///
+/// # Arguments
+///
+/// * `actual_dir` - The directory containing the actual images.
+/// * `expected_dir` - The directory containing the expected images.
+/// * `diff_dir` - The directory where the diff images will be saved.
+/// * `options` - The options for configuring the comparison process.
 pub fn run(
     actual_dir: impl AsRef<Path>,
     expected_dir: impl AsRef<Path>,
@@ -79,8 +95,8 @@ pub fn run(
         targets
             .par_iter()
             .map(|path| {
-                let img1 = std::fs::read(actual_dir.clone().join(path))?;
-                let img2 = std::fs::read(expected_dir.clone().join(path))?;
+                let img1 = std::fs::read(actual_dir.join(path))?;
+                let img2 = std::fs::read(expected_dir.join(path))?;
                 let res = image_diff_rs::diff(
                     img1,
                     img2,
@@ -142,7 +158,7 @@ pub fn run(
     });
 
     if let Some(html) = report.html {
-        // std::fs::write("./report.html", html).expect("TODO:");
+        std::fs::write("./report.html", html).expect("TODO:");
     }
 }
 

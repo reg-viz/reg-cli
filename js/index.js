@@ -19,8 +19,8 @@ const spawn = (startArg, threadId, memory) => {
     }
   });
 
-  worker.on('error', e => {
-    workers.forEach(w => w.terminate());
+  worker.on('error', (e) => {
+    workers.forEach((w) => w.terminate());
     throw new Error(e);
   });
 
@@ -36,7 +36,7 @@ const spawn = (startArg, threadId, memory) => {
 
 worker.on('message', ({ cmd, startArg, threadId, memory }) => {
   if (cmd === 'complete') {
-    workers.forEach(w => w.terminate());
+    workers.forEach((w) => w.terminate());
     process.exit(0);
   }
   if (cmd === 'loaded') {
@@ -50,7 +50,7 @@ worker.on('message', ({ cmd, startArg, threadId, memory }) => {
   }
 });
 
-worker.on('error', err => {
-  workers.forEach(w => w.terminate());
+worker.on('error', (err) => {
+  workers.forEach((w) => w.terminate());
   throw new Error(err);
 });
