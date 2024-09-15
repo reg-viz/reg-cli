@@ -1,10 +1,9 @@
 mod dir;
 mod report;
 
-use dir::resolve_dir;
 use image_diff_rs::{DiffOption, DiffOutput};
 use path_clean::PathClean;
-use rayon::prelude::*;
+use rayon::{prelude::*, ThreadPoolBuilder};
 use report::Report;
 use std::{
     collections::BTreeSet,
@@ -58,8 +57,8 @@ impl<'a> Default for Options<'a> {
 }
 
 pub fn run(
-    expected_dir: impl AsRef<Path>,
     actual_dir: impl AsRef<Path>,
+    expected_dir: impl AsRef<Path>,
     diff_dir: impl AsRef<Path>,
     options: Options,
 ) {
@@ -75,25 +74,35 @@ pub fn run(
         .cloned()
         .collect();
 
-    let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = targets
-        .par_iter()
-        .map(|path| {
-            let img1 = std::fs::read(actual_dir.clone().join(path))?;
-            let img2 = std::fs::read(expected_dir.clone().join(path))?;
-            let res = image_diff_rs::diff(
-                img1,
-                img2,
-                &DiffOption {
-                    threshold: Some(0.05),
-                    include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
-                },
-            );
-            // std::fs::write("./test.png", res.unwrap().diff_image)?;
-            let res = res.expect("TODO:");
-            Ok((path.clone(), res))
-        })
-        .inspect(|r| if let Err(e) = r { /*TODO: logging */ })
-        .collect();
+    let pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+    let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = pool.install(|| {
+        targets
+            .par_iter()
+            .map(|path| {
+                dbg!(actual_dir, actual_dir.clone().join(path));
+                let img1 = std::fs::read(actual_dir.clone().join(path))?;
+                dbg!(img1.len());
+
+                let img2 = std::fs::read(expected_dir.clone().join(path))?;
+                let res = image_diff_rs::diff(
+                    img1,
+                    img2,
+                    &DiffOption {
+                        threshold: Some(0.05),
+                        include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                    },
+                );
+                // std::fs::write("./test.png", res.unwrap().diff_image)?;
+                let res = res.expect("TODO:");
+                Ok((path.clone(), res))
+            })
+            .inspect(|r| {
+                if let Err(e) = r {
+                    dbg!(&e);
+                }
+            })
+            .collect()
+    });
 
     let result = result.expect("TODO:");
 
@@ -136,7 +145,7 @@ pub fn run(
     });
 
     if let Some(html) = report.html {
-        std::fs::write("./report.html", html).expect("TODO:");
+        // std::fs::write("./report.html", html).expect("TODO:");
     }
 }
 
