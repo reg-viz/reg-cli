@@ -92,7 +92,7 @@ pub fn run(
         .collect();
 
     let pool = ThreadPoolBuilder::new()
-        .num_threads(options.concurrency.unwrap_or_else(4))
+        .num_threads(options.concurrency.unwrap_or_else(|| 4))
         .build()
         .unwrap();
     let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = pool.install(|| {

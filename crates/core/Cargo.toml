@@ -18,4 +18,3 @@ pathdiff = "0.2.1"
 path-clean = "1.0.1"
 
 [dev-dependencies]
-rstest = "0.18.2"
