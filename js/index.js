@@ -1,6 +1,6 @@
 const { Worker } = require('node:worker_threads');
 
-const worker = new Worker('./entry.js');
+const worker = new Worker('./entry.js', { workerData: { argv: process.argv.slice(2) } });
 
 let nextTid = 1;
 const workers = [worker];

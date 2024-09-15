@@ -1,0 +1,12 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "reg_cli"
+path = "src/main.rs"
+
+[dependencies]
+reg_core = { path = "../reg_core" }
+clap = { version = "4", features = ["derive"] }

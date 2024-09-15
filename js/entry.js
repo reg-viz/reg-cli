@@ -1,13 +1,13 @@
 const { readFile } = require('node:fs/promises');
 const fs = require('node:fs');
 const { WASI } = require('@tybys/wasm-util');
-const { argv, env } = require('node:process');
+const { env } = require('node:process');
 const { join } = require('node:path');
-const { parentPort } = require('node:worker_threads');
+const { parentPort, workerData } = require('node:worker_threads');
 
 const wasi = new WASI({
   version: 'preview1',
-  args: argv,
+  args: workerData.argv,
   env,
   returnOnExit: true,
   preopens: {
@@ -27,7 +27,7 @@ const file = readFile(join(__dirname, './reg.wasm'));
     let instance = await WebAssembly.instantiate(wasm, {
       ...imports,
       wasi: {
-        'thread-spawn': startArg => {
+        'thread-spawn': (startArg) => {
           const threadIdBuffer = new SharedArrayBuffer(4);
           const id = new Int32Array(threadIdBuffer);
           Atomics.store(id, 0, -1);

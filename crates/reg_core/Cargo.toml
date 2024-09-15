@@ -1,9 +1,13 @@
 [package]
-name = "core"
+name = "reg_core"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "reg_core"
+path = "src/lib.rs"
 
 [dependencies]
 image-diff-rs = { git = "https://github.com/bokuweb/image-diff-rs.git" }
