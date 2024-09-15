@@ -48,7 +48,7 @@ pub struct Options<'a> {
     // matchingThreshold?: number,
     pub threshold_rate: Option<f32>,
     pub threshold_pixel: Option<u64>,
-    // concurrency?: number,
+    pub concurrency: Option<usize>,
     pub enable_antialias: Option<bool>,
     // enableClientAdditionalDetection?: boolean,
 }
@@ -59,6 +59,7 @@ impl<'a> Default for Options<'a> {
             report: None,
             threshold_rate: None,
             threshold_pixel: None,
+            concurrency: Some(4),
             enable_antialias: None,
         }
     }
@@ -90,7 +91,10 @@ pub fn run(
         .cloned()
         .collect();
 
-    let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(options.concurrency.unwrap_or_else(4))
+        .build()
+        .unwrap();
     let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = pool.install(|| {
         targets
             .par_iter()
