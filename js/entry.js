@@ -22,7 +22,7 @@ const file = readFile(join(__dirname, './reg.wasm'));
 (async () => {
   try {
     const wasm = await WebAssembly.compile(await file);
-    const opts = { initial: 100, maximum: 16384, shared: true };
+    const opts = { initial: 256, maximum: 16384, shared: true };
     const memory = new WebAssembly.Memory(opts);
     let instance = await WebAssembly.instantiate(wasm, {
       ...imports,

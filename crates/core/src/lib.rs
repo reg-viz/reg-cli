@@ -74,15 +74,12 @@ pub fn run(
         .cloned()
         .collect();
 
-    let pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+    let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();
     let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = pool.install(|| {
         targets
             .par_iter()
             .map(|path| {
-                dbg!(actual_dir, actual_dir.clone().join(path));
                 let img1 = std::fs::read(actual_dir.clone().join(path))?;
-                dbg!(img1.len());
-
                 let img2 = std::fs::read(expected_dir.clone().join(path))?;
                 let res = image_diff_rs::diff(
                     img1,

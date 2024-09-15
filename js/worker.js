@@ -25,14 +25,14 @@ const handler = async ({ startArg, tid, memory }) => {
     let instance = await WebAssembly.instantiate(wasm, {
       ...imports,
       wasi: {
-        'thread-spawn': startArg => {
-          const threadIdBuffer = new SharedArrayBuffer(4);
-          const id = new Int32Array(threadIdBuffer);
-          Atomics.store(id, 0, -1);
-          postMessage({ cmd: 'thread-spawn', startArg, threadId: id, memory });
-          Atomics.wait(id, 0, -1);
-          const tid = Atomics.load(id, 0);
-          return tid;
+        'thread-spawn': (startArg) => {
+          // const threadIdBuffer = new SharedArrayBuffer(4);
+          // const id = new Int32Array(threadIdBuffer);
+          // Atomics.store(id, 0, -1);
+          // postMessage({ cmd: 'thread-spawn', startArg, threadId: id, memory });
+          // Atomics.wait(id, 0, -1);
+          // const tid = Atomics.load(id, 0);
+          return -1;
         },
       },
       env: { memory },
@@ -43,18 +43,19 @@ const handler = async ({ startArg, tid, memory }) => {
     wasi.start(instance);
     try {
       const symbols = Object.getOwnPropertySymbols(wasi);
-      const selectDescription = description => s => {
+      const selectDescription = (description) => (s) => {
         if (s.description) {
           return s.description === description;
         }
         return s.toString() === `Symbol(${description})`;
       };
       if (Array.isArray(description)) {
-        return description.map(d => symbols.filter(selectDescription(d))[0]);
+        return description.map((d) => symbols.filter(selectDescription(d))[0]);
       }
       const kStarted = symbols.filter(selectDescription('kStarted'))[0];
       wasi[kStarted] = false;
     } catch (_) {}
+    console.log(tid);
     instance.exports.wasi_thread_start(tid, startArg);
   } catch (e) {
     throw e;
