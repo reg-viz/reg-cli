@@ -1,9 +1,9 @@
-const { readFile } = require('node:fs/promises');
-const fs = require('node:fs');
-const { WASI } = require('@tybys/wasm-util');
-const { env } = require('node:process');
-const { join } = require('node:path');
-const { parentPort, workerData } = require('node:worker_threads');
+import { readFile } from 'node:fs/promises';
+import fs from 'node:fs';
+import { WASI } from '@tybys/wasm-util';
+import { env } from 'node:process';
+import { join } from 'node:path';
+import { parentPort, workerData } from 'node:worker_threads';
 
 const wasi = new WASI({
   version: 'preview1',
@@ -29,7 +29,7 @@ const file = readFile(join(__dirname, './reg.wasm'));
           const threadIdBuffer = new SharedArrayBuffer(4);
           const id = new Int32Array(threadIdBuffer);
           Atomics.store(id, 0, -1);
-          parentPort.postMessage({
+          parentPort?.postMessage({
             cmd: 'thread-spawn',
             startArg,
             threadId: id,
@@ -43,7 +43,7 @@ const file = readFile(join(__dirname, './reg.wasm'));
       env: { memory },
     });
     wasi.start(instance);
-    parentPort.postMessage({ cmd: 'complete' });
+    parentPort?.postMessage({ cmd: 'complete' });
   } catch (e) {
     throw e;
   }
