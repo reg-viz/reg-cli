@@ -57,7 +57,7 @@ pub struct Options<'a> {
     // update?: boolean,
     // extendedErrors?: boolean,
     // urlPrefix?: string,
-    // matchingThreshold?: number,
+    pub matching_threshold: Option<f32>,
     pub threshold_rate: Option<f32>,
     pub threshold_pixel: Option<u64>,
     pub concurrency: Option<usize>,
@@ -69,6 +69,7 @@ impl<'a> Default for Options<'a> {
     fn default() -> Self {
         Self {
             report: None,
+            matching_threshold: Some(0.0),
             threshold_rate: None,
             threshold_pixel: None,
             concurrency: Some(4),
@@ -117,7 +118,7 @@ pub fn run(
                     img1,
                     img2,
                     &DiffOption {
-                        threshold: Some(0.05),
+                        threshold: options.matching_threshold,
                         include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
                     },
                 )?;
@@ -149,9 +150,9 @@ pub fn run(
             let mut diff_image = image_name.clone();
             failed.insert(image_name.clone());
             differences.insert(diff_image.clone());
-            // TODO:
+            // TODO: make webp, png selectable
             diff_image.set_extension("webp");
-            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone())?;
+            std::fs::write(diff_dir.join(&diff_image), item.diff_image)?;
         }
     }
 
@@ -174,7 +175,6 @@ pub fn run(
         std::fs::write("./report.html", html)?;
     };
     Ok(())
-    
 }
 
 pub(crate) fn find_images(

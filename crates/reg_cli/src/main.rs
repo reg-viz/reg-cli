@@ -18,6 +18,9 @@ struct Args {
     report: Option<PathBuf>,
 
     #[arg(long)]
+    matching_threshold: Option<f32>,
+
+    #[arg(long)]
     threshold_rate: Option<f32>,
 
     #[arg(long)]
@@ -35,11 +38,12 @@ pub fn main() {
 
     let options = Options {
         report: args.report.as_deref().map(Path::new),
+        matching_threshold: args.matching_threshold,
         threshold_rate: args.threshold_rate,
         threshold_pixel: args.threshold_pixel,
         concurrency: args.concurrency,
         enable_antialias: args.enable_antialias,
     };
 
-    run(args.actual_dir, args.expected_dir, args.diff_dir, options)
+    let _ = run(args.actual_dir, args.expected_dir, args.diff_dir, options);
 }
