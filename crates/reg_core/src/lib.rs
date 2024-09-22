@@ -1,7 +1,7 @@
 mod dir;
 mod report;
 
-use image_diff_rs::{DiffOption, DiffOutput};
+use image_diff_rs::{DiffOption, DiffOutput, ImageDiffError};
 use path_clean::PathClean;
 use rayon::{prelude::*, ThreadPoolBuilder};
 use report::Report;
@@ -9,6 +9,18 @@ use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
+
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum CompareError {
+    #[error("file io error, {0}")]
+    File(#[from] io::Error),
+    #[error("image diff error, {0}")]
+    ImageDiff(#[from] ImageDiffError),
+    #[error("unknown error")]
+    Unknown,
+}
 
 static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "bmp", "webp"];
 
@@ -78,7 +90,7 @@ pub fn run(
     expected_dir: impl AsRef<Path>,
     diff_dir: impl AsRef<Path>,
     options: Options,
-) {
+) -> Result<(), CompareError> {
     let actual_dir = actual_dir.as_ref();
     let expected_dir = expected_dir.as_ref();
     let diff_dir = diff_dir.as_ref();
@@ -95,7 +107,7 @@ pub fn run(
         .num_threads(options.concurrency.unwrap_or_else(|| 4))
         .build()
         .unwrap();
-    let result: Result<Vec<(PathBuf, DiffOutput)>, std::io::Error> = pool.install(|| {
+    let result: Result<Vec<(PathBuf, DiffOutput)>, CompareError> = pool.install(|| {
         targets
             .par_iter()
             .map(|path| {
@@ -108,9 +120,7 @@ pub fn run(
                         threshold: Some(0.05),
                         include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
                     },
-                );
-                // std::fs::write("./test.png", res.unwrap().diff_image)?;
-                let res = res.expect("TODO:");
+                )?;
                 Ok((path.clone(), res))
             })
             .inspect(|r| {
@@ -119,10 +129,9 @@ pub fn run(
                 }
             })
             .collect()
-    });
+    })?;
 
-    let result = result.expect("TODO:");
-
+    let result = result?;
     let mut differences = BTreeSet::new();
     let mut passed = BTreeSet::new();
     let mut failed = BTreeSet::new();
@@ -142,7 +151,7 @@ pub fn run(
             differences.insert(diff_image.clone());
             // TODO:
             diff_image.set_extension("webp");
-            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone()).expect("TODO:");
+            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone())?;
         }
     }
 
@@ -162,8 +171,10 @@ pub fn run(
     });
 
     if let Some(html) = report.html {
-        std::fs::write("./report.html", html).expect("TODO:");
-    }
+        std::fs::write("./report.html", html)?;
+    };
+    Ok(())
+    
 }
 
 pub(crate) fn find_images(
