@@ -60,4 +60,4 @@ const handler = async ({ startArg, tid, memory }) => {
   }
 };
 
-parentPort.addListener('message', handler);
+parentPort?.addListener('message', handler);

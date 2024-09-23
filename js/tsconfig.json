@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+      "target": "ESNext",
+      "module": "Preserve",
+      "moduleResolution": "Bundler",
+      "resolveJsonModule": true,
+      "esModuleInterop": false,
+      "allowSyntheticDefaultImports": true,
+      "skipLibCheck": true,
+      "allowJs": true,
+      "checkJs": true,
+      "strict": true,
+      "verbatimModuleSyntax": true,
+      "isolatedModules": true,
+      "forceConsistentCasingInFileNames": true,
+      "allowImportingTsExtensions": true,
+      "noImplicitOverride": true,
+      "noEmit": true
+    },
+    "include": ["./*.ts"]
+  }

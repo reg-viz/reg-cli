@@ -41,21 +41,20 @@ const handler = async ({ startArg, tid, memory }) => {
     const { createInstanceProxy } = require('./proxy.js');
     instance = createInstanceProxy(instance, memory);
     wasi.start(instance);
-    try {
-      const symbols = Object.getOwnPropertySymbols(wasi);
-      const selectDescription = (description) => (s) => {
-        if (s.description) {
-          return s.description === description;
-        }
-        return s.toString() === `Symbol(${description})`;
-      };
-      if (Array.isArray(description)) {
-        return description.map((d) => symbols.filter(selectDescription(d))[0]);
-      }
-      const kStarted = symbols.filter(selectDescription('kStarted'))[0];
-      wasi[kStarted] = false;
-    } catch (_) {}
-    console.log(tid);
+    // try {
+    //   const symbols = Object.getOwnPropertySymbols(wasi);
+    //   const selectDescription = (description) => (s) => {
+    //     if (s.description) {
+    //       return s.description === description;
+    //     }
+    //     return s.toString() === `Symbol(${description})`;
+    //   };
+    //   if (Array.isArray(description)) {
+    //     return description.map((d) => symbols.filter(selectDescription(d))[0]);
+    //   }
+    //   const kStarted = symbols.filter(selectDescription('kStarted'))[0];
+    //   wasi[kStarted] = false;
+    // } catch (_) {}
     instance.exports.wasi_thread_start(tid, startArg);
   } catch (e) {
     throw e;

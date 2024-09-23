@@ -15,7 +15,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum CompareError {
     #[error("file io error, {0}")]
-    File(#[from] io::Error),
+    File(#[from] std::io::Error),
     #[error("image diff error, {0}")]
     ImageDiff(#[from] ImageDiffError),
     #[error("unknown error")]
@@ -108,31 +108,32 @@ pub fn run(
         .num_threads(options.concurrency.unwrap_or_else(|| 4))
         .build()
         .unwrap();
-    let result: Result<Vec<(PathBuf, DiffOutput)>, CompareError> = pool.install(|| {
-        targets
-            .par_iter()
-            .map(|path| {
-                let img1 = std::fs::read(actual_dir.join(path))?;
-                let img2 = std::fs::read(expected_dir.join(path))?;
-                let res = image_diff_rs::diff(
-                    img1,
-                    img2,
-                    &DiffOption {
-                        threshold: options.matching_threshold,
-                        include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
-                    },
-                )?;
-                Ok((path.clone(), res))
-            })
-            .inspect(|r| {
-                if let Err(e) = r {
-                    dbg!(&e);
-                }
-            })
-            .collect()
-    })?;
 
-    let result = result?;
+    let result = pool
+        .install(|| {
+            targets
+                .par_iter()
+                .map(|path| {
+                    let img1 = std::fs::read(actual_dir.join(path))?;
+                    let img2 = std::fs::read(expected_dir.join(path))?;
+                    let res = image_diff_rs::diff(
+                        img1,
+                        img2,
+                        &DiffOption {
+                            threshold: options.matching_threshold,
+                            include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                        },
+                    )?;
+                    Ok((path.clone(), res))
+                })
+                .inspect(|r| {
+                    if let Err(e) = r {
+                        dbg!(&e);
+                    }
+                })
+        })
+        .collect::<Result<Vec<(PathBuf, DiffOutput)>, CompareError>>()?;
+
     let mut differences = BTreeSet::new();
     let mut passed = BTreeSet::new();
     let mut failed = BTreeSet::new();
@@ -152,7 +153,7 @@ pub fn run(
             differences.insert(diff_image.clone());
             // TODO: make webp, png selectable
             diff_image.set_extension("webp");
-            std::fs::write(diff_dir.join(&diff_image), item.diff_image)?;
+            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone())?;
         }
     }
 
@@ -174,6 +175,7 @@ pub fn run(
     if let Some(html) = report.html {
         std::fs::write("./report.html", html)?;
     };
+
     Ok(())
 }
 
