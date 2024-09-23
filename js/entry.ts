@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import fs from 'node:fs';
-import { WASI } from '@tybys/wasm-util';
+import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { join } from 'node:path';
 import { parentPort, workerData } from 'node:worker_threads';
@@ -8,10 +8,10 @@ import { parentPort, workerData } from 'node:worker_threads';
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
-  env,
+  env: env as Record<string, string>,
   returnOnExit: true,
   preopens: { './': './' },
-  fs,
+  fs: fs as IFs,
 });
 
 const imports = wasi.getImportObject();
@@ -25,7 +25,7 @@ const file = readFile(join(__dirname, './reg.wasm'));
     let instance = await WebAssembly.instantiate(wasm, {
       ...imports,
       wasi: {
-        'thread-spawn': (startArg) => {
+        'thread-spawn': (startArg: number) => {
           const threadIdBuffer = new SharedArrayBuffer(4);
           const id = new Int32Array(threadIdBuffer);
           Atomics.store(id, 0, -1);

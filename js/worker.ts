@@ -1,29 +1,29 @@
 import { parentPort } from 'node:worker_threads';
 import { readFile } from 'node:fs/promises';
 import fs from 'node:fs';
-import { WASI } from '@tybys/wasm-util';
+import { WASI, type IFs } from '@tybys/wasm-util';
 import { argv, env } from 'node:process';
 import { join } from 'node:path';
 
 const wasi = new WASI({
   version: 'preview1',
   args: argv,
-  env,
+  env: env as Record<string, string>,
   returnOnExit: true,
   preopens: { './': './' },
-  fs,
+  fs: fs as IFs,
 });
 
 const imports = wasi.getImportObject();
 const file = readFile(join(__dirname, './reg.wasm'));
 
-const handler = async ({ startArg, tid, memory }) => {
+const handler = async ({ startArg, tid, memory }: { startArg: number, tid: number, memory: number }) => {
   try {
     const wasm = await WebAssembly.compile(await file);
     let instance = await WebAssembly.instantiate(wasm, {
       ...imports,
       wasi: {
-        'thread-spawn': (startArg) => {
+        'thread-spawn': (startArg: number) => {
           const threadIdBuffer = new SharedArrayBuffer(4);
           const id = new Int32Array(threadIdBuffer);
           Atomics.store(id, 0, -1);
@@ -39,21 +39,7 @@ const handler = async ({ startArg, tid, memory }) => {
     const { createInstanceProxy } = require('./proxy.js');
     instance = createInstanceProxy(instance, memory);
     wasi.start(instance);
-    try {
-      const symbols = Object.getOwnPropertySymbols(wasi);
-      const selectDescription = (description) => (s) => {
-        if (s.description) {
-          return s.description === description;
-        }
-        return s.toString() === `Symbol(${description})`;
-      };
-      if (Array.isArray(description)) {
-        return description.map((d) => symbols.filter(selectDescription(d))[0]);
-      }
-      const kStarted = symbols.filter(selectDescription('kStarted'))[0];
-      wasi[kStarted] = false;
-    } catch (_) {}
-    console.log(tid);
+    // @ts-expect-error wasi_thread_start not defined
     instance.exports.wasi_thread_start(tid, startArg);
   } catch (e) {
     throw e;
