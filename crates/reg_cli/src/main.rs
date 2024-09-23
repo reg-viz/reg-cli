@@ -34,6 +34,10 @@ struct Args {
 }
 
 pub fn main() {
+    let _ = inner();
+}
+
+fn inner() -> Result<(), reg_core::CompareError> {
     let args = Args::parse();
 
     let options = Options {
@@ -45,5 +49,41 @@ pub fn main() {
         enable_antialias: args.enable_antialias,
     };
 
-    let _ = run(args.actual_dir, args.expected_dir, args.diff_dir, options);
+    run(args.actual_dir, args.expected_dir, args.diff_dir, options)
+}
+
+#[cfg(target = "wasm32-wasip1-threads")]
+#[repr(C)]
+pub struct WasmOutput {
+    pub len: usize,
+    pub buf: *mut u8,
+}
+
+#[cfg(target = "wasm32-wasip1-threads")]
+#[no_mangle]
+pub extern "C" fn wasm_main() -> *mut WasmOutput {
+    let json = "{}";
+
+    let mut string = json.to_string().into_bytes();
+    let string_len = string.len();
+    let string_ptr = string.as_mut_ptr();
+    std::mem::forget(string);
+
+    let output = Box::new(WasmOutput {
+        len: string_len,
+        buf: string_ptr,
+    });
+    Box::into_raw(output)
+}
+
+#[cfg(target = "wasm32-wasip1-threads")]
+#[no_mangle]
+pub extern "C" fn free_wasm_output(ptr: *mut WasmOutput) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let output = Box::from_raw(ptr);
+        Vec::from_raw_parts(output.buf, output.len, output.len);
+    }
 }
