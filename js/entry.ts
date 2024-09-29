@@ -5,6 +5,19 @@ import { env } from 'node:process';
 import { join } from 'node:path';
 import { parentPort, workerData } from 'node:worker_threads';
 
+export type CompareOutput = {
+  failedItems: string[],
+  newItems: string[],
+  deletedItems: string[],
+  passedItems: string[],
+  expectedItems: string[],
+  actualItems: string[],
+  diffItems: string[],
+  actualDir: string,
+  expectedDir: string,
+  diffDir: string,
+};
+
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
@@ -42,8 +55,22 @@ const file = readFile(join(__dirname, './reg.wasm'));
       },
       env: { memory },
     });
+
     wasi.start(instance);
-    parentPort?.postMessage({ cmd: 'complete' });
+
+    const m = (instance.exports as any).wasm_main();
+    const view = new DataView(memory.buffer, m);
+    const len = view.getUint32(0, true);
+    const bufPtr = view.getUint32(4, true);
+    const stringData = new Uint8Array(memory.buffer, bufPtr, len);
+    const decoder = new TextDecoder('utf-8');
+    const string = decoder.decode(stringData);
+    (instance.exports as any).free_wasm_output(m);
+    const report = JSON.parse(string);
+    
+    console.log(report);
+
+    parentPort?.postMessage({ cmd: 'complete', data: report });
   } catch (e) {
     throw e;
   }

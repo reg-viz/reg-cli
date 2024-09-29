@@ -1,5 +1,5 @@
 use clap::Parser;
-use reg_core::{run, Options};
+use reg_core::{run, JsonReport, Options, Url};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
@@ -18,6 +18,9 @@ struct Args {
     report: Option<PathBuf>,
 
     #[arg(long)]
+    json: Option<PathBuf>,
+
+    #[arg(long)]
     matching_threshold: Option<f32>,
 
     #[arg(long)]
@@ -27,56 +30,64 @@ struct Args {
     threshold_pixel: Option<u64>,
 
     #[arg(long)]
+    url_prefix: Option<Url>,
+
+    #[arg(long)]
     concurrency: Option<usize>,
 
     #[arg(long)]
     enable_antialias: Option<bool>,
 }
 
+#[cfg(not(all(target_os = "wasi", target_env = "p1")))]
 pub fn main() {
     let _ = inner();
 }
 
-fn inner() -> Result<(), reg_core::CompareError> {
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
+pub fn main() {
+    // NOP
+}
+
+fn inner() -> Result<JsonReport, reg_core::CompareError> {
     let args = Args::parse();
 
     let options = Options {
         report: args.report.as_deref().map(Path::new),
+        json: args.json.as_deref().map(Path::new),
         matching_threshold: args.matching_threshold,
         threshold_rate: args.threshold_rate,
         threshold_pixel: args.threshold_pixel,
         concurrency: args.concurrency,
         enable_antialias: args.enable_antialias,
+        url_prefix: args.url_prefix,
     };
 
     run(args.actual_dir, args.expected_dir, args.diff_dir, options)
 }
 
-#[cfg(target = "wasm32-wasip1-threads")]
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
 #[repr(C)]
 pub struct WasmOutput {
     pub len: usize,
     pub buf: *mut u8,
 }
 
-#[cfg(target = "wasm32-wasip1-threads")]
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
 #[no_mangle]
 pub extern "C" fn wasm_main() -> *mut WasmOutput {
-    let json = "{}";
+    let res = inner().unwrap();
+    let mut s = serde_json::to_string_pretty(&res).unwrap();
 
-    let mut string = json.to_string().into_bytes();
-    let string_len = string.len();
-    let string_ptr = string.as_mut_ptr();
-    std::mem::forget(string);
+    let len = s.len();
+    let ptr = s.as_mut_ptr();
+    std::mem::forget(s);
 
-    let output = Box::new(WasmOutput {
-        len: string_len,
-        buf: string_ptr,
-    });
+    let output = Box::new(WasmOutput { len, buf: ptr });
     Box::into_raw(output)
 }
 
-#[cfg(target = "wasm32-wasip1-threads")]
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
 #[no_mangle]
 pub extern "C" fn free_wasm_output(ptr: *mut WasmOutput) {
     if ptr.is_null() {

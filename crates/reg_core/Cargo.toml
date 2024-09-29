@@ -21,5 +21,6 @@ urlencoding = "2.1.3"
 pathdiff = "0.2.1"
 path-clean = "1.0.1"
 thiserror = "1.0"
+url = "2.5.2"
 
 [dev-dependencies]

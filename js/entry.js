@@ -45,14 +45,15 @@ const file = readFile(join(__dirname, './reg.wasm'));
 
     wasi.start(instance);
 
-    // const m = instance.exports.wasm_main();
-    // const view = new DataView(memory.buffer, m);
-    // const len = view.getUint32(0, true); // リトルエンディアン
-    // const bufPtr = view.getUint32(4, true);
-    // const stringData = new Uint8Array(memory.buffer, bufPtr, len);
-    // const decoder = new TextDecoder('utf-8');
-    // const string = decoder.decode(stringData);
-    // console.log(string);
+    const m = instance.exports.wasm_main();
+    const view = new DataView(memory.buffer, m);
+    const len = view.getUint32(0, true);
+    const bufPtr = view.getUint32(4, true);
+    const stringData = new Uint8Array(memory.buffer, bufPtr, len);
+    const decoder = new TextDecoder('utf-8');
+    const string = decoder.decode(stringData);
+    instance.exports.free_wasm_output(m);
+    console.log(string);
 
     parentPort.postMessage({ cmd: 'complete' });
   } catch (e) {

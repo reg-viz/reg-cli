@@ -4,13 +4,16 @@ mod report;
 use image_diff_rs::{DiffOption, DiffOutput, ImageDiffError};
 use path_clean::PathClean;
 use rayon::{prelude::*, ThreadPoolBuilder};
-use report::Report;
+use report::create_reports;
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
 
 use thiserror::Error;
+
+pub use report::JsonReport;
+pub use url::*;
 
 #[derive(Error, Debug)]
 pub enum CompareError {
@@ -23,6 +26,8 @@ pub enum CompareError {
 }
 
 static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "bmp", "webp"];
+
+static DEFAULT_JSON_PATH: &'static str = "./reg.json";
 
 fn is_supported_extension(path: &Path) -> bool {
     if let Some(extension) = path.extension() {
@@ -53,10 +58,10 @@ pub(crate) struct DetectedImages {
 pub struct Options<'a> {
     pub report: Option<&'a Path>,
     // junitReport?: string,
-    // json?: string,
+    pub json: Option<&'a Path>,
     // update?: boolean,
     // extendedErrors?: boolean,
-    // urlPrefix?: string,
+    pub url_prefix: Option<url::Url>,
     pub matching_threshold: Option<f32>,
     pub threshold_rate: Option<f32>,
     pub threshold_pixel: Option<u64>,
@@ -69,6 +74,8 @@ impl<'a> Default for Options<'a> {
     fn default() -> Self {
         Self {
             report: None,
+            json: Some(Path::new(DEFAULT_JSON_PATH)),
+            url_prefix: None,
             matching_threshold: Some(0.0),
             threshold_rate: None,
             threshold_pixel: None,
@@ -91,10 +98,11 @@ pub fn run(
     expected_dir: impl AsRef<Path>,
     diff_dir: impl AsRef<Path>,
     options: Options,
-) -> Result<(), CompareError> {
+) -> Result<JsonReport, CompareError> {
     let actual_dir = actual_dir.as_ref();
     let expected_dir = expected_dir.as_ref();
     let diff_dir = diff_dir.as_ref();
+    let json_path = options.json.unwrap_or_else(|| Path::new(DEFAULT_JSON_PATH));
 
     let detected = find_images(&expected_dir, &actual_dir);
 
@@ -151,32 +159,33 @@ pub fn run(
             let mut diff_image = image_name.clone();
             failed.insert(image_name.clone());
             differences.insert(diff_image.clone());
-            // TODO: make webp, png selectable
             diff_image.set_extension("webp");
             std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone())?;
         }
     }
 
-    let report = Report::create(report::ReportInput {
+    let report = create_reports(report::ReportInput {
         passed,
         failed,
         new: detected.new,
         deleted: detected.deleted,
-        // actual: detected.actual,
-        // expected: detected.expected,
+        actual: detected.actual,
+        expected: detected.expected,
         report: options.report,
         differences,
+        json: json_path,
         actual_dir,
         expected_dir,
         diff_dir,
         from_json: false,
+        url_prefix: options.url_prefix,
     });
 
-    if let Some(html) = report.html {
-        std::fs::write("./report.html", html)?;
+    if let (Some(html), Some(report)) = (report.html, options.report) {
+        std::fs::write(report, html)?;
     };
 
-    Ok(())
+    Ok(report.json)
 }
 
 pub(crate) fn find_images(

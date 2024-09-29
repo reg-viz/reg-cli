@@ -1,3 +1,7 @@
-import { start } from './';
+import { run } from './';
 
-start(process.argv.slice(2));
+const emitter = run(process.argv.slice(2));
+
+emitter.on('complete', (data) => {
+  console.log(data);
+});

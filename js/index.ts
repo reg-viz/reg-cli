@@ -1,7 +1,8 @@
+import EventEmitter from 'node:events';
 import { Worker } from 'node:worker_threads';
 
-// process.argv.slice(2)
-export const start = (argv: string[]) => {
+export const run = (argv: string[]): EventEmitter => {
+  const emitter = new EventEmitter();
   const worker = new Worker('./entry.js', { workerData: { argv } });
 
   let nextTid = 1;
@@ -37,17 +38,19 @@ export const start = (argv: string[]) => {
     return tid;
   };
 
-  worker.on('message', ({ cmd, startArg, threadId, memory }) => {
+  worker.on('message', ({ cmd, startArg, threadId, memory, data }) => {
     if (cmd === 'complete') {
       workers.forEach((w) => w.terminate());
-      process.exit(0);
+      emitter.emit('complete', data);
     }
+
     if (cmd === 'loaded') {
       if (typeof worker.unref === 'function') {
         worker.unref();
       }
       return;
     }
+
     if (cmd === 'thread-spawn') {
       spawn(startArg, threadId, memory);
     }
@@ -57,6 +60,8 @@ export const start = (argv: string[]) => {
     workers.forEach((w) => w.terminate());
     throw new Error(err.message);
   });
+
+  return emitter;
 };
 
 export type CompareInput = {
@@ -79,10 +84,19 @@ export type CompareInput = {
 };
 
 export type CompareOutput = {
-  passed: boolean,
-  image: string,
+  failedItems: string[],
+  newItems: string[],
+  deletedItems: string[],
+  passedItems: string[],
+  expectedItems: string[],
+  actualItems: string[],
+  diffItems: string[],
+  actualDir: string,
+  expectedDir: string,
+  diffDir: string,
 };
 
-export const compare = async (input: CompareInput): Promise<CompareOutput[]> => {
-  return [];
+export const compare = (input: CompareInput): EventEmitter => {
+  const args = Object.entries(input).flatMap(([k, v]) => [k, String(v)]);
+  return run(args);
 };
