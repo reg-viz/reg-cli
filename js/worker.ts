@@ -1,9 +1,10 @@
 import { parentPort } from 'node:worker_threads';
-import { readFile } from 'node:fs/promises';
 import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { argv, env } from 'node:process';
-import { join } from 'node:path';
+import { readWasm, resolveExtention } from './utils';
+// https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
+import { createInstanceProxy } from './proxy';
 
 const wasi = new WASI({
   version: 'preview1',
@@ -15,9 +16,9 @@ const wasi = new WASI({
 });
 
 const imports = wasi.getImportObject();
-const file = readFile(join(__dirname, './reg.wasm'));
+const file = readWasm();
 
-const handler = async ({ startArg, tid, memory }: { startArg: number, tid: number, memory: number }) => {
+const handler = async ({ startArg, tid, memory }: { startArg: number, tid: number, memory: WebAssembly.Memory }) => {
   try {
     const wasm = await WebAssembly.compile(await file);
     let instance = await WebAssembly.instantiate(wasm, {
@@ -35,8 +36,6 @@ const handler = async ({ startArg, tid, memory }: { startArg: number, tid: numbe
       },
       env: { memory },
     });
-    // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
-    const { createInstanceProxy } = require('./proxy.js');
     instance = createInstanceProxy(instance, memory);
     wasi.start(instance);
     // @ts-expect-error wasi_thread_start not defined

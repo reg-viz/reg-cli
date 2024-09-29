@@ -1,9 +1,8 @@
-import { readFile } from 'node:fs/promises';
 import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
-import { join } from 'node:path';
 import { parentPort, workerData } from 'node:worker_threads';
+import { readWasm } from './utils';
 
 export type CompareOutput = {
   failedItems: string[],
@@ -28,7 +27,7 @@ const wasi = new WASI({
 });
 
 const imports = wasi.getImportObject();
-const file = readFile(join(__dirname, './reg.wasm'));
+const file = readWasm();
 
 (async () => {
   try {

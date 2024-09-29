@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.19.0-wasm0",
+  "version": "0.0.0-experimental-wasm0",
   "description": "",
   "type": "module",
   "exports": {
@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild"
+    "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm"
   },
   "keywords": [],
   "author": "bokuweb",
