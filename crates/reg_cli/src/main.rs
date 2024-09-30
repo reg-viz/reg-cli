@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long)]
+    #[clap(index = 1)]
     actual_dir: PathBuf,
 
-    #[arg(long)]
+    #[clap(index = 2)]
     expected_dir: PathBuf,
 
-    #[arg(long)]
+    #[clap(index = 3)]
     diff_dir: PathBuf,
 
     #[arg(long)]
@@ -20,22 +20,22 @@ struct Args {
     #[arg(long)]
     json: Option<PathBuf>,
 
-    #[arg(long)]
+    #[clap(value_name = "matchingThreshold")]
     matching_threshold: Option<f32>,
 
-    #[arg(long)]
+    #[clap(value_name = "thresholdRate")]
     threshold_rate: Option<f32>,
 
-    #[arg(long)]
+    #[clap(value_name = "thresholdPixel")]
     threshold_pixel: Option<u64>,
 
-    #[arg(long)]
+    #[clap(value_name = "urlPrefix")]
     url_prefix: Option<Url>,
 
     #[arg(long)]
     concurrency: Option<usize>,
 
-    #[arg(long)]
+    #[clap(value_name = "enableAntialias")]
     enable_antialias: Option<bool>,
 }
 
