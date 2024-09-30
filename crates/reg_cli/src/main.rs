@@ -20,22 +20,22 @@ struct Args {
     #[arg(long)]
     json: Option<PathBuf>,
 
-    #[clap(value_name = "matchingThreshold")]
+    #[arg(long = "matchingThreshold")]
     matching_threshold: Option<f32>,
 
-    #[clap(value_name = "thresholdRate")]
+    #[arg(long = "thresholdRate")]
     threshold_rate: Option<f32>,
 
-    #[clap(value_name = "thresholdPixel")]
+    #[arg(long = "thresholdPixel")]
     threshold_pixel: Option<u64>,
 
-    #[clap(value_name = "urlPrefix")]
+    #[arg(long = "urlPrefix")]
     url_prefix: Option<Url>,
 
     #[arg(long)]
     concurrency: Option<usize>,
 
-    #[clap(value_name = "enableAntialias")]
+    #[arg(long = "enableAntialias")]
     enable_antialias: Option<bool>,
 }
 

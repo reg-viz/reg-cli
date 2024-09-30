@@ -106,6 +106,12 @@ export type CompareOutput = {
 
 export const compare = (input: CompareInput): EventEmitter => {
   const { actualDir, expectedDir, diffDir, ...rest } = input;
-  const args = [actualDir, expectedDir, diffDir, ...Object.entries(rest).flatMap(([k, v]) => [`--${k}`, String(v)])];
+  const args = [
+    '--',
+    actualDir,
+    expectedDir,
+    diffDir,
+    ...Object.entries(rest).flatMap(([k, v]) => [`--${k}`, String(v)]),
+  ];
   return run(args);
 };
