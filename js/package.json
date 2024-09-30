@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.0.0-experimental-wasm1",
+  "version": "0.0.0-experimental-wasm3",
   "description": "",
   "type": "module",
   "start": "node ./dist/cli.mjs",

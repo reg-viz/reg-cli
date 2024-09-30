@@ -99,6 +99,6 @@ export type CompareOutput = {
 };
 
 export const compare = (input: CompareInput): EventEmitter => {
-  const args = Object.entries(input).flatMap(([k, v]) => [k, String(v)]);
+  const args = Object.entries(input).flatMap(([k, v]) => [`--${k}`, String(v)]);
   return run(args);
 };
