@@ -28,7 +28,7 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) actual_dir: &'a Path,
     pub(crate) expected_dir: &'a Path,
     pub(crate) diff_dir: &'a Path,
-    pub(crate) report: Option<&'a Path>,
+    pub(crate) report: &'a Path,
     // junitReport: string,
     // extendedErrors: boolean,
     pub(crate) url_prefix: Option<url::Url>,
@@ -146,7 +146,8 @@ pub fn create_reports(input: ReportInput) -> Reports {
         diff_dir: create_dir_for_json_report(input.json, input.diff_dir, input.url_prefix.clone()),
     };
 
-    let html_report = if let Some(report) = input.report {
+    let html_report = {
+        let report = input.report;
         let template = include_str!("../../../template/template.html");
         let js = include_str!("../../../report/ui/dist/report.js");
         let css = include_str!("../../../report/ui/dist/style.css");
@@ -207,8 +208,6 @@ pub fn create_reports(input: ReportInput) -> Reports {
             .render_data(&mut html, &data)
             .expect("should render report.");
         Some(html.into())
-    } else {
-        None
     };
 
     Reports {

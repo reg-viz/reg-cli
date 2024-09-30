@@ -111,7 +111,7 @@ export const compare = (input: CompareInput): EventEmitter => {
     actualDir,
     expectedDir,
     diffDir,
-    ...Object.entries(rest).flatMap(([k, v]) => [`--${k}`, String(v)]),
+    ...Object.entries(rest).flatMap(([k, v]) => (v == null ? [] : [`--${k}`, String(v)])),
   ];
   return run(args);
 };

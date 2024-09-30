@@ -28,6 +28,7 @@ pub enum CompareError {
 static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "bmp", "webp"];
 
 static DEFAULT_JSON_PATH: &'static str = "./reg.json";
+static DEFAULT_REPORT_PATH: &'static str = "./report.html";
 
 fn is_supported_extension(path: &Path) -> bool {
     if let Some(extension) = path.extension() {
@@ -103,6 +104,9 @@ pub fn run(
     let expected_dir = expected_dir.as_ref();
     let diff_dir = diff_dir.as_ref();
     let json_path = options.json.unwrap_or_else(|| Path::new(DEFAULT_JSON_PATH));
+    let report = options
+        .report
+        .unwrap_or_else(|| Path::new(DEFAULT_REPORT_PATH));
 
     let detected = find_images(&expected_dir, &actual_dir);
 
@@ -171,7 +175,7 @@ pub fn run(
         deleted: detected.deleted,
         actual: detected.actual,
         expected: detected.expected,
-        report: options.report,
+        report,
         differences,
         json: json_path,
         actual_dir,
