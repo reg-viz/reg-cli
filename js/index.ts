@@ -1,7 +1,13 @@
 import EventEmitter from 'node:events';
 import { Worker } from 'node:worker_threads';
-import { dir, resolveExtention } from './utils';
-import { join } from 'node:path';
+import { isCJS, resolveExtention } from './utils';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'url';
+
+export const dir = (): string => {
+  const dir = isCJS ? __dirname : dirname(fileURLToPath(import.meta.url));
+  return dir;
+};
 
 export const run = (argv: string[]): EventEmitter => {
   const emitter = new EventEmitter();
