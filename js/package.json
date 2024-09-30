@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.0.0-experimental-wasm3",
+  "version": "0.0.0-experimental-wasm4",
   "description": "",
   "type": "module",
   "start": "node ./dist/cli.mjs",
@@ -24,7 +24,8 @@
     "reg-cli": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm"
+    "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [],
   "author": "bokuweb",
