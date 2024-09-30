@@ -3,6 +3,7 @@
   "version": "0.0.0-experimental-wasm0",
   "description": "",
   "type": "module",
+  "start": "node ./dist/cli.mjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -10,12 +11,18 @@
       "require": "./dist/index.cjs"
     }
   },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
+  "bin": {
+    "reg-cli": "./dist/cli.mjs"
+  },
   "scripts": {
     "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm"
   },
