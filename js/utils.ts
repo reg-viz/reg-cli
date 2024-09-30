@@ -5,10 +5,13 @@ import { join } from 'node:path';
 
 const isCJS = typeof __dirname !== 'undefined';
 
-export const readWasm = () => {
+export const dir = (): string => {
   const dir = isCJS ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+  return dir;
+};
 
-  const file = readFile(join(dir, './reg.wasm'));
+export const readWasm = () => {
+  const file = readFile(join(dir(), './reg.wasm'));
   return file;
 };
 

@@ -1,16 +1,17 @@
 import EventEmitter from 'node:events';
 import { Worker } from 'node:worker_threads';
-import { resolveExtention } from './utils';
+import { dir, resolveExtention } from './utils';
+import { join } from 'node:path';
 
 export const run = (argv: string[]): EventEmitter => {
   const emitter = new EventEmitter();
-  const worker = new Worker(`./entry.${resolveExtention()}`, { workerData: { argv } });
+  const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
 
   let nextTid = 1;
   const workers = [worker];
 
   const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
-    const worker = new Worker(`./worker.${resolveExtention()}`);
+    const worker = new Worker(join(dir(), `./worker.${resolveExtention()}`));
 
     workers.push(worker);
 
