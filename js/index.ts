@@ -17,7 +17,7 @@ export const run = (argv: string[]): EventEmitter => {
   const workers = [worker];
 
   const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
-    const worker = new Worker(join(dir(), `./worker.${resolveExtention()}`));
+    const worker = new Worker(join(dir(), `./worker.${resolveExtention()}`), { workerData: { argv } });
 
     workers.push(worker);
 
@@ -111,7 +111,7 @@ export const compare = (input: CompareInput): EventEmitter => {
     actualDir,
     expectedDir,
     diffDir,
-    ...Object.entries(rest).flatMap(([k, v]) => (v == null ? [] : [`--${k}`, String(v)])),
+    ...Object.entries(rest).flatMap(([k, v]) => (v == null || v === '' ? [] : [`--${k}`, String(v)])),
   ];
   return run(args);
 };

@@ -1,4 +1,4 @@
-import { parentPort } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { argv, env } from 'node:process';
@@ -6,9 +6,11 @@ import { readWasm, resolveExtention } from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
 
+console.log(workerData.argv, 'arg')
+
 const wasi = new WASI({
   version: 'preview1',
-  args: argv,
+  args: workerData.argv,
   env: env as Record<string, string>,
   returnOnExit: true,
   preopens: { './': './' },
