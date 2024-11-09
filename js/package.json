@@ -1,6 +1,6 @@
 {
-  "name": "reg-cli",
-  "version": "0.0.0-experimental-wasm13",
+  "name": "@bokuweb/reg-cli-wasm",
+  "version": "0.0.0-experimental0",
   "description": "",
   "type": "module",
   "start": "node ./dist/cli.mjs",
@@ -12,7 +12,7 @@
     }
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
