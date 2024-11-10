@@ -151,20 +151,32 @@ pub fn run(
     let mut failed = BTreeSet::new();
 
     for (image_name, item) in result.iter() {
-        if is_passed(
-            item.width,
-            item.height,
-            item.diff_count as u64,
-            options.threshold_pixel,
-            options.threshold_rate,
-        ) {
-            passed.insert(image_name.clone());
-        } else {
-            let mut diff_image = image_name.clone();
-            failed.insert(image_name.clone());
-            differences.insert(diff_image.clone());
-            diff_image.set_extension("webp");
-            std::fs::write(diff_dir.join(&diff_image), item.diff_image.clone())?;
+        match item {
+            DiffOutput::Matched { .. } => {
+                passed.insert(image_name.clone());
+            }
+            DiffOutput::Unmacthed {
+                diff_count,
+                diff_image,
+                width,
+                height,
+            } => {
+                if is_passed(
+                    width.clone(),
+                    height.clone(),
+                    diff_count.clone() as u64,
+                    options.threshold_pixel,
+                    options.threshold_rate,
+                ) {
+                    passed.insert(image_name.clone());
+                } else {
+                    let mut diff_image_name = image_name.clone();
+                    failed.insert(image_name.clone());
+                    differences.insert(diff_image_name.clone());
+                    diff_image_name.set_extension("webp");
+                    std::fs::write(diff_dir.join(&diff_image_name), diff_image)?;
+                }
+            }
         }
     }
 
