@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.5",
+    "@pyroscope/nodejs": "^0.4.1",
     "unbuild": "^2.0.0"
   }
 }

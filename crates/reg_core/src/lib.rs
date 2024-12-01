@@ -152,10 +152,10 @@ pub fn run(
 
     for (image_name, item) in result.iter() {
         match item {
-            DiffOutput::Matched { .. } => {
+            DiffOutput::Eq => {
                 passed.insert(image_name.clone());
             }
-            DiffOutput::Unmacthed {
+            DiffOutput::NotEq {
                 diff_count,
                 diff_image,
                 width,

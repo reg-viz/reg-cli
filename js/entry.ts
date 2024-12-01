@@ -69,8 +69,6 @@ const file = readWasm();
     (instance.exports as any).free_wasm_output(m);
     const report = JSON.parse(string);
     
-    console.log(report);
-
     parentPort?.postMessage({ cmd: 'complete', data: report });
   } catch (e) {
     throw e;
