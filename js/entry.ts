@@ -17,8 +17,6 @@ export type CompareOutput = {
   diffDir: string,
 };
 
-console.log(workerData.argv, 'arg')
-
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,

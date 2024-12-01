@@ -6,8 +6,6 @@ import { readWasm, resolveExtention } from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
 
-console.log(workerData.argv, 'arg')
-
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
