@@ -10,3 +10,4 @@ report.html
 /screenshot/*
 sample/index.html
 from-json.html
+dist/*
