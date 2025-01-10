@@ -58,7 +58,7 @@
     "bluebird": "3.7.2",
     "chalk": "4.1.2",
     "cli-spinner": "0.2.10",
-    "cross-spawn": "7.0.5",
+    "cross-spawn": "7.0.6",
     "del": "6.1.1",
     "glob": "7.2.3",
     "img-diff-js": "0.5.4",
