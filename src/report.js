@@ -10,26 +10,6 @@ import path from 'path';
 import * as xmlBuilder from 'xmlbuilder2';
 import { createSpan } from './tracing';
 
-export type ReportParams = {
-  passedItems: string[],
-  failedItems: string[],
-  newItems: string[],
-  deletedItems: string[],
-  expectedItems: string[],
-  actualItems: string[],
-  diffItems: string[],
-  json: string,
-  actualDir: string,
-  expectedDir: string,
-  diffDir: string,
-  report: string,
-  junitReport: string,
-  extendedErrors: boolean,
-  urlPrefix: string,
-  enableClientAdditionalDetection: boolean,
-  fromJSON?: boolean,
-};
-
 const loadFaviconAsDataURL = type => {
   const fname = path.resolve(__dirname, `../report/assets/favicon_${type}.png`);
   const buffer = fs.readFileSync(fname);
@@ -134,15 +114,15 @@ const createJunitReport = params => {
   return doc.end({ prettyPrint: true });
 };
 
-function addPassedJunitTestElement(testsuiteElement, item: string) {
+function addPassedJunitTestElement(testsuiteElement, item) {
   testsuiteElement.ele('testcase', { name: item });
 }
 
-function addFailedJunitTestElement(testsuiteElement, item: string, reason: string) {
+function addFailedJunitTestElement(testsuiteElement, item, reason) {
   testsuiteElement.ele('testcase', { name: item }).ele('failure', { message: reason });
 }
 
-function createXimdiffWorker(params: ReportParams) {
+function createXimdiffWorker(params) {
   const file = path.join(__dirname, '../template/worker_pre.js');
   const moduleJs = fs.readFileSync(path.join(__dirname, '../report/ui/dist/worker.js'), 'utf8');
   const wasmLoaderJs = fs.readFileSync(detectDiff.getBrowserJsPath(), 'utf8');
@@ -151,7 +131,7 @@ function createXimdiffWorker(params: ReportParams) {
   return Mustache.render(template.toString(), { ximgdiffWasmUrl }) + '\n' + moduleJs + '\n' + wasmLoaderJs;
 }
 
-export default (params: ReportParams) => {
+export default (params) => {
   return createSpan('createReport', () => {
     if (!!params.report) {
       const html = createHTMLReport(params);

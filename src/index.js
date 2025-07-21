@@ -1,5 +1,3 @@
-/* @flow */
-
 import glob from 'glob'; // $FlowIgnore
 import mkdirp from 'make-dir'; // $FlowIgnore
 import del from 'del'; // $FlowIgnore
@@ -12,33 +10,8 @@ import createReport from './report';
 import bluebird from 'bluebird';
 import EventEmitter from 'events';
 import ProcessAdaptor from './process-adaptor';
-import type { DiffCreatorParams } from './diff';
 import { findImages } from './image-finder';
-import { initTracing, createSpan, shutdownTracing } from './tracing';
-
-type CompareResult = {
-  passed: boolean,
-  image: string,
-};
-
-type RegParams = {
-  actualDir: string,
-  expectedDir: string,
-  diffDir: string,
-  report?: string,
-  junitReport?: string,
-  json?: string,
-  update?: boolean,
-  extendedErrors?: boolean,
-  urlPrefix?: string,
-  matchingThreshold?: number,
-  threshold?: number, // alias to thresholdRate.
-  thresholdRate?: number,
-  thresholdPixel?: number,
-  concurrency?: number,
-  enableAntialias?: boolean,
-  enableClientAdditionalDetection?: boolean,
-};
+import { initTracing, createSpan, createSyncSpan, shutdownTracing } from './tracing';
 
 const copyImages = (actualImages, { expectedDir, actualDir }) => {
   return createSpan('copyImages', () => {
@@ -75,7 +48,7 @@ const compareImages = (
     concurrency,
     enableAntialias,
   },
-): Promise<CompareResult[]> => {
+) => {
   return createSpan('compareImages', () => {
     const images = actualImages.filter(actualImage => expectedImages.includes(actualImage));
     
@@ -209,50 +182,66 @@ const updateExpected = ({ actualDir, expectedDir, diffDir, deletedImages, newIma
     });
 };
 
-module.exports = (params: RegParams) => {
+module.exports = (params) => {
   initTracing();
   
-  return createSpan('reg-cli-main', () => {
-    const {
-      actualDir,
-      expectedDir,
-      diffDir,
-      json,
-      concurrency = 4,
-      update,
-      report,
-      junitReport,
-      extendedErrors,
-      urlPrefix,
-      threshold,
-      matchingThreshold = 0,
-      thresholdRate,
-      thresholdPixel,
-      enableAntialias,
-      enableClientAdditionalDetection,
-    } = params;
-    const dirs = { actualDir, expectedDir, diffDir };
-    const emitter = new EventEmitter();
+  const {
+    actualDir,
+    expectedDir,
+    diffDir,
+    json,
+    concurrency = 4,
+    update,
+    report,
+    junitReport,
+    extendedErrors,
+    urlPrefix,
+    threshold,
+    matchingThreshold = 0,
+    thresholdRate,
+    thresholdPixel,
+    enableAntialias,
+    enableClientAdditionalDetection,
+  } = params;
+  const dirs = { actualDir, expectedDir, diffDir };
+  const emitter = new EventEmitter();
 
-    const { expectedImages, actualImages, deletedImages, newImages } = findImages(expectedDir, actualDir);
+  // 非同期でreg-cli-mainスパンを実行
+  (async () => {
+    try {
+      await createSpan('reg-cli-main', async () => {
+        const { expectedImages, actualImages, deletedImages, newImages } = createSyncSpan('find-images', () => {
+          console.log(`[reg-cli] Finding images in directories...`);
+          return findImages(expectedDir, actualDir);
+        });
 
-    mkdirp.sync(expectedDir);
-    mkdirp.sync(diffDir);
+        createSyncSpan('create-directories', () => {
+          console.log(`[reg-cli] Creating directories...`);
+          mkdirp.sync(expectedDir);
+          mkdirp.sync(diffDir);
+          console.log(`[reg-cli] Directories created: ${expectedDir}, ${diffDir}`);
+          return null;
+        });
 
-    setImmediate(() => emitter.emit('start'));
-    compareImages(emitter, {
-      expectedImages,
-      actualImages,
-      dirs,
-      matchingThreshold,
-      thresholdRate: thresholdRate || threshold,
-      thresholdPixel,
-      concurrency,
-      enableAntialias: !!enableAntialias,
-    })
-      .then(result => aggregate(result))
-      .then(({ passed, failed, diffItems }) => {
-        return createReport({
+        setImmediate(() => emitter.emit('start'));
+        
+        const result = await compareImages(emitter, {
+          expectedImages,
+          actualImages,
+          dirs,
+          matchingThreshold,
+          thresholdRate: thresholdRate || threshold,
+          thresholdPixel,
+          concurrency,
+          enableAntialias: !!enableAntialias,
+        });
+
+        const { passed, failed, diffItems } = await createSpan('aggregate-results', () => {
+          return aggregate(result);
+        });
+
+        console.log(`[reg-cli] Creating report...`);
+        const reportResult = await createReport({
           passedItems: passed,
           failedItems: failed,
           newItems: newImages,
@@ -270,30 +259,46 @@ module.exports = (params: RegParams) => {
           urlPrefix: urlPrefix || '',
           enableClientAdditionalDetection: !!enableClientAdditionalDetection,
         });
-      })
-      .then(result => {
-        deletedImages.forEach(image => emitter.emit('compare', { type: 'delete', path: image }));
-        newImages.forEach(image => emitter.emit('compare', { type: 'new', path: image }));
-        if (update) {
-          return updateExpected({
-            actualDir,
-            expectedDir,
-            diffDir,
-            deletedImages,
-            newImages,
-            diffItems: result.diffItems,
-          }).then(() => {
-            emitter.emit('update');
-            return result;
-          });
-        }
-        return result;
-      })
-      .then(result => emitter.emit('complete', result))
-      .catch(err => emitter.emit('error', err));
 
-    return emitter;
-  });
+        const finalResult = await createSpan('process-results', () => {
+          deletedImages.forEach(image => emitter.emit('compare', { type: 'delete', path: image }));
+          newImages.forEach(image => emitter.emit('compare', { type: 'new', path: image }));
+          if (update) {
+            return createSpan('updateExpected', () => {
+              return updateExpected({
+                actualDir,
+                expectedDir,
+                diffDir,
+                deletedImages,
+                newImages,
+                diffItems: reportResult.diffItems,
+              }).then(() => {
+                emitter.emit('update');
+                return reportResult;
+              });
+            });
+          }
+          return Promise.resolve(reportResult);
+        });
+
+        emitter.emit('complete', finalResult);
+        // トレーシングを適切にシャットダウン
+        setTimeout(async () => {
+          await shutdownTracing();
+        }, 1000);
+        
+        return finalResult;
+      });
+    } catch (err) {
+      emitter.emit('error', err);
+      // エラー時もトレーシングをシャットダウン
+      setTimeout(async () => {
+        await shutdownTracing();
+      }, 500);
+    }
+  })();
+
+  return emitter;
 };
 
 // shutdownTracing関数もexportする
