@@ -90,6 +90,29 @@ reg-cli.js -F ./sample/reg.json -R ./sample/index.html"
 $ npm t
 ```
 
+### Jaeger Tracing Test
+
+`reg-cli` includes OpenTelemetry tracing support for monitoring and debugging. You can run tests with Jaeger tracing enabled:
+
+```sh
+# Start Jaeger and run tracing test (automatically stops Jaeger when done)
+$ npm run jaeger:test
+
+# Start Jaeger service only
+$ npm run jaeger:start
+
+# Run tracing test (requires Jaeger to be running)
+$ npm run jaeger:test:dev
+
+# Stop Jaeger service
+$ npm run jaeger:stop
+```
+
+After running the tracing test, you can view the traces in Jaeger UI at http://localhost:16686.
+
+**Requirements for Jaeger testing:**
+- Docker and Docker Compose
+
 ## Contribute
 
 PRs welcome.

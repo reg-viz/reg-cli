@@ -8,6 +8,7 @@ import mkdirp from 'make-dir'; // $FlowIgnore
 import path from 'path';
 // $FlowIgnore
 import * as xmlBuilder from 'xmlbuilder2';
+import { createSpan } from './tracing';
 
 export type ReportParams = {
   passedItems: string[],
@@ -151,27 +152,29 @@ function createXimdiffWorker(params: ReportParams) {
 }
 
 export default (params: ReportParams) => {
-  if (!!params.report) {
-    const html = createHTMLReport(params);
-    mkdirp.sync(path.dirname(params.report));
-    fs.writeFileSync(params.report, html);
-    if (!!params.enableClientAdditionalDetection) {
-      const workerjs = createXimdiffWorker(params);
-      fs.writeFileSync(path.resolve(path.dirname(params.report), 'worker.js'), workerjs);
-      const wasmBuf = fs.readFileSync(detectDiff.getBrowserWasmPath());
-      fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
+  return createSpan('createReport', () => {
+    if (!!params.report) {
+      const html = createHTMLReport(params);
+      mkdirp.sync(path.dirname(params.report));
+      fs.writeFileSync(params.report, html);
+      if (!!params.enableClientAdditionalDetection) {
+        const workerjs = createXimdiffWorker(params);
+        fs.writeFileSync(path.resolve(path.dirname(params.report), 'worker.js'), workerjs);
+        const wasmBuf = fs.readFileSync(detectDiff.getBrowserWasmPath());
+        fs.writeFileSync(path.resolve(path.dirname(params.report), 'detector.wasm'), wasmBuf);
+      }
     }
-  }
-  if (!!params.junitReport) {
-    const junitXml = createJunitReport(params);
-    mkdirp.sync(path.dirname(params.junitReport));
-    fs.writeFileSync(params.junitReport, junitXml);
-  }
+    if (!!params.junitReport) {
+      const junitXml = createJunitReport(params);
+      mkdirp.sync(path.dirname(params.junitReport));
+      fs.writeFileSync(params.junitReport, junitXml);
+    }
 
-  const json = createJSONReport(params);
-  if (!params.fromJSON) {
-    mkdirp.sync(path.dirname(params.json));
-    fs.writeFileSync(params.json, JSON.stringify(json));
-  }
-  return json;
+    const json = createJSONReport(params);
+    if (!params.fromJSON) {
+      mkdirp.sync(path.dirname(params.json));
+      fs.writeFileSync(params.json, JSON.stringify(json));
+    }
+    return json;
+  });
 };

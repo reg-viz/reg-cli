@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "6832:6832/udp"  # Jaeger agent UDP (compact)
+      - "6831:6831/udp"  # Jaeger agent UDP (binary)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=info
+    networks:
+      - jaeger-net
+
+networks:
+  jaeger-net:
+    driver: bridge 
