@@ -37,21 +37,78 @@ struct Args {
 
     #[arg(long = "enableAntialias")]
     enable_antialias: Option<bool>,
+
+    #[arg(long)]
+    tracing: bool,
 }
 
-#[cfg(not(all(target_os = "wasi", target_env = "p1")))]
+// Native main function with tracing support
+#[cfg(all(not(all(target_os = "wasi", target_env = "p1")), feature = "jaeger"))]
+#[tokio::main]
+pub async fn main() {
+    let result = inner_async().await;
+    
+    // Shutdown tracing with explicit flush
+    println!("Flushing traces to Jaeger...");
+    // Longer wait for HTTP OTLP exporter
+    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+    reg_core::shutdown_tracing();
+    // Additional wait after shutdown
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    println!("Tracing shutdown completed");
+    
+    if let Err(e) = result {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+// Native main function without tracing 
+#[cfg(all(not(all(target_os = "wasi", target_env = "p1")), not(feature = "jaeger")))]
 pub fn main() {
-    let _ = inner();
+    let result = inner_sync();
+    
+    if let Err(e) = result {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }
 
+// WASI main function (no-op)
 #[cfg(all(target_os = "wasi", target_env = "p1"))]
 pub fn main() {
     // NOP
 }
 
-fn inner() -> Result<JsonReport, reg_core::CompareError> {
+// Async version for tracing support
+#[cfg(feature = "jaeger")]
+async fn inner_async() -> Result<JsonReport, reg_core::CompareError> {
     let args = Args::parse();
 
+    // Initialize tracing if enabled via CLI flag or environment variable
+    let tracing_enabled = args.tracing 
+        || std::env::var("JAEGER_ENABLED").unwrap_or_default() == "true"
+        || std::env::var("RUST_TRACING").unwrap_or_default() == "true";
+    
+    if tracing_enabled {
+        if let Err(e) = reg_core::init_tracing() {
+            eprintln!("Failed to initialize tracing: {}", e);
+        } else {
+            println!("Jaeger tracing enabled - view traces at http://localhost:16686");
+        }
+    }
+
+    create_options_and_run(args)
+}
+
+// Sync version without tracing
+fn inner_sync() -> Result<JsonReport, reg_core::CompareError> {
+    let args = Args::parse();
+    create_options_and_run(args)
+}
+
+// Common function to create options and run
+fn create_options_and_run(args: Args) -> Result<JsonReport, reg_core::CompareError> {
     let options = Options {
         report: args.report.as_deref().map(Path::new),
         json: args.json.as_deref().map(Path::new),
@@ -66,6 +123,7 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
     run(args.actual_dir, args.expected_dir, args.diff_dir, options)
 }
 
+// WASM exports
 #[cfg(all(target_os = "wasi", target_env = "p1"))]
 #[repr(C)]
 pub struct WasmOutput {
@@ -76,7 +134,7 @@ pub struct WasmOutput {
 #[cfg(all(target_os = "wasi", target_env = "p1"))]
 #[no_mangle]
 pub extern "C" fn wasm_main() -> *mut WasmOutput {
-    let res = inner();
+    let res = inner_wasi();
     if let Ok(res) = res {
         let mut s = serde_json::to_string_pretty(&res).unwrap();
 
@@ -89,6 +147,13 @@ pub extern "C" fn wasm_main() -> *mut WasmOutput {
     } else {
         panic!("Failed to exec wasm main. readon {:?}", res);
     }
+}
+
+// WASI version 
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
+fn inner_wasi() -> Result<JsonReport, reg_core::CompareError> {
+    let args = Args::parse();
+    create_options_and_run(args)
 }
 
 #[cfg(all(target_os = "wasi", target_env = "p1"))]

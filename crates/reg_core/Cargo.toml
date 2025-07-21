@@ -23,4 +23,18 @@ path-clean = "1.0.1"
 thiserror = "1.0"
 url = "2.5.2"
 
+# Jaeger tracing dependencies
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "json"] }
+tracing-opentelemetry = { version = "0.18", optional = true }
+opentelemetry = { version = "0.18", optional = true }
+opentelemetry-jaeger = { version = "0.17", optional = true, features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.11", optional = true, features = ["http-proto", "reqwest-client"] }
+opentelemetry_sdk = { version = "0.18", optional = true, features = ["rt-tokio"] }
+tokio = { version = "1", optional = true, features = ["rt", "rt-multi-thread"] }
+
 [dev-dependencies]
+
+[features]
+default = []
+jaeger = ["tracing", "tracing-subscriber", "tracing-opentelemetry", "opentelemetry", "opentelemetry-jaeger", "opentelemetry-otlp", "opentelemetry_sdk", "tokio"]

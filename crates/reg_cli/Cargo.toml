@@ -11,3 +11,8 @@ path = "src/main.rs"
 reg_core = { path = "../reg_core" }
 clap = { version = "4", features = ["derive"] }
 serde_json = { version = "1.0" }
+tokio = { version = "1", optional = true, features = ["rt", "rt-multi-thread", "macros"] }
+
+[features]
+default = []
+jaeger = ["reg_core/jaeger", "tokio"]
