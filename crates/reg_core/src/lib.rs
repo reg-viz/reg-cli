@@ -39,27 +39,26 @@ static DEFAULT_REPORT_PATH: &'static str = "./report.html";
 /// Initialize Jaeger tracing if enabled
 #[cfg(feature = "jaeger")]
 pub fn init_tracing() -> Result<(), Box<dyn std::error::Error>> {
-    use opentelemetry_sdk::trace as sdktrace;
     use opentelemetry_otlp::WithExportConfig;
-    
+    use opentelemetry_sdk::trace as sdktrace;
+
     let jaeger_endpoint = std::env::var("JAEGER_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4318/v1/traces".to_string());
-    
+
     // Create OTLP HTTP exporter
     let exporter = opentelemetry_otlp::new_exporter()
         .http()
         .with_endpoint(jaeger_endpoint);
-    
+
     // Create tracer with resource information
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(exporter)
         .with_trace_config(
-            sdktrace::config()
-                .with_resource(opentelemetry_sdk::Resource::new(vec![
-                    opentelemetry::KeyValue::new("service.name", "reg-cli-rust"),
-                    opentelemetry::KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                ]))
+            sdktrace::config().with_resource(opentelemetry_sdk::Resource::new(vec![
+                opentelemetry::KeyValue::new("service.name", "reg-cli-rust"),
+                opentelemetry::KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+            ])),
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
@@ -71,7 +70,7 @@ pub fn init_tracing() -> Result<(), Box<dyn std::error::Error>> {
         .with(
             tracing_subscriber::fmt::layer()
                 .with_target(false)
-                .compact()
+                .compact(),
         )
         .with(telemetry_layer)
         .with(tracing_subscriber::EnvFilter::from_default_env())
@@ -186,7 +185,7 @@ pub fn run(
     info!("Starting reg-cli-rust comparison");
 
     let detected = find_images(&expected_dir, &actual_dir);
-    
+
     #[cfg(feature = "jaeger")]
     info!(
         expected_images = detected.expected.len(),
@@ -206,15 +205,15 @@ pub fn run(
     info!(target_images = targets.len(), "Images to compare");
 
     let thread_count = options.concurrency.unwrap_or_else(|| 4);
-    
+
     // ThreadPool creation with tracing
     let pool = {
         #[cfg(feature = "jaeger")]
         let _span = span!(Level::INFO, "threadpool-creation", threads = thread_count).entered();
-        
+
         #[cfg(feature = "jaeger")]
         info!("Creating ThreadPool with {} threads", thread_count);
-        
+
         ThreadPoolBuilder::new()
             .num_threads(thread_count)
             .build()
@@ -224,9 +223,13 @@ pub fn run(
     // Image comparison with tracing
     let result = {
         #[cfg(feature = "jaeger")]
-        let _span = span!(Level::INFO, "image-comparison-batch", 
-                         image_count = targets.len(), 
-                         thread_count = thread_count).entered();
+        let _span = span!(
+            Level::INFO,
+            "image-comparison-batch",
+            image_count = targets.len(),
+            thread_count = thread_count
+        )
+        .entered();
 
         pool.install(|| {
             targets
@@ -241,54 +244,60 @@ pub fn run(
 
                     #[cfg(feature = "jaeger")]
                     info!("Processing image: {}", path.display());
-                    
+
                     // File reading spans
                     let img1 = {
                         #[cfg(feature = "jaeger")]
                         let _span = span!(Level::INFO, "read-actual-file", 
-                                         image = %path.display()).entered();
+                                         image = %path.display())
+                        .entered();
                         std::fs::read(actual_dir.join(path))?
                     };
-                    
+
                     let img2 = {
                         #[cfg(feature = "jaeger")]
                         let _span = span!(Level::INFO, "read-expected-file", 
-                                         image = %path.display()).entered();
+                                         image = %path.display())
+                        .entered();
                         std::fs::read(expected_dir.join(path))?
                     };
-                    
+
                     #[cfg(feature = "jaeger")]
                     info!(
                         actual_size = img1.len(),
                         expected_size = img2.len(),
                         "Image files read"
                     );
-                    
+
                     // Image diff calculation span
                     let res = {
                         #[cfg(feature = "jaeger")]
                         let _span = span!(Level::INFO, "diff-calculation", 
                                          image = %path.display(),
                                          actual_size = img1.len(),
-                                         expected_size = img2.len()).entered();
-                        
+                                         expected_size = img2.len())
+                        .entered();
+
                         image_diff_rs::diff(
                             img1,
                             img2,
                             &DiffOption {
                                 threshold: options.matching_threshold,
-                                include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                                include_anti_alias: Some(
+                                    !options.enable_antialias.unwrap_or_default(),
+                                ),
                             },
                         )?
                     };
-                    
+
                     #[cfg(feature = "jaeger")]
                     match &res {
                         DiffOutput::Eq => info!("Image comparison: PASSED"),
-                        DiffOutput::NotEq { diff_count, .. } => 
-                            info!(diff_count = diff_count, "Image comparison: FAILED"),
+                        DiffOutput::NotEq { diff_count, .. } => {
+                            info!(diff_count = diff_count, "Image comparison: FAILED")
+                        }
                     }
-                    
+
                     Ok((path.clone(), res))
                 })
                 .inspect(|r| {
@@ -319,7 +328,8 @@ pub fn run(
                 DiffOutput::Eq => {
                     #[cfg(feature = "jaeger")]
                     let _span = span!(Level::INFO, "process-passed-image", 
-                                     image = %image_name.display()).entered();
+                                     image = %image_name.display())
+                    .entered();
                     passed.insert(image_name.clone());
                 }
                 DiffOutput::NotEq {
@@ -333,8 +343,9 @@ pub fn run(
                                      image = %image_name.display(),
                                      diff_count = *diff_count,
                                      width = *width,
-                                     height = *height).entered();
-                    
+                                     height = *height)
+                    .entered();
+
                     if is_passed(
                         width.clone(),
                         height.clone(),
@@ -350,16 +361,17 @@ pub fn run(
                         failed.insert(image_name.clone());
                         differences.insert(diff_image_name.clone());
                         diff_image_name.set_extension("webp");
-                        
+
                         #[cfg(feature = "jaeger")]
                         info!(image = %image_name.display(), "Writing diff image");
-                        
+
                         // Diff image writing span
                         {
                             #[cfg(feature = "jaeger")]
                             let _span = span!(Level::INFO, "write-diff-image", 
                                              image = %image_name.display(),
-                                             diff_size = diff_image.len()).entered();
+                                             diff_size = diff_image.len())
+                            .entered();
                             std::fs::write(diff_dir.join(&diff_image_name), diff_image)?;
                         }
                     }
@@ -404,7 +416,7 @@ pub fn run(
     if let (Some(html), Some(report)) = (report.html, options.report) {
         #[cfg(feature = "jaeger")]
         let _span = span!(Level::INFO, "html-report-write").entered();
-        
+
         std::fs::write(report, html)?;
     };
 
@@ -431,11 +443,11 @@ pub(crate) fn find_images(
     let expected: BTreeSet<PathBuf> = {
         #[cfg(feature = "jaeger")]
         let _span = span!(Level::INFO, "glob-expected-images").entered();
-        
+
         let pattern = expected_dir.display().to_string() + "/**/*";
         #[cfg(feature = "jaeger")]
         info!(pattern = %pattern, "Scanning expected directory");
-        
+
         let result: BTreeSet<PathBuf> = glob::glob(&pattern)
             .expect("the pattern should be correct.")
             .flatten()
@@ -448,23 +460,23 @@ pub(crate) fn find_images(
                 )
             })
             .collect();
-            
+
         #[cfg(feature = "jaeger")]
         let count = result.len();
         #[cfg(feature = "jaeger")]
         info!(count = count, "Expected images found");
-        
+
         result
     };
 
     let actual: BTreeSet<PathBuf> = {
         #[cfg(feature = "jaeger")]
         let _span = span!(Level::INFO, "glob-actual-images").entered();
-        
+
         let pattern = actual_dir.display().to_string() + "/**/*";
         #[cfg(feature = "jaeger")]
         info!(pattern = %pattern, "Scanning actual directory");
-        
+
         let result: BTreeSet<PathBuf> = glob::glob(&pattern)
             .expect("the pattern should be correct.")
             .flatten()
@@ -477,12 +489,12 @@ pub(crate) fn find_images(
                 )
             })
             .collect();
-            
+
         #[cfg(feature = "jaeger")]
         let count = result.len();
         #[cfg(feature = "jaeger")]
         info!(count = count, "Actual images found");
-        
+
         result
     };
 
@@ -492,7 +504,7 @@ pub(crate) fn find_images(
     #[cfg(feature = "jaeger")]
     info!(
         expected_total = expected.len(),
-        actual_total = actual.len(), 
+        actual_total = actual.len(),
         deleted_count = deleted.len(),
         new_count = new.len(),
         "Image discovery completed"
