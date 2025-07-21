@@ -30,10 +30,12 @@ export const run = (argv: string[]): EventEmitter => {
       const { worker, workers } = await createSpan('worker-initialization', async () => {
         const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
         const workers = [worker];
+        console.log(`[WASM] Worker created at:`, new Date().toISOString());
         return { worker, workers };
       });
 
       let nextTid = 1;
+      let firstMessageReceived = false;
 
       // Worker spawn 関数の定義
       const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
@@ -47,7 +49,11 @@ export const run = (argv: string[]): EventEmitter => {
                 worker.unref();
               }
             } else if (cmd === 'thread-spawn') {
-              spawn(startArg, threadId, memory);
+              createSpan('thread-spawn-message-handling', async () => {
+                console.log(`[WASM] Handling thread-spawn message at:`, new Date().toISOString());
+                spawn(startArg, threadId, memory);
+                return Promise.resolve();
+              }).catch(() => {}); // Silently handle tracing errors
             }
           });
 
@@ -72,7 +78,21 @@ export const run = (argv: string[]): EventEmitter => {
 
       // メインワーカーのイベント処理
       await createSpan('worker-event-setup', async () => {
+        
+        // 最初のメッセージ受信時間を測定
+        const measureFirstMessage = (cmd: string) => {
+          if (!firstMessageReceived) {
+            firstMessageReceived = true;
+            console.log(`[WASM] First message '${cmd}' received at:`, new Date().toISOString());
+            createSpan('first-message-received', async () => {
+              return Promise.resolve({ cmd, receivedAt: new Date().toISOString() });
+            }).catch(() => {});
+          }
+        };
+
         worker.on('message', ({ cmd, startArg, threadId, memory, data }) => {
+          measureFirstMessage(cmd);
+          
           if (cmd === 'complete') {
             createSpan('worker-completion', async () => {
               workers.forEach((w) => w.terminate());
@@ -82,14 +102,21 @@ export const run = (argv: string[]): EventEmitter => {
           }
 
           if (cmd === 'loaded') {
-            if (typeof worker.unref === 'function') {
-              worker.unref();
-            }
+            createSpan('worker-loaded', async () => {
+              if (typeof worker.unref === 'function') {
+                worker.unref();
+              }
+              return Promise.resolve();
+            }).catch(() => {});
             return;
           }
 
           if (cmd === 'thread-spawn') {
-            spawn(startArg, threadId, memory);
+            createSpan('main-worker-thread-spawn-handling', async () => {
+              console.log(`[WASM] Main worker handling thread-spawn at:`, new Date().toISOString());
+              spawn(startArg, threadId, memory);
+              return Promise.resolve();
+            }).catch(() => {}); // Silently handle tracing errors
           }
         });
 
