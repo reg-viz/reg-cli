@@ -74,12 +74,24 @@ const compareImages = (
   },
 ): Promise<CompareResult[]> => {
   const images = actualImages.filter(actualImage => expectedImages.includes(actualImage));
+  const debug = process.env.REG_DEBUG || false;
+  
+  if (debug) {
+    console.log(`[INDEX] Starting comparison for ${images.length} images`);
+    console.log(`[INDEX] Images to process:`, images);
+  }
+  
   concurrency = images.length < 20 ? 1 : concurrency || 4;
+  if (debug) console.log(`[INDEX] Using concurrency level: ${concurrency}`);
+  
   const processes = range(concurrency).map(() => new ProcessAdaptor(emitter));
+  
   return bluebird
     .map(
       images,
-      image => {
+      (image, index) => {
+        if (debug) console.log(`[INDEX] Processing image ${index + 1}/${images.length}: ${image}`);
+        
         const p = processes.find(p => !p.isRunning());
         if (p) {
           return p.run({
@@ -90,11 +102,14 @@ const compareImages = (
             thresholdPixel,
             enableAntialias,
           });
+        } else {
+          if (debug) console.warn(`[INDEX] No available process found for ${image}`);
         }
       },
       { concurrency },
     )
     .then(result => {
+      if (debug) console.log(`[INDEX] Comparison completed for all ${images.length} images`);
       processes.forEach(p => p.close());
       return result;
     })
@@ -183,11 +198,22 @@ module.exports = (params: RegParams) => {
   });
 
   const { expectedImages, actualImages, deletedImages, newImages } = findImages(expectedDir, actualDir);
+  
+  const debug = process.env.REG_DEBUG || false;
+  if (debug) {
+    console.log(`[INDEX] Image discovery results:`);
+    console.log(`[INDEX] - Expected images: ${expectedImages.length}`, expectedImages.slice(0, 5));
+    console.log(`[INDEX] - Actual images: ${actualImages.length}`, actualImages.slice(0, 5));
+    console.log(`[INDEX] - Deleted images: ${deletedImages.length}`, deletedImages.slice(0, 5));
+    console.log(`[INDEX] - New images: ${newImages.length}`, newImages.slice(0, 5));
+  }
 
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
 
   setImmediate(() => emitter.emit('start'));
+  if (debug) console.log(`[INDEX] Starting image comparison process...`);
+  
   compareImages(emitter, {
     expectedImages,
     actualImages,
@@ -198,8 +224,14 @@ module.exports = (params: RegParams) => {
     concurrency,
     enableAntialias: !!enableAntialias,
   })
-    .then(result => aggregate(result, emitterResults))
+    .then(result => {
+      if (debug) console.log(`[INDEX] Image comparison completed, aggregating results...`);
+      return aggregate(result, emitterResults);
+    })
     .then(({ passed, failed, diffItems, diffDetails }) => {
+      if (debug) console.log(`[INDEX] Results - passed: ${passed.length}, failed: ${failed.length}, diffItems: ${diffItems.length}`);
+      if (debug) console.log(`[INDEX] Creating reports...`);
+      
       return createReport({
         passedItems: passed,
         failedItems: failed,
@@ -221,6 +253,7 @@ module.exports = (params: RegParams) => {
       });
     })
     .then(result => {
+      if (debug) console.log(`[INDEX] Reports created successfully`);
       deletedImages.forEach(image => emitter.emit('compare', { type: 'delete', path: image }));
       newImages.forEach(image => emitter.emit('compare', { type: 'new', path: image }));
       if (update) {
@@ -239,7 +272,10 @@ module.exports = (params: RegParams) => {
       return result;
     })
     .then(result => emitter.emit('complete', result))
-    .catch(err => emitter.emit('error', err));
+    .catch(err => {
+      console.error(`[INDEX] Error in main process:`, err);
+      emitter.emit('error', err);
+    });
 
   return emitter;
 };

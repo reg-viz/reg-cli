@@ -15,6 +15,9 @@ export default class ProcessAdaptor {
     this._process = fork(path.resolve(__dirname, './diff.js'));
     this._isRunning = false;
     this._emitter = emitter;
+    
+    // Set max listeners to prevent warning
+    this._process.setMaxListeners(50);
   }
 
   isRunning() {
@@ -22,11 +25,30 @@ export default class ProcessAdaptor {
   }
 
   run(params: DiffCreatorParams): Promise<?DiffResult> {
+    const debug = process.env.REG_DEBUG || false;
+    if (debug) console.log(`[PROCESS-ADAPTOR] Starting diff process for image: ${params.image}`);
+    
     return new Promise((resolve, reject) => {
       this._isRunning = true;
-      if (!this._process || !this._process.send) resolve();
+      
+      // Add timeout to detect hanging processes
+      const timeout = setTimeout(() => {
+        console.error(`[PROCESS-ADAPTOR] Timeout after 30s for image: ${params.image}`);
+        this._isRunning = false;
+        reject(new Error(`Diff process timeout for ${params.image}`));
+      }, 30000);
+      
+      if (!this._process || !this._process.send) {
+        clearTimeout(timeout);
+        resolve();
+      }
+      
       this._process.send(params);
+      
       this._process.once('message', (result) => {
+        clearTimeout(timeout);
+        if (debug) console.log(`[PROCESS-ADAPTOR] Received result for ${params.image}: passed=${result.passed}`);
+        
         this._isRunning = false;
         this._emitter.emit('compare', {
           type: result.passed ? 'pass' : 'fail', 
@@ -34,6 +56,13 @@ export default class ProcessAdaptor {
           diffDetails: result.diffDetails
         });
         resolve(result);
+      });
+      
+      this._process.once('error', (error) => {
+        clearTimeout(timeout);
+        console.error(`[PROCESS-ADAPTOR] Process error for ${params.image}:`, error);
+        this._isRunning = false;
+        reject(error);
       });
     });
   }

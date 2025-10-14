@@ -31,9 +31,23 @@ export type ReportParams = {
 };
 
 const loadFaviconAsDataURL = type => {
-  const fname = path.resolve(__dirname, `../report/assets/favicon_${type}.png`);
-  const buffer = fs.readFileSync(fname);
-  return 'data:image/png;base64,' + buffer.toString('base64');
+  // Create simple 16x16 favicon as base64 data URL
+  const colors = {
+    success: '#4CAF50', // Green
+    failure: '#F44336'  // Red
+  };
+  
+  const color = colors[type] || colors.success;
+  
+  // Simple SVG favicon converted to base64
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="8" cy="8" r="7" fill="${color}" stroke="#fff" stroke-width="1"/>
+    <text x="8" y="12" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">
+      ${type === 'failure' ? '✗' : '✓'}
+    </text>
+  </svg>`;
+  
+  return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
 };
 
 const encodeFilePath = filePath => {
@@ -794,9 +808,10 @@ const createFallbackCSS = () => {
       height: 100%;
       background: #667eea;
       cursor: ew-resize;
-      z-index: 3;
+      z-index: 1000;
       transform: translateX(-50%);
       box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      pointer-events: auto;
     }
     
     .modal-slider-handle::before {
@@ -976,6 +991,19 @@ const createFallbackCSS = () => {
       padding: 10px;
     }
     
+    .zoom-help {
+      color: #ccc;
+      font-size: 11px;
+      margin-top: 8px;
+      text-align: center;
+      max-width: 150px;
+      line-height: 1.3;
+      padding: 4px;
+      background: rgba(0, 123, 204, 0.2);
+      border-radius: 4px;
+      border: 1px solid rgba(0, 123, 204, 0.3);
+    }
+    
     .zoom-btn {
       background: rgba(255, 255, 255, 0.9);
       border: none;
@@ -1015,18 +1043,31 @@ const createFallbackCSS = () => {
       height: 100%;
       overflow: hidden;
       cursor: grab;
+      user-select: none;
     }
     
     .zoomable-container.dragging {
       cursor: grabbing;
     }
     
-    .zoomable-image {
+          .zoomable-container.zoomed {
+            cursor: move;
+          }
+          
+          .zoomable-container.dragging {
+            cursor: grabbing;
+          }
+          
+          .zoomable-container:focus {
+            outline: 2px solid #007acc;
+            outline-offset: 2px;
+          }    .zoomable-image {
       transition: transform 0.2s ease;
       transform-origin: center center;
       width: 100%;
       height: 100%;
       object-fit: contain;
+      pointer-events: none;
     }
     
     /* Modal responsive adjustments */
@@ -1690,13 +1731,14 @@ const createFallbackJS = () => {
                 <img class="modal-slider-image actual zoomable-image" src="\${actualSrc}" alt="Actual" />
                 \${diffSrc ? \`<img class="modal-slider-image diff zoomable-image" src="\${diffSrc}" alt="Diff" style="display:none;" />\` : ''}
               </div>
-              <div class="modal-slider-handle"></div>
             </div>
+            <div class="modal-slider-handle"></div>
             <div class="zoom-controls">
               <button class="zoom-btn" data-zoom="in">+</button>
               <div class="zoom-level">100%</div>
               <button class="zoom-btn" data-zoom="out">−</button>
               <button class="zoom-btn" data-zoom="reset">⌂</button>
+              <div class="zoom-help">💡 Zoom: scroll wheel or +/− • Pan: drag or arrow keys • Reset: Home</div>
             </div>
           </div>
         \`;
@@ -1792,32 +1834,48 @@ const createFallbackJS = () => {
         
         const handle = slider.querySelector('.modal-slider-handle');
         const actualImg = slider.querySelector('.modal-slider-image.actual');
+        const zoomableContainer = slider.querySelector('.zoomable-container');
         
         let isDragging = false;
+        let currentSliderPosition = 50; // Percentage
         
         const updateSlider = (clientX) => {
-          const rect = slider.getBoundingClientRect();
-          const x = clientX - rect.left;
-          const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+          const sliderRect = slider.getBoundingClientRect();
+          const x = clientX - sliderRect.left;
+          const percentage = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
           
+          currentSliderPosition = percentage;
           handle.style.left = percentage + '%';
           actualImg.style.clipPath = \`inset(0 \${100 - percentage}% 0 0)\`;
         };
+        
+        const updateSliderFromZoom = () => {
+          // Maintain slider position when zooming
+          handle.style.left = currentSliderPosition + '%';
+          actualImg.style.clipPath = \`inset(0 \${100 - currentSliderPosition}% 0 0)\`;
+        };
+        
+        // Store the update function for zoom controls to use
+        if (zoomableContainer) {
+          zoomableContainer.updateSlider = updateSliderFromZoom;
+        }
         
         // Mouse events
         handle.addEventListener('mousedown', (e) => {
           isDragging = true;
           e.preventDefault();
+          e.stopPropagation();
         });
         
         slider.addEventListener('mousemove', (e) => {
           if (isDragging) {
             updateSlider(e.clientX);
+            e.stopPropagation();
           }
         });
         
         slider.addEventListener('click', (e) => {
-          if (!isDragging) {
+          if (!isDragging && !e.target.closest('.zoom-controls, .zoom-btn')) {
             updateSlider(e.clientX);
           }
         });
@@ -1826,10 +1884,11 @@ const createFallbackJS = () => {
           isDragging = false;
         });
         
-        // Touch events
+        // Touch events for mobile
         handle.addEventListener('touchstart', (e) => {
           isDragging = true;
           e.preventDefault();
+          e.stopPropagation();
         });
         
         slider.addEventListener('touchmove', (e) => {
@@ -1837,6 +1896,7 @@ const createFallbackJS = () => {
             const touch = e.touches[0];
             updateSlider(touch.clientX);
             e.preventDefault();
+            e.stopPropagation();
           }
         });
         
@@ -1912,6 +1972,18 @@ const createFallbackJS = () => {
             if (zoomLevel) {
               zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
             }
+            
+            // Update container cursor based on zoom level
+            if (currentZoom > 1) {
+              zoomContainer.classList.add('zoomed');
+            } else {
+              zoomContainer.classList.remove('zoomed');
+            }
+            
+            // Update slider position if in slider mode
+            if (zoomContainer.updateSlider) {
+              zoomContainer.updateSlider();
+            }
           };
           
           const resetPosition = () => {
@@ -1954,11 +2026,17 @@ const createFallbackJS = () => {
           
           // Pan functionality when zoomed
           zoomContainer.addEventListener('mousedown', (e) => {
+            // Don't pan if clicking on slider handle or zoom controls
+            if (e.target.closest('.modal-slider-handle, .zoom-controls')) {
+              return;
+            }
+            
             if (currentZoom > 1) {
               isDragging = true;
               startX = e.clientX - translateX;
               startY = e.clientY - translateY;
               zoomContainer.classList.add('dragging');
+              e.preventDefault();
             }
           });
           
@@ -1966,7 +2044,14 @@ const createFallbackJS = () => {
             if (isDragging && currentZoom > 1) {
               translateX = e.clientX - startX;
               translateY = e.clientY - startY;
+              
+              // Constrain panning to reasonable bounds
+              const maxTranslate = Math.max(0, (currentZoom - 1) * 200);
+              translateX = Math.max(-maxTranslate, Math.min(maxTranslate, translateX));
+              translateY = Math.max(-maxTranslate, Math.min(maxTranslate, translateY));
+              
               updateTransform();
+              e.preventDefault();
             }
           });
           
@@ -1974,6 +2059,42 @@ const createFallbackJS = () => {
             if (isDragging) {
               isDragging = false;
               zoomContainer.classList.remove('dragging');
+            }
+          });
+          
+          // Keyboard navigation when focused
+          zoomContainer.setAttribute('tabindex', '0');
+          zoomContainer.addEventListener('keydown', (e) => {
+            if (currentZoom > 1) {
+              const step = 20;
+              switch (e.key) {
+                case 'ArrowUp':
+                  translateY += step;
+                  updateTransform();
+                  e.preventDefault();
+                  break;
+                case 'ArrowDown':
+                  translateY -= step;
+                  updateTransform();
+                  e.preventDefault();
+                  break;
+                case 'ArrowLeft':
+                  translateX += step;
+                  updateTransform();
+                  e.preventDefault();
+                  break;
+                case 'ArrowRight':
+                  translateX -= step;
+                  updateTransform();
+                  e.preventDefault();
+                  break;
+                case 'Home':
+                  translateX = 0;
+                  translateY = 0;
+                  updateTransform();
+                  e.preventDefault();
+                  break;
+              }
             }
           });
           
