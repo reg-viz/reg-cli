@@ -124,11 +124,20 @@ const escapeGlob = fileName => {
     .replace(/(\!)/g, '[$1]');
 };
 
-const aggregate = result => {
+const aggregate = (result, emitterResults) => {
   const passed = result.filter(r => r.passed).map(r => r.image);
   const failed = result.filter(r => !r.passed).map(r => r.image);
   const diffItems = failed.map(image => image.replace(/\.[^\.]+$/, '.png'));
-  return { passed, failed, diffItems };
+  
+  // Create diffDetails object from emitter results
+  const diffDetails = {};
+  emitterResults.forEach(emitterResult => {
+    if (emitterResult.diffDetails) {
+      diffDetails[emitterResult.path] = emitterResult.diffDetails;
+    }
+  });
+  
+  return { passed, failed, diffItems, diffDetails };
 };
 
 const updateExpected = ({ actualDir, expectedDir, diffDir, deletedImages, newImages, diffItems }) => {
@@ -166,6 +175,12 @@ module.exports = (params: RegParams) => {
   } = params;
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
+  const emitterResults = []; // Collect emitter results to get diffDetails
+
+  // Listen for compare events to collect diffDetails
+  emitter.on('compare', (result) => {
+    emitterResults.push(result);
+  });
 
   const { expectedImages, actualImages, deletedImages, newImages } = findImages(expectedDir, actualDir);
 
@@ -183,8 +198,8 @@ module.exports = (params: RegParams) => {
     concurrency,
     enableAntialias: !!enableAntialias,
   })
-    .then(result => aggregate(result))
-    .then(({ passed, failed, diffItems }) => {
+    .then(result => aggregate(result, emitterResults))
+    .then(({ passed, failed, diffItems, diffDetails }) => {
       return createReport({
         passedItems: passed,
         failedItems: failed,
@@ -193,6 +208,7 @@ module.exports = (params: RegParams) => {
         expectedItems: update ? actualImages : expectedImages,
         actualItems: actualImages,
         diffItems,
+        diffDetails, // Pass diffDetails to the report
         json: json || './reg.json',
         actualDir,
         expectedDir,

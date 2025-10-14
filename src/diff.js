@@ -67,8 +67,20 @@ const createDiff = ({
     })
       .then(({ width, height, diffCount }) => {
         const passed = isPassed({ width, height, diffCount, thresholdPixel, thresholdRate });
+        const totalPixels = width * height;
+        const diffPercentage = totalPixels > 0 ? (diffCount / totalPixels) * 100 : 0;
+        
         if (!process || !process.send) return;
-        process.send({ passed, image });
+        process.send({ 
+          passed, 
+          image, 
+          diffDetails: {
+            width,
+            height,
+            diffCount,
+            diffPercentage
+          }
+        });
       })
   })
 };

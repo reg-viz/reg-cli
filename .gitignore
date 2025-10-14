@@ -10,3 +10,8 @@ report.html
 /screenshot/*
 sample/index.html
 from-json.html
+*.png
+*.jpg
+*.jpeg
+*.html
+*.json

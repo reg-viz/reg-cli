@@ -29,7 +29,9 @@ export default class ProcessAdaptor {
       this._process.once('message', (result) => {
         this._isRunning = false;
         this._emitter.emit('compare', {
-          type: result.passed ? 'pass' : 'fail', path: result.image,
+          type: result.passed ? 'pass' : 'fail', 
+          path: result.image,
+          diffDetails: result.diffDetails
         });
         resolve(result);
       });
