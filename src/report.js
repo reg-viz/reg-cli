@@ -1004,6 +1004,12 @@ const createFallbackCSS = () => {
       border: 1px solid rgba(0, 123, 204, 0.3);
     }
     
+    .zoom-help.active {
+      background: rgba(76, 175, 80, 0.3);
+      border-color: rgba(76, 175, 80, 0.5);
+      color: #90EE90;
+    }
+    
     .zoom-btn {
       background: rgba(255, 255, 255, 0.9);
       border: none;
@@ -1964,8 +1970,38 @@ const createFallbackJS = () => {
           const images = zoomContainer.querySelectorAll('.zoomable-image');
           const zoomControls = container.querySelectorAll('.zoom-controls')[index];
           const zoomLevel = zoomControls?.querySelector('.zoom-level');
+          const zoomHelp = zoomControls?.querySelector('.zoom-help');
+          
+          // Calculate pan boundaries based on actual image and container dimensions
+          const getPanBounds = () => {
+            if (!images.length || currentZoom <= 1) return { maxX: 0, maxY: 0 };
+            
+            const img = images[0];
+            const containerRect = zoomContainer.getBoundingClientRect();
+            
+            // Get the actual rendered size of the image (before zoom transform)
+            const imgRect = img.getBoundingClientRect();
+            const imgWidth = imgRect.width / currentZoom; // Get base width before current zoom
+            const imgHeight = imgRect.height / currentZoom; // Get base height before current zoom
+            
+            // Calculate how much the image extends beyond container when zoomed
+            const scaledWidth = imgWidth * currentZoom;
+            const scaledHeight = imgHeight * currentZoom;
+            
+            // Maximum translation in pixels (accounting for translate being applied before scale)
+            // We divide by currentZoom because translate happens before scale in the transform
+            const maxX = Math.max(0, (scaledWidth - containerRect.width) / (2 * currentZoom));
+            const maxY = Math.max(0, (scaledHeight - containerRect.height) / (2 * currentZoom));
+            
+            return { maxX, maxY };
+          };
           
           const updateTransform = () => {
+            // Apply pan bounds constraint
+            const bounds = getPanBounds();
+            translateX = Math.max(-bounds.maxX, Math.min(bounds.maxX, translateX));
+            translateY = Math.max(-bounds.maxY, Math.min(bounds.maxY, translateY));
+            
             images.forEach(img => {
               img.style.transform = \`scale(\${currentZoom}) translate(\${translateX}px, \${translateY}px)\`;
             });
@@ -1973,11 +2009,24 @@ const createFallbackJS = () => {
               zoomLevel.textContent = Math.round(currentZoom * 100) + '%';
             }
             
+            // Update help text based on zoom state
+            if (zoomHelp) {
+              if (currentZoom > 1) {
+                zoomHelp.classList.add('active');
+                zoomHelp.textContent = '✓ Pan active: drag to scroll or use arrow keys';
+              } else {
+                zoomHelp.classList.remove('active');
+                zoomHelp.textContent = '💡 Zoom: scroll wheel or +/− • Pan: drag or arrow keys';
+              }
+            }
+            
             // Update container cursor based on zoom level
             if (currentZoom > 1) {
               zoomContainer.classList.add('zoomed');
+              zoomContainer.style.cursor = isDragging ? 'grabbing' : 'grab';
             } else {
               zoomContainer.classList.remove('zoomed');
+              zoomContainer.style.cursor = 'default';
             }
             
             // Update slider position if in slider mode
@@ -2006,7 +2055,12 @@ const createFallbackJS = () => {
                   break;
                 case 'out':
                   currentZoom = Math.max(currentZoom / 1.5, 0.1);
-                  updateTransform();
+                  // Reset position if zooming out to 1x or less
+                  if (currentZoom <= 1) {
+                    resetPosition();
+                  } else {
+                    updateTransform();
+                  }
                   break;
                 case 'reset':
                   currentZoom = 1;
@@ -2020,8 +2074,16 @@ const createFallbackJS = () => {
           zoomContainer.addEventListener('wheel', (e) => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            currentZoom = Math.max(0.1, Math.min(10, currentZoom * delta));
-            updateTransform();
+            const newZoom = Math.max(0.1, Math.min(10, currentZoom * delta));
+            
+            // If zooming out past 1x, reset position
+            if (newZoom <= 1 && currentZoom > 1) {
+              currentZoom = 1;
+              resetPosition();
+            } else {
+              currentZoom = newZoom;
+              updateTransform();
+            }
           }, { passive: false });
           
           // Pan functionality when zoomed
@@ -2036,6 +2098,7 @@ const createFallbackJS = () => {
               startX = e.clientX - translateX;
               startY = e.clientY - translateY;
               zoomContainer.classList.add('dragging');
+              zoomContainer.style.cursor = 'grabbing';
               e.preventDefault();
             }
           });
@@ -2044,12 +2107,6 @@ const createFallbackJS = () => {
             if (isDragging && currentZoom > 1) {
               translateX = e.clientX - startX;
               translateY = e.clientY - startY;
-              
-              // Constrain panning to reasonable bounds
-              const maxTranslate = Math.max(0, (currentZoom - 1) * 200);
-              translateX = Math.max(-maxTranslate, Math.min(maxTranslate, translateX));
-              translateY = Math.max(-maxTranslate, Math.min(maxTranslate, translateY));
-              
               updateTransform();
               e.preventDefault();
             }
@@ -2059,6 +2116,9 @@ const createFallbackJS = () => {
             if (isDragging) {
               isDragging = false;
               zoomContainer.classList.remove('dragging');
+              if (currentZoom > 1) {
+                zoomContainer.style.cursor = 'grab';
+              }
             }
           });
           
