@@ -1979,14 +1979,28 @@ const createFallbackJS = () => {
             const img = images[0];
             const containerRect = zoomContainer.getBoundingClientRect();
             
-            // Get the actual rendered size of the image (before zoom transform)
-            const imgRect = img.getBoundingClientRect();
-            const imgWidth = imgRect.width / currentZoom; // Get base width before current zoom
-            const imgHeight = imgRect.height / currentZoom; // Get base height before current zoom
+            // Get natural dimensions to calculate actual display size
+            const naturalWidth = img.naturalWidth || img.width;
+            const naturalHeight = img.naturalHeight || img.height;
             
-            // Calculate how much the image extends beyond container when zoomed
-            const scaledWidth = imgWidth * currentZoom;
-            const scaledHeight = imgHeight * currentZoom;
+            // Calculate how the image fits within the container (object-fit: contain behavior)
+            const containerAspect = containerRect.width / containerRect.height;
+            const imageAspect = naturalWidth / naturalHeight;
+            
+            let displayWidth, displayHeight;
+            if (imageAspect > containerAspect) {
+              // Image is wider than container - constrained by width
+              displayWidth = containerRect.width;
+              displayHeight = containerRect.width / imageAspect;
+            } else {
+              // Image is taller than container - constrained by height
+              displayHeight = containerRect.height;
+              displayWidth = containerRect.height * imageAspect;
+            }
+            
+            // Calculate how much the zoomed image extends beyond container
+            const scaledWidth = displayWidth * currentZoom;
+            const scaledHeight = displayHeight * currentZoom;
             
             // Maximum translation in pixels (accounting for translate being applied before scale)
             // We divide by currentZoom because translate happens before scale in the transform
