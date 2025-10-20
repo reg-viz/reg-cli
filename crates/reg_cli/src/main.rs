@@ -77,19 +77,19 @@ pub struct WasmOutput {
 #[no_mangle]
 pub extern "C" fn wasm_main() -> *mut WasmOutput {
     let res = inner();
-    if let Ok(ref res) = res {
-        if let Ok(r) = serde_json::to_string_pretty(&res) {
-            let mut s = r;
+    if let Ok(res) = res {
+        let mut s = serde_json::to_string_pretty(&res).unwrap();
 
-            let len = s.len();
-            let ptr = s.as_mut_ptr();
-            std::mem::forget(s);
+        let len = s.len();
+        let ptr = s.as_mut_ptr();
+        std::mem::forget(s);
 
-            let output = Box::new(WasmOutput { len, buf: ptr });
-            return Box::into_raw(output);
-        }
+        let output = Box::new(WasmOutput { len, buf: ptr });
+        Box::into_raw(output)
+    } else {
+        eprintln!("Failed to exec wasm main. Error details: {:?}", res);
+        panic!("Failed to exec wasm main. reason: {:?}", res);
     }
-    panic!("Failed to exec wasm main. readon {:?}", res);
 }
 
 #[cfg(all(target_os = "wasi", target_env = "p1"))]
