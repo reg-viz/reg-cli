@@ -181,8 +181,8 @@ pub fn run(
                 } else {
                     let mut diff_image_name = image_name.clone();
                     failed.insert(image_name.clone());
-                    differences.insert(diff_image_name.clone());
                     diff_image_name.set_extension("webp");
+                    differences.insert(diff_image_name.clone());
                     
                     let diff_path = diff_dir.join(&diff_image_name);
                     if let Some(parent) = diff_path.parent() {
