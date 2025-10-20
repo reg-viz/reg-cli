@@ -87,7 +87,8 @@ pub extern "C" fn wasm_main() -> *mut WasmOutput {
         let output = Box::new(WasmOutput { len, buf: ptr });
         Box::into_raw(output)
     } else {
-        panic!("Failed to exec wasm main. readon {:?}", res);
+        eprintln!("Failed to exec wasm main. Error details: {:?}", res);
+        panic!("Failed to exec wasm main. reason: {:?}", res);
     }
 }
 

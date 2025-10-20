@@ -126,8 +126,17 @@ pub fn run(
             targets
                 .par_iter()
                 .map(|path| {
-                    let img1 = std::fs::read(actual_dir.join(path))?;
-                    let img2 = std::fs::read(expected_dir.join(path))?;
+                    let actual_path = actual_dir.join(path);
+                    let expected_path = expected_dir.join(path);
+                    
+                    let img1 = std::fs::read(&actual_path).map_err(|e| {
+                        eprintln!("Failed to read actual file: {:?}, error: {:?}", actual_path, e);
+                        e
+                    })?;
+                    let img2 = std::fs::read(&expected_path).map_err(|e| {
+                        eprintln!("Failed to read expected file: {:?}, error: {:?}", expected_path, e);
+                        e
+                    })?;
                     let res = image_diff_rs::diff(
                         img1,
                         img2,
@@ -174,7 +183,18 @@ pub fn run(
                     failed.insert(image_name.clone());
                     differences.insert(diff_image_name.clone());
                     diff_image_name.set_extension("webp");
-                    std::fs::write(diff_dir.join(&diff_image_name), diff_image)?;
+                    
+                    let diff_path = diff_dir.join(&diff_image_name);
+                    if let Some(parent) = diff_path.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| {
+                            eprintln!("Failed to create diff directory: {:?}, error: {:?}", parent, e);
+                            e
+                        })?;
+                    }
+                    std::fs::write(&diff_path, diff_image).map_err(|e| {
+                        eprintln!("Failed to write diff file: {:?}, error: {:?}", diff_path, e);
+                        e
+                    })?;
                 }
             }
         }
@@ -198,7 +218,16 @@ pub fn run(
     });
 
     if let (Some(html), Some(report)) = (report.html, options.report) {
-        std::fs::write(report, html)?;
+        if let Some(parent) = report.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                eprintln!("Failed to create report directory: {:?}, error: {:?}", parent, e);
+                e
+            })?;
+        }
+        std::fs::write(report, html).map_err(|e| {
+            eprintln!("Failed to write report file: {:?}, error: {:?}", report, e);
+            e
+        })?;
     };
 
     Ok(report.json)
