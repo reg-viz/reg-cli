@@ -17,7 +17,12 @@
     "screenshot": "node test/screenshot.js",
     "test:cli": "chmod +x dist/cli.js && ava test/cli.test.mjs",
     "test:screenshot": "npm run build:report && npm run reg && npm run screenshot",
-    "test": "export NODE_OPTIONS=--openssl-legacy-provider && cross-env NODE_ENV=\"debug\" npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
+    "test": "export NODE_OPTIONS=--openssl-legacy-provider && cross-env NODE_ENV=\"debug\" npm run build:report && npm run build && npm run test:cli && npm run test:screenshot",
+    "jaeger:start": "docker-compose -f docker-compose.jaeger.yml up -d",
+    "jaeger:stop": "docker-compose -f docker-compose.jaeger.yml down",
+    "jaeger:wasm:build": "cd js && pnpm install && npm run build",
+    "jaeger:wasm:test": "npm run jaeger:wasm:build && npm run jaeger:start && sleep 5 && node jaeger-wasm-test.js && npm run jaeger:stop",
+    "jaeger:wasm:test:dev": "npm run jaeger:start && sleep 5 && node jaeger-wasm-test.js"
   },
   "engines": {
     "node": ">=18"
@@ -55,6 +60,7 @@
     "**/debug": "^4.3.4"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "@pyroscope/nodejs": "^0.4.1",
     "bluebird": "3.7.2",
     "chalk": "4.1.2",

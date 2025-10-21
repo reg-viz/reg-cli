@@ -90,6 +90,52 @@ reg-cli.js -F ./sample/reg.json -R ./sample/index.html"
 $ npm t
 ```
 
+### Jaeger Tracing Test (WASM Version)
+
+The WASM version of `reg-cli` includes OpenTelemetry tracing support for monitoring and debugging WASM-based image comparison operations.
+
+```sh
+# Start Jaeger and run WASM tracing test (automatically stops Jaeger when done)
+$ npm run jaeger:wasm:test
+
+# Start Jaeger service only
+$ npm run jaeger:start
+
+# Run WASM tracing test (requires Jaeger to be running)
+$ npm run jaeger:wasm:test:dev
+
+# Stop Jaeger service
+$ npm run jaeger:stop
+```
+
+After running the tracing test, you can view the traces in Jaeger UI at http://localhost:16686.
+
+**WASM Tracing Features (Detailed):**
+- `reg-cli-wasm-test` - Overall test execution
+- `reg-cli-wasm-compare` - Main comparison operation
+- `input-validation` - Input parameter validation
+- `args-construction` - Command line argument construction
+- `reg-cli-wasm-main` - Main process execution
+- `args-parsing` - Argument parsing in worker
+- `worker-initialization` - Worker thread initialization
+- `worker-event-setup` - Worker event handler setup
+- `worker-spawn` - Individual worker spawning (parallel processing)
+- `worker-completion` - Worker completion handling
+- `reg-cli-wasm-comparison-complete` - Final comparison result processing
+- `wasm-test-complete` - Test completion
+
+**Requirements for WASM Jaeger testing:**
+- Docker and Docker Compose
+- Node.js 20+
+- Built WASM version (`npm run jaeger:wasm:build`)
+
+**Performance Insights:**
+The detailed tracing allows you to monitor:
+- Parallel worker spawning efficiency
+- Argument processing overhead
+- Worker lifecycle management
+- Overall comparison performance metrics
+
 ## Contribute
 
 PRs welcome.
