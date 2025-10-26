@@ -20,7 +20,7 @@
     "test": "export NODE_OPTIONS=--openssl-legacy-provider && cross-env NODE_ENV=\"debug\" npm run build:report && npm run build && npm run test:cli && npm run test:screenshot"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
