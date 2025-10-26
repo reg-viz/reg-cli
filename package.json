@@ -48,7 +48,7 @@
     "**/glob-parent": "^6.0.1",
     "**/dot-prop": "^10.0.0",
     "**/node-forge": "^1.0.0",
-    "**/serialize-javascript": "^6.0.0",
+    "**/serialize-javascript": "^7.0.0",
     "**/y18n": "^5.0.0",
     "**/braces": "^3.0.0",
     "**/trim-newlines": "3.0.1",
