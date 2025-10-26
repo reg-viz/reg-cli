@@ -89,7 +89,7 @@
     "flow-typed": "4.1.1",
     "puppeteer": "13.7.0",
     "rimraf": "3.0.2",
-    "serve-static": "1.16.2"
+    "serve-static": "2.2.0"
   },
   "files": [
     "dist",
