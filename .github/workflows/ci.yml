@@ -5,10 +5,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/setup-node@master
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/setup-node@dda4788290998366da86b6a4f497909644397bb2
         with:
-          node-version: 18
+          node-version: 22
       - name: yarn
         run: yarn --frozen-lockfile
       - name: flow
