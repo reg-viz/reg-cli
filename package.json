@@ -86,7 +86,7 @@
     "ava": "6.4.1",
     "copyfiles": "2.4.1",
     "cross-env": "10.1.0",
-    "finalhandler": "2.1.0",
+    "finalhandler": "2.1.1",
     "flow-bin": "0.77.0",
     "flow-typed": "4.1.1",
     "puppeteer": "24.34.0",
