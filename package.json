@@ -52,7 +52,7 @@
       "serialize-javascript": "^7.0.0",
       "y18n": "^5.0.0",
       "braces": "^3.0.0",
-      "trim-newlines": "3.0.1",
+      "trim-newlines": "5.0.0",
       "brace-expansion": "4.0.1",
       "debug": "^4.3.4"
     }
