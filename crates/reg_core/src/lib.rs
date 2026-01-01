@@ -1,5 +1,6 @@
 mod dir;
 mod report;
+pub mod tracing_layer;
 
 use image_diff_rs::{DiffOption, DiffOutput, ImageDiffError};
 use path_clean::PathClean;
@@ -9,10 +10,12 @@ use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
+use tracing::{info, info_span, instrument};
 
 use thiserror::Error;
 
 pub use report::JsonReport;
+pub use tracing_layer::{clear_trace_data, get_trace_data_json, init_tracing, set_js_trace_context, SpanData, TraceData};
 pub use url::*;
 
 #[derive(Error, Debug)]
@@ -94,6 +97,7 @@ impl<'a> Default for Options<'a> {
 /// * `expected_dir` - The directory containing the expected images.
 /// * `diff_dir` - The directory where the diff images will be saved.
 /// * `options` - The options for configuring the comparison process.
+#[instrument(skip(options), fields(actual_dir = %actual_dir.as_ref().display(), expected_dir = %expected_dir.as_ref().display(), diff_dir = %diff_dir.as_ref().display()))]
 pub fn run(
     actual_dir: impl AsRef<Path>,
     expected_dir: impl AsRef<Path>,
@@ -108,6 +112,13 @@ pub fn run(
         .report
         .unwrap_or_else(|| Path::new(DEFAULT_REPORT_PATH));
 
+    info!(
+        actual_dir = %actual_dir.display(),
+        expected_dir = %expected_dir.display(),
+        diff_dir = %diff_dir.display(),
+        "Starting image comparison"
+    );
+
     let detected = find_images(&expected_dir, &actual_dir);
 
     let targets: Vec<PathBuf> = detected
@@ -116,35 +127,71 @@ pub fn run(
         .cloned()
         .collect();
 
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(options.concurrency.unwrap_or_else(|| 4))
-        .build()
-        .unwrap();
+    let concurrency = options.concurrency.unwrap_or(4);
+    info!(target_count = targets.len(), concurrency, "Starting parallel image diff");
 
-    let result = pool
-        .install(|| {
+    let pool = {
+        let _pool_span = info_span!("build_thread_pool", num_threads = concurrency).entered();
+        ThreadPoolBuilder::new()
+            .num_threads(concurrency)
+            .build()
+            .unwrap()
+    };
+
+    let result = {
+        let diff_span = info_span!("parallel_image_diff", target_count = targets.len());
+        let _diff_guard = diff_span.enter();
+        
+        // Capture the parent span to propagate to rayon threads
+        let parent_span = diff_span.clone();
+        
+        pool.install(|| {
+            // Note: There may be ~20-30ms delay here due to rayon thread scheduling overhead
+            // This is especially noticeable in WASI environments
             targets
                 .par_iter()
                 .map(|path| {
+                    // Explicitly set parent span for cross-thread context propagation
+                    let image_span = info_span!(parent: parent_span.clone(), "diff_single_image", image = %path.display());
+                    let _image_guard = image_span.enter();
+                    
                     let actual_path = actual_dir.join(path);
                     let expected_path = expected_dir.join(path);
                     
-                    let img1 = std::fs::read(&actual_path).map_err(|e| {
-                        eprintln!("Failed to read actual file: {:?}, error: {:?}", actual_path, e);
-                        e
-                    })?;
-                    let img2 = std::fs::read(&expected_path).map_err(|e| {
-                        eprintln!("Failed to read expected file: {:?}, error: {:?}", expected_path, e);
-                        e
-                    })?;
-                    let res = image_diff_rs::diff(
-                        img1,
-                        img2,
-                        &DiffOption {
-                            threshold: options.matching_threshold,
-                            include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
-                        },
-                    )?;
+                    // Read actual image
+                    let img1 = {
+                        let _read_span = info_span!(parent: image_span.clone(), "read_actual_image", path = %actual_path.display()).entered();
+                        std::fs::read(&actual_path).map_err(|e| {
+                            eprintln!("Failed to read actual file: {:?}, error: {:?}", actual_path, e);
+                            e
+                        })?
+                    };
+                    
+                    // Read expected image
+                    let img2 = {
+                        let _read_span = info_span!(parent: image_span.clone(), "read_expected_image", path = %expected_path.display()).entered();
+                        std::fs::read(&expected_path).map_err(|e| {
+                            eprintln!("Failed to read expected file: {:?}, error: {:?}", expected_path, e);
+                            e
+                        })?
+                    };
+                    
+                    // Calculate diff
+                    let res = {
+                        let _calc_span = info_span!(parent: image_span.clone(), "calculate_diff", 
+                            actual_size = img1.len(), 
+                            expected_size = img2.len()
+                        ).entered();
+                        image_diff_rs::diff(
+                            img1,
+                            img2,
+                            &DiffOption {
+                                threshold: options.matching_threshold,
+                                include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                            },
+                        )?
+                    };
+                    
                     Ok((path.clone(), res))
                 })
                 .inspect(|r| {
@@ -152,8 +199,9 @@ pub fn run(
                         dbg!(&e);
                     }
                 })
-        })
-        .collect::<Result<Vec<(PathBuf, DiffOutput)>, CompareError>>()?;
+                .collect::<Result<Vec<(PathBuf, DiffOutput)>, CompareError>>()
+        })?
+    };
 
     let mut differences = BTreeSet::new();
     let mut passed = BTreeSet::new();
@@ -200,39 +248,53 @@ pub fn run(
         }
     }
 
-    let report = create_reports(report::ReportInput {
-        passed,
-        failed,
-        new: detected.new,
-        deleted: detected.deleted,
-        actual: detected.actual,
-        expected: detected.expected,
-        report,
-        differences,
-        json: json_path,
-        actual_dir,
-        expected_dir,
-        diff_dir,
-        from_json: false,
-        url_prefix: options.url_prefix,
-    });
+    let report = {
+        let _report_span = info_span!("create_reports").entered();
+        info!(
+            passed_count = passed.len(),
+            failed_count = failed.len(),
+            new_count = detected.new.len(),
+            deleted_count = detected.deleted.len(),
+            "Creating reports"
+        );
+        create_reports(report::ReportInput {
+            passed,
+            failed,
+            new: detected.new,
+            deleted: detected.deleted,
+            actual: detected.actual,
+            expected: detected.expected,
+            report,
+            differences,
+            json: json_path,
+            actual_dir,
+            expected_dir,
+            diff_dir,
+            from_json: false,
+            url_prefix: options.url_prefix,
+        })
+    };
 
-    if let (Some(html), Some(report)) = (report.html, options.report) {
-        if let Some(parent) = report.parent() {
+    if let (Some(html), Some(report_path)) = (report.html, options.report) {
+        let _write_span = info_span!("write_report", path = %report_path.display()).entered();
+        if let Some(parent) = report_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 eprintln!("Failed to create report directory: {:?}, error: {:?}", parent, e);
                 e
             })?;
         }
-        std::fs::write(report, html).map_err(|e| {
-            eprintln!("Failed to write report file: {:?}, error: {:?}", report, e);
+        std::fs::write(report_path, html).map_err(|e| {
+            eprintln!("Failed to write report file: {:?}, error: {:?}", report_path, e);
             e
         })?;
+        info!(path = %report_path.display(), "Report written");
     };
 
+    info!("Comparison complete");
     Ok(report.json)
 }
 
+#[instrument(fields(expected_dir = %expected_dir.as_ref().display(), actual_dir = %actual_dir.as_ref().display()))]
 pub(crate) fn find_images(
     expected_dir: impl AsRef<Path>,
     actual_dir: impl AsRef<Path>,
@@ -266,8 +328,16 @@ pub(crate) fn find_images(
         })
         .collect();
 
-    let deleted = expected.difference(&actual).cloned().collect();
-    let new = actual.difference(&expected).cloned().collect();
+    let deleted: BTreeSet<PathBuf> = expected.difference(&actual).cloned().collect();
+    let new: BTreeSet<PathBuf> = actual.difference(&expected).cloned().collect();
+
+    info!(
+        expected_count = expected.len(),
+        actual_count = actual.len(),
+        deleted_count = deleted.len(),
+        new_count = new.len(),
+        "Found images"
+    );
 
     DetectedImages {
         expected,
