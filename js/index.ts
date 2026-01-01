@@ -3,6 +3,15 @@ import { Worker } from 'node:worker_threads';
 import { isCJS, resolveExtention } from './utils';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'url';
+import {
+  initTracing,
+  shutdownTracing,
+  processRustTraceData,
+  isTracingEnabled,
+  startRootSpan,
+  endRootSpan,
+  type RustTraceData,
+} from './tracing';
 
 export const dir = (): string => {
   const dir = isCJS ? __dirname : dirname(fileURLToPath(import.meta.url));
@@ -10,6 +19,14 @@ export const dir = (): string => {
 };
 
 export const run = (argv: string[]): EventEmitter => {
+  // Initialize tracing if enabled
+  if (isTracingEnabled()) {
+    initTracing();
+  }
+
+  // Start root span for the entire operation
+  const traceContext = isTracingEnabled() ? startRootSpan('reg-cli') : null;
+
   const emitter = new EventEmitter();
   const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
 
@@ -46,8 +63,17 @@ export const run = (argv: string[]): EventEmitter => {
     return tid;
   };
 
-  worker.on('message', ({ cmd, startArg, threadId, memory, data }) => {
+  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData }) => {
     if (cmd === 'complete') {
+      // Process trace data from Rust/WASM if available
+      if (isTracingEnabled() && traceData) {
+        processRustTraceData(traceData as RustTraceData);
+        // End root span after processing Rust spans
+        endRootSpan(true);
+        // Wait for traces to be exported before shutting down
+        await shutdownTracing();
+      }
+
       workers.forEach((w) => w.terminate());
       emitter.emit('complete', data);
     }
@@ -65,6 +91,9 @@ export const run = (argv: string[]): EventEmitter => {
   });
 
   worker.on('error', (err: Error) => {
+    if (traceContext) {
+      endRootSpan(false);
+    }
     workers.forEach((w) => w.terminate());
     throw new Error(err.message);
   });

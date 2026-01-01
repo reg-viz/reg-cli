@@ -3,18 +3,24 @@ import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
 import { readWasm } from './utils';
+import { type RustTraceData } from './tracing';
+
+// Check if tracing is enabled via environment variable
+const isTracingEnabled = (): boolean => {
+  return env.OTEL_ENABLED === 'true' || env.JAEGER_ENABLED === 'true';
+};
 
 export type CompareOutput = {
-  failedItems: string[],
-  newItems: string[],
-  deletedItems: string[],
-  passedItems: string[],
-  expectedItems: string[],
-  actualItems: string[],
-  diffItems: string[],
-  actualDir: string,
-  expectedDir: string,
-  diffDir: string,
+  failedItems: string[];
+  newItems: string[];
+  deletedItems: string[];
+  passedItems: string[];
+  expectedItems: string[];
+  actualItems: string[];
+  diffItems: string[];
+  actualDir: string;
+  expectedDir: string;
+  diffDir: string;
 };
 
 const wasi = new WASI({
@@ -28,6 +34,24 @@ const wasi = new WASI({
 
 const imports = wasi.getImportObject();
 const file = readWasm();
+
+/**
+ * Read a string from WASM memory using WasmOutput structure
+ */
+const readWasmString = (
+  exports: any,
+  memory: WebAssembly.Memory,
+  outputPtr: number,
+): string => {
+  const view = new DataView(memory.buffer, outputPtr);
+  const len = view.getUint32(0, true);
+  const bufPtr = view.getUint32(4, true);
+  const stringData = new Uint8Array(memory.buffer, bufPtr, len);
+  const decoder = new TextDecoder('utf-8');
+  const str = decoder.decode(stringData);
+  exports.free_wasm_output(outputPtr);
+  return str;
+};
 
 (async () => {
   try {
@@ -55,20 +79,47 @@ const file = readWasm();
       env: { memory },
     });
 
+    const exports = instance.exports as any;
+
     wasi.start(instance);
 
-    const m = (instance.exports as any).wasm_main();
-    const view = new DataView(memory.buffer, m);
-    const len = view.getUint32(0, true);
-    const bufPtr = view.getUint32(4, true);
-    const stringData = new Uint8Array(memory.buffer, bufPtr, len);
-    const decoder = new TextDecoder('utf-8');
-    const string = decoder.decode(stringData);
-    (instance.exports as any).free_wasm_output(m);
-    const report = JSON.parse(string);
-    
-    parentPort?.postMessage({ cmd: 'complete', data: report });
+    // Initialize tracing in WASM if enabled
+    if (isTracingEnabled() && typeof exports.init_tracing === 'function') {
+      exports.init_tracing();
+    }
+
+    // Pre-initialize and warm up thread pool to reduce scheduling overhead
+    // Default to 4 threads, this can be configured via CLI args if needed
+    const concurrency = 4; // TODO: Get from CLI args if available
+    if (typeof exports.init_thread_pool_wasm === 'function') {
+      exports.init_thread_pool_wasm(concurrency);
+    }
+
+    // Run the main WASM function
+    const m = exports.wasm_main();
+    const reportString = readWasmString(exports, memory, m);
+    const report = JSON.parse(reportString);
+
+    // Get trace data from WASM if tracing is enabled
+    let traceData: RustTraceData | null = null;
+    if (isTracingEnabled() && typeof exports.get_trace_data === 'function') {
+      const tracePtr = exports.get_trace_data();
+      const traceJson = readWasmString(exports, memory, tracePtr);
+      try {
+        traceData = JSON.parse(traceJson) as RustTraceData;
+      } catch (e) {
+        console.error('[Tracing] Failed to parse trace data:', e);
+      }
+
+      // Clear trace data in WASM
+      if (typeof exports.clear_trace_data === 'function') {
+        exports.clear_trace_data();
+      }
+    }
+
+    parentPort?.postMessage({ cmd: 'complete', data: report, traceData });
   } catch (e) {
     throw e;
   }
 })();
+
