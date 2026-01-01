@@ -14,6 +14,7 @@ import EventEmitter from 'events';
 import ProcessAdaptor from './process-adaptor';
 import type { DiffCreatorParams } from './diff';
 import { findImages } from './image-finder';
+import { startSpan, isTracingEnabled, getTraceContext } from './tracing';
 
 type CompareResult = {
   passed: boolean,
@@ -73,9 +74,18 @@ const compareImages = (
     enableAntialias,
   },
 ): Promise<CompareResult[]> => {
+  const span = startSpan('compare_images', { 
+    image_count: actualImages.length,
+    concurrency: concurrency || 4,
+  });
+  
   const images = actualImages.filter(actualImage => expectedImages.includes(actualImage));
   concurrency = images.length < 20 ? 1 : concurrency || 4;
-  const processes = range(concurrency).map(() => new ProcessAdaptor(emitter));
+  
+  // Get trace context to pass to child processes
+  const traceContext = getTraceContext();
+  const processes = range(concurrency).map(() => new ProcessAdaptor(emitter, traceContext));
+  
   return bluebird
     .map(
       images,
@@ -96,6 +106,7 @@ const compareImages = (
     )
     .then(result => {
       processes.forEach(p => p.close());
+      span.end();
       return result;
     })
     .filter(r => !!r);
@@ -167,7 +178,10 @@ module.exports = (params: RegParams) => {
   const dirs = { actualDir, expectedDir, diffDir };
   const emitter = new EventEmitter();
 
+  // Find images with span
+  const findImagesSpan = startSpan('find_images', { expectedDir, actualDir });
   const { expectedImages, actualImages, deletedImages, newImages } = findImages(expectedDir, actualDir);
+  findImagesSpan.end();
 
   mkdirp.sync(expectedDir);
   mkdirp.sync(diffDir);
@@ -185,7 +199,11 @@ module.exports = (params: RegParams) => {
   })
     .then(result => aggregate(result))
     .then(({ passed, failed, diffItems }) => {
-      return createReport({
+      const reportSpan = startSpan('create_report', { 
+        passed_count: passed.length,
+        failed_count: failed.length,
+      });
+      const result = createReport({
         passedItems: passed,
         failedItems: failed,
         newItems: newImages,
@@ -203,6 +221,8 @@ module.exports = (params: RegParams) => {
         urlPrefix: urlPrefix || '',
         enableClientAdditionalDetection: !!enableClientAdditionalDetection,
       });
+      reportSpan.end();
+      return result;
     })
     .then(result => {
       deletedImages.forEach(image => emitter.emit('compare', { type: 'delete', path: image }));
