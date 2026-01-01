@@ -3,12 +3,14 @@ mod report;
 pub mod tracing_layer;
 
 use image_diff_rs::{DiffOption, DiffOutput, ImageDiffError};
+use once_cell::sync::OnceCell;
 use path_clean::PathClean;
-use rayon::{prelude::*, ThreadPoolBuilder};
+use rayon::{prelude::*, ThreadPool, ThreadPoolBuilder};
 use report::create_reports;
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 use tracing::{info, info_span, instrument};
 
@@ -17,6 +19,51 @@ use thiserror::Error;
 pub use report::JsonReport;
 pub use tracing_layer::{clear_trace_data, get_trace_data_json, init_tracing, set_js_trace_context, SpanData, TraceData};
 pub use url::*;
+
+/// Global thread pool for parallel image processing
+static GLOBAL_THREAD_POOL: OnceCell<ThreadPool> = OnceCell::new();
+static POOL_NUM_THREADS: AtomicUsize = AtomicUsize::new(4);
+
+/// Initialize the global thread pool with the specified number of threads
+/// and warm it up by running dummy tasks on each thread
+pub fn init_thread_pool(num_threads: usize) {
+    let _span = info_span!("init_thread_pool", num_threads).entered();
+    
+    POOL_NUM_THREADS.store(num_threads, Ordering::SeqCst);
+    
+    let pool = GLOBAL_THREAD_POOL.get_or_init(|| {
+        let _build_span = info_span!("build_thread_pool").entered();
+        ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build()
+            .expect("Failed to build thread pool")
+    });
+    
+    // Warm up the thread pool by running a task on each thread
+    {
+        let _warmup_span = info_span!("warmup_thread_pool").entered();
+        pool.install(|| {
+            (0..num_threads).into_par_iter().for_each(|_| {
+                // Force each thread to wake up
+                std::hint::black_box(());
+            });
+        });
+    }
+    
+    info!(num_threads, "Thread pool initialized and warmed up");
+}
+
+/// Get the global thread pool, initializing it with default settings if needed
+fn get_thread_pool(requested_threads: Option<usize>) -> &'static ThreadPool {
+    let num_threads = requested_threads.unwrap_or(4);
+    
+    // Initialize pool if not already done
+    if GLOBAL_THREAD_POOL.get().is_none() {
+        init_thread_pool(num_threads);
+    }
+    
+    GLOBAL_THREAD_POOL.get().expect("Thread pool should be initialized")
+}
 
 #[derive(Error, Debug)]
 pub enum CompareError {
@@ -130,13 +177,8 @@ pub fn run(
     let concurrency = options.concurrency.unwrap_or(4);
     info!(target_count = targets.len(), concurrency, "Starting parallel image diff");
 
-    let pool = {
-        let _pool_span = info_span!("build_thread_pool", num_threads = concurrency).entered();
-        ThreadPoolBuilder::new()
-            .num_threads(concurrency)
-            .build()
-            .unwrap()
-    };
+    // Use pre-warmed global thread pool to avoid scheduling overhead
+    let pool = get_thread_pool(Some(concurrency));
 
     let result = {
         let diff_span = info_span!("parallel_image_diff", target_count = targets.len());

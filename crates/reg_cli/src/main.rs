@@ -1,5 +1,5 @@
 use clap::Parser;
-use reg_core::{run, JsonReport, Options, Url};
+use reg_core::{init_thread_pool, run, JsonReport, Options, Url};
 use std::path::{Path, PathBuf};
 use tracing::info_span;
 
@@ -82,6 +82,14 @@ pub struct WasmOutput {
 #[no_mangle]
 pub extern "C" fn init_tracing() {
     reg_core::init_tracing();
+}
+
+/// Initialize thread pool with specified number of threads and warm it up
+/// This should be called early during startup to avoid latency during actual processing
+#[cfg(all(target_os = "wasi", target_env = "p1"))]
+#[no_mangle]
+pub extern "C" fn init_thread_pool_wasm(num_threads: usize) {
+    init_thread_pool(num_threads);
 }
 
 /// Set JS trace context for context propagation

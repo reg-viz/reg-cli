@@ -88,6 +88,13 @@ const readWasmString = (
       exports.init_tracing();
     }
 
+    // Pre-initialize and warm up thread pool to reduce scheduling overhead
+    // Default to 4 threads, this can be configured via CLI args if needed
+    const concurrency = 4; // TODO: Get from CLI args if available
+    if (typeof exports.init_thread_pool_wasm === 'function') {
+      exports.init_thread_pool_wasm(concurrency);
+    }
+
     // Run the main WASM function
     const m = exports.wasm_main();
     const reportString = readWasmString(exports, memory, m);
