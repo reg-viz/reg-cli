@@ -12,6 +12,7 @@ import fs from 'fs';
 // import notifier from './notifier';
 import { BALLOT_X, CHECK_MARK, GREEK_CROSS, MINUS } from './icon';
 import createReport from './report';
+import { initTracing, shutdownTracing, startRootSpan, endRootSpan, isTracingEnabled } from './tracing';
 
 const spinner = new Spinner();
 spinner.setSpinnerString(18);
@@ -166,6 +167,12 @@ if (from) {
   }
 }
 
+// Initialize tracing if enabled
+if (isTracingEnabled()) {
+  initTracing();
+  startRootSpan('reg-cli-js');
+}
+
 const observer = compare({
   actualDir,
   expectedDir,
@@ -204,13 +211,20 @@ observer.on('compare', params => {
 
 observer.once('update', () => log.success(`✨ your expected images are updated ✨`));
 
-observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems }) => {
+observer.once('complete', async ({ failedItems, deletedItems, newItems, passedItems }) => {
   spinner.stop(true);
   log.info('\n');
   if (failedItems.length) log.fail(`${BALLOT_X} ${failedItems.length} file(s) changed.`);
   if (deletedItems.length) log.warn(`${MINUS} ${deletedItems.length} file(s) deleted.`);
   if (newItems.length) log.info(`${GREEK_CROSS} ${newItems.length} file(s) appended.`);
   if (passedItems.length) log.success(`${CHECK_MARK} ${passedItems.length} file(s) passed.`);
+  
+  // End tracing
+  if (isTracingEnabled()) {
+    endRootSpan(true);
+    await shutdownTracing();
+  }
+  
   if (!update && (failedItems.length > 0 || (extendedErrors && (newItems.length > 0 || deletedItems.length > 0)))) {
     log.fail(customDiffMessage);
     if (!ignoreChange) process.exit(1);
@@ -218,7 +232,13 @@ observer.once('complete', ({ failedItems, deletedItems, newItems, passedItems })
   return process.exit(0);
 });
 
-observer.once('error', error => {
+observer.once('error', async error => {
+  // End tracing with error
+  if (isTracingEnabled()) {
+    endRootSpan(false);
+    await shutdownTracing();
+  }
+  
   log.fail(error);
   process.exit(1);
 });
