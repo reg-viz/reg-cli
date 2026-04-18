@@ -64,8 +64,12 @@ pub struct Options<'a> {
     /// Where to write the JUnit XML report. `None` means no junit output.
     pub junit_report: Option<&'a Path>,
     pub json: Option<&'a Path>,
+    /// Mirror of classic reg-cli's `-E / --extendedErrors`. Affects only the
+    /// JUnit XML: new/deleted items become `<failure message="newItem"/>` /
+    /// `"deletedItem"` instead of silent passed testcases. Non-junit exit
+    /// code behaviour is still driven by the CLI wrapper itself.
+    pub extended_errors: Option<bool>,
     // update?: boolean,
-    // extendedErrors?: boolean,
     pub url_prefix: Option<url::Url>,
     pub matching_threshold: Option<f32>,
     pub threshold_rate: Option<f32>,
@@ -115,6 +119,7 @@ impl<'a> Default for Options<'a> {
             report: None,
             junit_report: None,
             json: Some(Path::new(DEFAULT_JSON_PATH)),
+            extended_errors: None,
             url_prefix: None,
             matching_threshold: Some(0.0),
             threshold_rate: None,
@@ -368,7 +373,10 @@ pub fn run(
         if let Some(parent) = junit_path.parent() {
             std::fs::create_dir_all(parent).ok();
         }
-        let xml = report::build_junit_xml(&report.json);
+        let xml = report::build_junit_xml(
+            &report.json,
+            options.extended_errors.unwrap_or(false),
+        );
         std::fs::write(junit_path, xml).map_err(|e| {
             eprintln!("Failed to write {:?}: {:?}", junit_path, e);
             e
@@ -444,7 +452,10 @@ pub fn run_from_json(
         if let Some(parent) = junit_path.parent() {
             std::fs::create_dir_all(parent).ok();
         }
-        std::fs::write(junit_path, report::build_junit_xml(&report.json))?;
+        std::fs::write(
+            junit_path,
+            report::build_junit_xml(&report.json, options.extended_errors.unwrap_or(false)),
+        )?;
     }
 
     Ok(report.json)
