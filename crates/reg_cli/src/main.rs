@@ -30,33 +30,32 @@ struct Args {
     #[clap(index = 3)]
     diff_dir: PathBuf,
 
-    #[arg(long)]
+    #[arg(short = 'R', long)]
     report: Option<PathBuf>,
 
-    #[arg(long)]
+    #[arg(short = 'J', long)]
     json: Option<PathBuf>,
 
-    #[arg(long = "matchingThreshold")]
+    #[arg(short = 'M', long = "matchingThreshold")]
     matching_threshold: Option<f32>,
 
-    #[arg(long = "thresholdRate")]
+    #[arg(short = 'T', long = "thresholdRate")]
     threshold_rate: Option<f32>,
 
-    #[arg(long = "thresholdPixel")]
+    #[arg(short = 'S', long = "thresholdPixel")]
     threshold_pixel: Option<u64>,
 
-    #[arg(long = "urlPrefix")]
+    #[arg(short = 'P', long = "urlPrefix")]
     url_prefix: Option<Url>,
 
-    #[arg(long)]
+    #[arg(short = 'C', long)]
     concurrency: Option<usize>,
 
-    #[arg(long = "enableAntialias")]
+    #[arg(short = 'A', long = "enableAntialias", default_missing_value = "true", num_args = 0..=1)]
     enable_antialias: Option<bool>,
 
     /// Output format for diff images. `webp` (default) matches the current
-    /// Rust/Wasm behaviour. `png` matches the classic JS implementation and
-    /// is useful for apples-to-apples benchmarking.
+    /// Rust/Wasm behaviour. `png` matches the classic JS implementation.
     #[arg(long = "diffFormat", value_enum)]
     diff_format: Option<DiffFormatArg>,
 }
