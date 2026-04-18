@@ -129,6 +129,10 @@ const pushFlag = (name: string, v: unknown): void => {
 pushFlag('report', values.report);
 pushFlag('json', jsonPath);
 pushFlag('junit', values.junit);
+// `-E` is both a CLI exit-code knob (handled in JS below) AND input to the
+// junit XML generator on the Rust side — forward it so the XML matches
+// classic reg-cli's extendedErrors behaviour.
+pushFlag('extendedErrors', values.extendedErrors);
 pushFlag('from', fromPath);
 pushFlag('additionalDetection', values.additionalDetection);
 pushFlag('matchingThreshold', values.matchingThreshold);
