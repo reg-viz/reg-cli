@@ -2,7 +2,7 @@ mod dir;
 mod report;
 pub mod tracing_layer;
 
-use image_diff_rs::{DiffOption, DiffOutput, ImageDiffError};
+use image_diff_rs::{DiffOption, DiffOutput, EncodeFormat, ImageDiffError};
 use path_clean::PathClean;
 use rayon::{prelude::*, ThreadPoolBuilder};
 use report::create_reports;
@@ -71,7 +71,38 @@ pub struct Options<'a> {
     pub threshold_pixel: Option<u64>,
     pub concurrency: Option<usize>,
     pub enable_antialias: Option<bool>,
+    /// Format for the generated diff images. `None` keeps the default
+    /// (WebP lossless). Setting `Some(Png)` makes the output apples-to-apples
+    /// with the classic JS implementation.
+    pub diff_image_format: Option<DiffImageFormat>,
     // enableClientAdditionalDetection?: boolean,
+}
+
+/// User-facing mirror of `image_diff_rs::EncodeFormat` so that `reg_core`
+/// consumers don't have to depend on image-diff-rs directly.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+pub enum DiffImageFormat {
+    #[default]
+    Webp,
+    Png,
+}
+
+impl From<DiffImageFormat> for EncodeFormat {
+    fn from(f: DiffImageFormat) -> Self {
+        match f {
+            DiffImageFormat::Webp => EncodeFormat::Webp,
+            DiffImageFormat::Png => EncodeFormat::Png,
+        }
+    }
+}
+
+impl DiffImageFormat {
+    fn extension(self) -> &'static str {
+        match self {
+            DiffImageFormat::Webp => "webp",
+            DiffImageFormat::Png => "png",
+        }
+    }
 }
 
 impl<'a> Default for Options<'a> {
@@ -85,6 +116,7 @@ impl<'a> Default for Options<'a> {
             threshold_pixel: None,
             concurrency: Some(4),
             enable_antialias: None,
+            diff_image_format: None,
         }
     }
 }
@@ -178,8 +210,8 @@ pub fn run(
                     
                     // Calculate diff
                     let res = {
-                        let _calc_span = info_span!(parent: image_span.clone(), "calculate_diff", 
-                            actual_size = img1.len(), 
+                        let _calc_span = info_span!(parent: image_span.clone(), "calculate_diff",
+                            actual_size = img1.len(),
                             expected_size = img2.len()
                         ).entered();
                         image_diff_rs::diff(
@@ -188,6 +220,9 @@ pub fn run(
                             &DiffOption {
                                 threshold: options.matching_threshold,
                                 include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                                encode_format: options
+                                    .diff_image_format
+                                    .map(EncodeFormat::from),
                             },
                         )?
                     };
@@ -229,7 +264,12 @@ pub fn run(
                 } else {
                     let mut diff_image_name = image_name.clone();
                     failed.insert(image_name.clone());
-                    diff_image_name.set_extension("webp");
+                    diff_image_name.set_extension(
+                        options
+                            .diff_image_format
+                            .unwrap_or_default()
+                            .extension(),
+                    );
                     differences.insert(diff_image_name.clone());
                     
                     let diff_path = diff_dir.join(&diff_image_name);
@@ -272,6 +312,10 @@ pub fn run(
             diff_dir,
             from_json: false,
             url_prefix: options.url_prefix,
+            diff_image_extention: options
+                .diff_image_format
+                .unwrap_or_default()
+                .extension(),
         })
     };
 

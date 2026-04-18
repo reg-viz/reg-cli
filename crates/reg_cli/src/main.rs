@@ -1,7 +1,22 @@
-use clap::Parser;
-use reg_core::{run, JsonReport, Options, Url};
+use clap::{Parser, ValueEnum};
+use reg_core::{run, DiffImageFormat, JsonReport, Options, Url};
 use std::path::{Path, PathBuf};
 use tracing::info_span;
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+enum DiffFormatArg {
+    Webp,
+    Png,
+}
+
+impl From<DiffFormatArg> for DiffImageFormat {
+    fn from(f: DiffFormatArg) -> Self {
+        match f {
+            DiffFormatArg::Webp => DiffImageFormat::Webp,
+            DiffFormatArg::Png => DiffImageFormat::Png,
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -38,6 +53,12 @@ struct Args {
 
     #[arg(long = "enableAntialias")]
     enable_antialias: Option<bool>,
+
+    /// Output format for diff images. `webp` (default) matches the current
+    /// Rust/Wasm behaviour. `png` matches the classic JS implementation and
+    /// is useful for apples-to-apples benchmarking.
+    #[arg(long = "diffFormat", value_enum)]
+    diff_format: Option<DiffFormatArg>,
 }
 
 #[cfg(not(all(target_os = "wasi", target_env = "p1")))]
@@ -66,6 +87,7 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
         concurrency: args.concurrency,
         enable_antialias: args.enable_antialias,
         url_prefix: args.url_prefix,
+        diff_image_format: args.diff_format.map(DiffImageFormat::from),
     };
 
     run(args.actual_dir, args.expected_dir, args.diff_dir, options)
