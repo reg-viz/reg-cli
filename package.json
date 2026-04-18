@@ -56,7 +56,8 @@
       "debug": "^4.3.4"
     },
     "onlyBuiltDependencies": [
-      "cli-spinner"
+      "cli-spinner",
+      "puppeteer"
     ]
   },
   "dependencies": {
