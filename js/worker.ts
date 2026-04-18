@@ -2,7 +2,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { argv, env } from 'node:process';
-import { readWasm, resolveExtention } from './utils';
+import { computeWasiSandbox, readWasm, resolveExtention } from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
 import { type WorkerSpan } from './tracing';
@@ -10,13 +10,17 @@ import { type WorkerSpan } from './tracing';
 const isTracingEnabled = (): boolean =>
   env.OTEL_ENABLED === 'true' || env.JAEGER_ENABLED === 'true';
 
+// Each rayon worker thread (Node Worker) has its own WASI instance and fd
+// table, so we must narrow its sandbox too — not just the main entry one.
+const sandbox = computeWasiSandbox(workerData.argv);
+
 // Per-handler buffer. Sent to parent on completion.
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
-  env: env as Record<string, string>,
+  env: sandbox.env,
   returnOnExit: true,
-  preopens: { './': './' },
+  preopens: sandbox.preopens,
   fs: fs as IFs,
 });
 
