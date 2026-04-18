@@ -3,11 +3,31 @@ import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
 import { readWasm } from './utils';
-import { type RustTraceData } from './tracing';
+import { type RustTraceData, type WorkerSpan } from './tracing';
 
 // Check if tracing is enabled via environment variable
 const isTracingEnabled = (): boolean => {
   return env.OTEL_ENABLED === 'true' || env.JAEGER_ENABLED === 'true';
+};
+
+// Collect timing spans on the worker side to be sent back with 'complete'.
+const workerSpans: WorkerSpan[] = [];
+const tSpan = async <T>(
+  name: string,
+  fn: () => Promise<T> | T,
+  attributes?: WorkerSpan['attributes'],
+): Promise<T> => {
+  if (!isTracingEnabled()) return fn();
+  const start_ms = Date.now();
+  const result = await fn();
+  workerSpans.push({
+    name,
+    start_ms,
+    end_ms: Date.now(),
+    attributes,
+    worker_label: 'entry',
+  });
+  return result;
 };
 
 export type CompareOutput = {
@@ -55,62 +75,93 @@ const readWasmString = (
 
 (async () => {
   try {
-    const wasm = await WebAssembly.compile(await file);
+    const entry_start_ms = Date.now();
+
+    const wasm = await tSpan(
+      'entry.wasm_compile',
+      async () => WebAssembly.compile(await file),
+    );
+
     const opts = { initial: 256, maximum: 16384, shared: true };
     const memory = new WebAssembly.Memory(opts);
-    let instance = await WebAssembly.instantiate(wasm, {
-      ...imports,
-      wasi: {
-        'thread-spawn': (startArg: number) => {
-          const threadIdBuffer = new SharedArrayBuffer(4);
-          const id = new Int32Array(threadIdBuffer);
-          Atomics.store(id, 0, -1);
-          parentPort?.postMessage({
-            cmd: 'thread-spawn',
-            startArg,
-            threadId: id,
-            memory,
-          });
-          Atomics.wait(id, 0, -1);
-          const tid = Atomics.load(id, 0);
-          return tid;
+
+    let instance = await tSpan('entry.wasm_instantiate', async () =>
+      WebAssembly.instantiate(wasm, {
+        ...imports,
+        wasi: {
+          'thread-spawn': (startArg: number) => {
+            const threadIdBuffer = new SharedArrayBuffer(4);
+            const id = new Int32Array(threadIdBuffer);
+            Atomics.store(id, 0, -1);
+            parentPort?.postMessage({
+              cmd: 'thread-spawn',
+              startArg,
+              threadId: id,
+              memory,
+            });
+            Atomics.wait(id, 0, -1);
+            const tid = Atomics.load(id, 0);
+            return tid;
+          },
         },
-      },
-      env: { memory },
-    });
+        env: { memory },
+      }),
+    );
 
     const exports = instance.exports as any;
 
-    wasi.start(instance);
+    await tSpan('entry.wasi_start', async () => {
+      wasi.start(instance);
+    });
 
     // Initialize tracing in WASM if enabled
     if (isTracingEnabled() && typeof exports.init_tracing === 'function') {
-      exports.init_tracing();
+      await tSpan('entry.init_tracing_rust', async () => {
+        exports.init_tracing();
+      });
     }
 
     // Run the main WASM function
-    const m = exports.wasm_main();
-    const reportString = readWasmString(exports, memory, m);
+    const m = await tSpan('entry.wasm_main', async () => exports.wasm_main());
+    const reportString = await tSpan('entry.read_report_string', async () =>
+      readWasmString(exports, memory, m),
+    );
     const report = JSON.parse(reportString);
 
     // Get trace data from WASM if tracing is enabled
     let traceData: RustTraceData | null = null;
     if (isTracingEnabled() && typeof exports.get_trace_data === 'function') {
-      const tracePtr = exports.get_trace_data();
-      const traceJson = readWasmString(exports, memory, tracePtr);
-      try {
-        traceData = JSON.parse(traceJson) as RustTraceData;
-      } catch (e) {
-        console.error('[Tracing] Failed to parse trace data:', e);
-      }
+      await tSpan('entry.collect_rust_traces', async () => {
+        const tracePtr = exports.get_trace_data();
+        const traceJson = readWasmString(exports, memory, tracePtr);
+        try {
+          traceData = JSON.parse(traceJson) as RustTraceData;
+        } catch (e) {
+          console.error('[Tracing] Failed to parse trace data:', e);
+        }
 
-      // Clear trace data in WASM
-      if (typeof exports.clear_trace_data === 'function') {
-        exports.clear_trace_data();
-      }
+        if (typeof exports.clear_trace_data === 'function') {
+          exports.clear_trace_data();
+        }
+      });
     }
 
-    parentPort?.postMessage({ cmd: 'complete', data: report, traceData });
+    // Overall span for this main worker
+    if (isTracingEnabled()) {
+      workerSpans.push({
+        name: 'entry.worker_total',
+        start_ms: entry_start_ms,
+        end_ms: Date.now(),
+        worker_label: 'entry',
+      });
+    }
+
+    parentPort?.postMessage({
+      cmd: 'complete',
+      data: report,
+      traceData,
+      workerSpans,
+    });
   } catch (e) {
     throw e;
   }

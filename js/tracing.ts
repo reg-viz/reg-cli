@@ -108,9 +108,15 @@ export const shutdownTracing = async (): Promise<void> => {
     console.log('[Tracing] Starting SDK shutdown...');
   }
 
-  // Wait a bit for traces to be exported
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  await sdk.shutdown();
+  try {
+    // Force flush before shutdown to ensure all spans are exported.
+    // (previously there was an extra 2000ms sleep here that was dominating
+    //  wall-clock for small workloads — removed after bench confirmed it was
+    //  unnecessary once sdk.shutdown() awaits export completion.)
+    await sdk.shutdown();
+  } catch (err) {
+    console.error('[Tracing] Error during shutdown:', err);
+  }
 
   isInitialized = false;
   sdk = null;
@@ -327,6 +333,53 @@ export const processRustTraceData = (traceData: RustTraceData): void => {
     if (process.env.OTEL_DEBUG === 'true') {
       console.log(`[Tracing] Created span: ${rustSpan.name} (${rustSpan.duration_ms}ms) [${parentInfo}] start=${rustSpan.start_time_ms}, end=${rustSpan.end_time_ms}`);
     }
+  }
+};
+
+/**
+ * Timing event collected inside a worker thread and shipped back to the main
+ * thread via postMessage. Converted to an OpenTelemetry span on receipt.
+ */
+export interface WorkerSpan {
+  name: string;
+  start_ms: number; // epoch millis (Date.now()-style)
+  end_ms: number;
+  attributes?: Record<string, string | number | boolean>;
+  worker_label?: string; // "main" | "thread-1" | ...
+}
+
+/**
+ * Convert worker-side timing events to OpenTelemetry spans attached under the
+ * current root span. Used to surface JS-bridge costs (Worker creation, wasm
+ * compile / instantiate, message round-trips) that Rust-side tracing cannot see.
+ */
+export const processWorkerSpans = (
+  spans: WorkerSpan[],
+  workerLabel: string,
+): void => {
+  if (!isTracingEnabled() || !isInitialized || !spans?.length) return;
+
+  const tracer = getTracer();
+  const parentCtx = currentRootContext ?? ROOT_CONTEXT;
+
+  for (const s of spans) {
+    const startNs = s.start_ms * 1_000_000;
+    const endNs = s.end_ms * 1_000_000;
+    const span = tracer.startSpan(
+      s.name,
+      {
+        startTime: [Math.floor(startNs / 1e9), startNs % 1e9],
+      },
+      parentCtx,
+    );
+    span.setAttribute('worker', s.worker_label ?? workerLabel);
+    span.setAttribute('duration_ms', s.end_ms - s.start_ms);
+    if (s.attributes) {
+      for (const [k, v] of Object.entries(s.attributes)) {
+        span.setAttribute(k, v as string | number | boolean);
+      }
+    }
+    span.end([Math.floor(endNs / 1e9), endNs % 1e9]);
   }
 };
 
