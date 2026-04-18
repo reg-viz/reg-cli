@@ -33,6 +33,29 @@ static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "
 static DEFAULT_JSON_PATH: &'static str = "./reg.json";
 static DEFAULT_REPORT_PATH: &'static str = "./report.html";
 
+/// Magic line prefix that the JS host (`js/entry.ts`, `js/worker.ts`) parses
+/// out of the Wasm's stderr stream to produce live `compare` events on the
+/// `EventEmitter` returned by `compare()`. Mirrors classic reg-cli's
+/// `ProcessAdaptor` which fires per-file events as each image finishes
+/// diffing, so reg-suit spinners and progress UIs animate.
+///
+/// Format (one event per line, TAB-delimited, newline-terminated):
+///
+///     __REG_CLI_EVT__\t{"type":"pass|fail|new|delete","path":"..."}\n
+///
+/// Everything else on stderr is forwarded through to `console.error` on the
+/// host, so actual errors still reach users.
+const PROGRESS_MARKER: &str = "__REG_CLI_EVT__";
+
+/// Print a live progress event to stderr. Uses JSON for the payload so that
+/// arbitrary characters in `path` (Unicode, backslashes on Windows, tabs,
+/// newlines) don't break the downstream parser. Flushing here would be
+/// nice-to-have but `eprintln!` already flushes to the WASI fd per-call.
+fn emit_progress(kind: &'static str, path: &str) {
+    let payload = serde_json::json!({ "type": kind, "path": path });
+    eprintln!("{}\t{}", PROGRESS_MARKER, payload);
+}
+
 fn is_supported_extension(path: &Path) -> bool {
     if let Some(extension) = path.extension() {
         if let Some(ext_str) = extension.to_str() {
@@ -164,6 +187,17 @@ pub fn run(
 
     let detected = find_images(&expected_dir, &actual_dir);
 
+    // Emit `new` / `delete` progress events up front — classic reg-cli
+    // fires these before the per-image diff loop starts, and reg-suit /
+    // spinners depend on live progress. See `emit_progress` for the wire
+    // format and `js/entry.ts` for the receiving side.
+    for p in &detected.new {
+        emit_progress("new", &p.display().to_string());
+    }
+    for p in &detected.deleted {
+        emit_progress("delete", &p.display().to_string());
+    }
+
     let targets: Vec<PathBuf> = detected
         .actual
         .intersection(&detected.expected)
@@ -245,7 +279,36 @@ pub fn run(
                             },
                         )?
                     };
-                    
+
+                    // Fire the live pass/fail event as early as we can —
+                    // right after the pixel-diff completes, before the
+                    // caller-thread serialises through `collect`. Classify
+                    // here (not in the post-collect loop) so consumers see
+                    // progress while other rayon threads are still working
+                    // on remaining images.
+                    let kind = match &res {
+                        DiffOutput::Eq => "pass",
+                        DiffOutput::NotEq {
+                            diff_count,
+                            width,
+                            height,
+                            ..
+                        } => {
+                            if is_passed(
+                                *width,
+                                *height,
+                                *diff_count as u64,
+                                options.threshold_pixel,
+                                options.threshold_rate,
+                            ) {
+                                "pass"
+                            } else {
+                                "fail"
+                            }
+                        }
+                    };
+                    emit_progress(kind, &path.display().to_string());
+
                     Ok((path.clone(), res))
                 })
                 .inspect(|r| {

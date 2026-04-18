@@ -3,6 +3,7 @@ import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
 import { computeWasiSandbox, readWasm } from './utils';
+import { createPrintErrHook } from './progress';
 import { type RustTraceData, type WorkerSpan } from './tracing';
 
 // Check if tracing is enabled via environment variable
@@ -47,6 +48,14 @@ export type CompareOutput = {
 // in utils.ts for the policy.
 const sandbox = computeWasiSandbox(workerData.argv);
 
+// Live `compare` events: Rust emits tagged stderr lines as each image
+// finishes diffing (or is detected as new/deleted). Forward them to the
+// main process so `EventEmitter#emit('compare', …)` can fire live instead
+// of batched-post-complete.
+const printErr = createPrintErrHook((ev) => {
+  parentPort?.postMessage({ cmd: 'compare-event', event: ev });
+});
+
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
@@ -54,6 +63,7 @@ const wasi = new WASI({
   returnOnExit: true,
   preopens: sandbox.preopens,
   fs: fs as IFs,
+  printErr,
 });
 
 const imports = wasi.getImportObject();
