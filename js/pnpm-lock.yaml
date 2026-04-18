@@ -26,6 +26,9 @@ importers:
       '@tybys/wasm-util':
         specifier: ^0.9.0
         version: 0.9.0
+      x-img-diff-js:
+        specifier: ^0.3.5
+        version: 0.3.5
     devDependencies:
       '@pyroscope/nodejs':
         specifier: ^0.4.1
@@ -1550,6 +1553,9 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
+  x-img-diff-js@0.3.5:
+    resolution: {integrity: sha512-B97ztoc2JeM+62HH1zFhmTyilsVqL486WMm8X3oQz16lTCGITY1cz+H57mTsNG0QuyVxv1yGq06qC8wy6UPCmQ==}
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -3066,6 +3072,8 @@ snapshots:
       strip-ansi: 6.0.1
 
   wrappy@1.0.2: {}
+
+  x-img-diff-js@0.3.5: {}
 
   y18n@5.0.8: {}
 

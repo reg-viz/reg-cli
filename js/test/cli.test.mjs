@@ -365,3 +365,118 @@ test('-D custom diff message shows up on failure', async () => {
   ]);
   assert.ok(stdout.includes('custom-trailer-msg'));
 });
+
+// ---------------------------------------------------------------------------
+// Phase-F: --version / favicon / -X client assets / -U semantics
+// ---------------------------------------------------------------------------
+
+test('--version prints the package.json version', async () => {
+  const { code, stdout } = await runCli(['--version']);
+  assert.equal(code, 0);
+  // Must look like semver-ish (at least digits + dot), not the classic
+  // "reg-cli-wasm" placeholder.
+  assert.match(stdout.trim(), /^\d+\.\d+\.\d+/);
+});
+
+test('HTML report embeds a favicon data URL', async () => {
+  const d = await scratch();
+  const reportRel = `${d.rel}/report.html`;
+  await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-R',
+    reportRel,
+    '-I',
+  ]);
+  const html = await readFile(join(REPO, reportRel), 'utf8');
+  // `<link rel="shortcut icon" href="data:image/png;base64,...">` — check
+  // the placeholder was replaced with real PNG bytes.
+  assert.match(
+    html,
+    /<link rel="shortcut icon" href="data:image\/png;base64,[A-Za-z0-9+/=]{20,}"/,
+  );
+});
+
+test('-X client emits worker.js + detector.wasm next to report', async () => {
+  const d = await scratch();
+  const reportRel = `${d.rel}/report.html`;
+  await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-R',
+    reportRel,
+    '-X',
+    'client',
+    '-I',
+  ]);
+  const reportDir = dirname(join(REPO, reportRel));
+  // Classic reg-cli test asserts on the *existence* of these files
+  // (test/cli.test.mjs:250-275). Match that at minimum; also sanity-check
+  // sizes so we catch an empty-write regression.
+  const workerStat = await stat(join(reportDir, 'worker.js'));
+  const wasmStat = await stat(join(reportDir, 'detector.wasm'));
+  assert.ok(workerStat.size > 10_000, 'worker.js should contain the concatenated bundle');
+  assert.ok(wasmStat.size > 100_000, 'detector.wasm should be the x-img-diff wasm');
+});
+
+test('-U prunes deleted baselines and keeps passed files untouched', async () => {
+  // Seed a scenario: expected has stale.png (not in actual) → deleted.
+  // actual has sample0.png differing from expected → failed/changed.
+  // expected has sample1.png identical to actual → passed.
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'sample0.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
+    join(REPO, actualRel, 'sample1.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
+    join(REPO, expectedRel, 'sample0.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
+    join(REPO, expectedRel, 'sample1.png'),
+  );
+  // Stale baseline only in expected → should be removed by -U.
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'stale.png'),
+  );
+  // Capture pre-update mtime for the passed file so we can assert we
+  // didn't needlessly rewrite it.
+  const passedBefore = await stat(join(REPO, expectedRel, 'sample1.png'));
+
+  const { code } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-U',
+  ]);
+  assert.equal(code, 0);
+
+  // stale.png: pruned.
+  await assert.rejects(() => stat(join(REPO, expectedRel, 'stale.png')));
+
+  // sample0.png: overwritten with actual/sample0.png — bytes now match.
+  const a0 = await readFile(join(REPO, actualRel, 'sample0.png'));
+  const e0 = await readFile(join(REPO, expectedRel, 'sample0.png'));
+  assert.equal(Buffer.compare(a0, e0), 0);
+
+  // sample1.png (passed): bytes unchanged AND mtime unchanged.
+  const passedAfter = await stat(join(REPO, expectedRel, 'sample1.png'));
+  assert.equal(
+    passedAfter.mtimeMs,
+    passedBefore.mtimeMs,
+    'passed file should not be rewritten by -U',
+  );
+});

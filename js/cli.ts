@@ -26,8 +26,10 @@
 //
 import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { run, type CompareOutput } from './';
+import { run, dir as distDir, type CompareOutput } from './';
+import { writeXimgdiffAssets } from './ximgdiff';
 
 const HELP = `
   Usage
@@ -56,8 +58,16 @@ if (process.argv.includes('-h') || process.argv.includes('--help')) {
   process.exit(0);
 }
 if (process.argv.includes('--version')) {
-  // Keep in sync with package.json via build if we care; fine as a placeholder.
-  process.stdout.write('reg-cli-wasm\n');
+  // Read from the package.json next to dist/. reg-suit and downstream
+  // tooling probe `reg-cli --version` to decide which compat shim to use,
+  // so this needs to report a real semver.
+  try {
+    const requireShim = createRequire(import.meta.url);
+    const pkg = requireShim('../package.json') as { version?: string };
+    process.stdout.write(`${pkg.version ?? 'unknown'}\n`);
+  } catch {
+    process.stdout.write('unknown\n');
+  }
   process.exit(0);
 }
 
@@ -165,6 +175,23 @@ emitter.once('complete', async (data: CompareOutput) => {
   // files inside the WASI sandbox's preopened root and avoids a duplicate
   // serialize/write from JS.
 
+  // `-X client` emits worker.js + detector.wasm next to the HTML report so
+  // the browser's second-pass pixel detector can actually load. We do it in
+  // JS (not Rust) because the x-img-diff-js wasm binary lives in node_modules
+  // and shouldn't be linked into the Wasm bundle.
+  if (values.additionalDetection === 'client' && typeof values.report === 'string') {
+    try {
+      await writeXimgdiffAssets({
+        reportPath: values.report,
+        urlPrefix: typeof values.urlPrefix === 'string' ? values.urlPrefix : '',
+        distDir: distDir(),
+      });
+    } catch (e) {
+      process.stderr.write(`reg-cli: failed to write ximgdiff assets — ${(e as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  }
+
   // Per-file lines (ordering roughly follows classic reg-cli).
   for (const img of passed) process.stdout.write(`${CHECK} pass    ${formatPath(img)}\n`);
   for (const img of added) process.stdout.write(`${PLUS} append  ${formatPath(img)}\n`);
@@ -185,7 +212,11 @@ emitter.once('complete', async (data: CompareOutput) => {
       return;
     }
     try {
-      await updateExpected(actualDir, expectedDir, data.actualItems ?? []);
+      await updateExpected(actualDir, expectedDir, {
+        newItems: added,
+        failedItems: failed,
+        deletedItems: deleted,
+      });
       process.stdout.write('\u2728 your expected images are updated \u2728\n');
     } catch (e) {
       process.stderr.write(`reg-cli: failed to update expected — ${(e as Error).message}\n`);
@@ -208,12 +239,34 @@ emitter.once('error', (err: Error) => {
   process.exitCode = 1;
 });
 
+// Match classic reg-cli's `-U` semantics (src/index.js:134-146):
+//
+//   1. rm from expected: deletedItems ∪ failedItems — first so stale
+//      baselines don't linger and so overwrites are clean.
+//   2. copy actual→expected: newItems ∪ failedItems — only the images the
+//      user actually wanted to refresh; passed items are untouched.
+//
+// This differs from a naive `copy every actualItem` (what we shipped
+// pre-phase-F) in two ways that matter for reg-suit workflows:
+//   - deleted baselines are actually pruned
+//   - unchanged images aren't needlessly rewritten (preserves mtime, keeps
+//     git status clean)
 async function updateExpected(
   actualDir: string,
   expectedDir: string,
-  images: string[],
+  items: {
+    newItems: string[];
+    failedItems: string[];
+    deletedItems: string[];
+  },
 ): Promise<void> {
-  for (const img of images) {
+  const { rm } = await import('node:fs/promises');
+  const toRemove = [...items.deletedItems, ...items.failedItems];
+  for (const img of toRemove) {
+    await rm(join(expectedDir, img), { force: true });
+  }
+  const toCopy = [...items.newItems, ...items.failedItems];
+  for (const img of toCopy) {
     const src = join(actualDir, img);
     const dst = join(expectedDir, img);
     await mkdir(dirname(dst), { recursive: true });
