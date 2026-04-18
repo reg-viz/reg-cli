@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
-import { readWasm } from './utils';
+import { computeWasiSandbox, readWasm } from './utils';
 import { type RustTraceData, type WorkerSpan } from './tracing';
 
 // Check if tracing is enabled via environment variable
@@ -43,12 +43,16 @@ export type CompareOutput = {
   diffDir: string;
 };
 
+// Build the narrowest WASI sandbox this run needs. See `computeWasiSandbox`
+// in utils.ts for the policy.
+const sandbox = computeWasiSandbox(workerData.argv);
+
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
-  env: env as Record<string, string>,
+  env: sandbox.env,
   returnOnExit: true,
-  preopens: { './': './' },
+  preopens: sandbox.preopens,
   fs: fs as IFs,
 });
 
