@@ -7,10 +7,12 @@ import {
   initTracing,
   shutdownTracing,
   processRustTraceData,
+  processWorkerSpans,
   isTracingEnabled,
   startRootSpan,
   endRootSpan,
   type RustTraceData,
+  type WorkerSpan,
 } from './tracing';
 
 export const dir = (): string => {
@@ -18,33 +20,56 @@ export const dir = (): string => {
   return dir;
 };
 
+// Record a span in the main process' WorkerSpan format for later conversion.
+const mainSpans: WorkerSpan[] = [];
+const recordMainSpan = (name: string, start_ms: number, attributes?: WorkerSpan['attributes']) => {
+  if (!isTracingEnabled()) return;
+  mainSpans.push({ name, start_ms, end_ms: Date.now(), attributes, worker_label: 'main' });
+};
+
 export const run = (argv: string[]): EventEmitter => {
-  // Initialize tracing if enabled
+  const run_start_ms = Date.now();
+
+  // Initialize tracing if enabled (may be ~tens of ms on first run).
+  const t_init = Date.now();
   if (isTracingEnabled()) {
     initTracing();
+    recordMainSpan('main.init_tracing', t_init);
   }
 
   // Start root span for the entire operation
   const traceContext = isTracingEnabled() ? startRootSpan('reg-cli') : null;
 
   const emitter = new EventEmitter();
+
+  const t_new_entry = Date.now();
   const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
+  recordMainSpan('main.new_entry_worker', t_new_entry);
 
   let nextTid = 1;
   const workers = [worker];
+  const threadWorkerSpans: WorkerSpan[] = [];
 
   const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
+    const t_new_worker = Date.now();
     const worker = new Worker(join(dir(), `./worker.${resolveExtention()}`), { workerData: { argv } });
+    const tid = nextTid++;
+    recordMainSpan('main.new_thread_worker', t_new_worker, { tid });
 
     workers.push(worker);
 
-    worker.on('message', ({ cmd, startArg, threadId, memory }) => {
+    worker.on('message', (msg) => {
+      const { cmd } = msg;
       if (cmd === 'loaded') {
         if (typeof worker.unref === 'function') {
           worker.unref();
         }
       } else if (cmd === 'thread-spawn') {
-        spawn(startArg, threadId, memory);
+        spawn(msg.startArg, msg.threadId, msg.memory);
+      } else if (cmd === 'worker-spans') {
+        if (Array.isArray(msg.workerSpans)) {
+          threadWorkerSpans.push(...msg.workerSpans);
+        }
       }
     });
 
@@ -52,8 +77,6 @@ export const run = (argv: string[]): EventEmitter => {
       workers.forEach((w) => w.terminate());
       throw new Error(e.message);
     });
-
-    const tid = nextTid++;
 
     if (threadId) {
       Atomics.store(threadId, 0, tid);
@@ -63,19 +86,42 @@ export const run = (argv: string[]): EventEmitter => {
     return tid;
   };
 
-  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData }) => {
+  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData, workerSpans }) => {
     if (cmd === 'complete') {
-      // Process trace data from Rust/WASM if available
-      if (isTracingEnabled() && traceData) {
-        processRustTraceData(traceData as RustTraceData);
-        // End root span after processing Rust spans
+      const t_post_complete = Date.now();
+
+      // Process JS worker spans (entry.ts + thread workers)
+      if (isTracingEnabled()) {
+        if (Array.isArray(workerSpans)) {
+          processWorkerSpans(workerSpans as WorkerSpan[], 'entry');
+        }
+        if (threadWorkerSpans.length) {
+          processWorkerSpans(threadWorkerSpans, 'thread');
+        }
+        // Process trace data from Rust/WASM if available
+        if (traceData) {
+          processRustTraceData(traceData as RustTraceData);
+        }
+        // Record wall-clock around processing
+        recordMainSpan('main.process_trace_and_spans', t_post_complete);
+        // Also record total time
+        mainSpans.push({
+          name: 'main.run_total',
+          start_ms: run_start_ms,
+          end_ms: Date.now(),
+          worker_label: 'main',
+        });
+        processWorkerSpans(mainSpans, 'main');
+        // End root span after processing spans
         endRootSpan(true);
         // Wait for traces to be exported before shutting down
         await shutdownTracing();
       }
 
       workers.forEach((w) => w.terminate());
+      // Emit complete and ensure we don't exit before traces are sent
       emitter.emit('complete', data);
+      return; // Prevent further processing
     }
 
     if (cmd === 'loaded') {

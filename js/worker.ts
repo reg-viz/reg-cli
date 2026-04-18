@@ -5,7 +5,12 @@ import { argv, env } from 'node:process';
 import { readWasm, resolveExtention } from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
+import { type WorkerSpan } from './tracing';
 
+const isTracingEnabled = (): boolean =>
+  env.OTEL_ENABLED === 'true' || env.JAEGER_ENABLED === 'true';
+
+// Per-handler buffer. Sent to parent on completion.
 const wasi = new WASI({
   version: 'preview1',
   args: workerData.argv,
@@ -19,27 +24,72 @@ const imports = wasi.getImportObject();
 const file = readWasm();
 
 const handler = async ({ startArg, tid, memory }: { startArg: number, tid: number, memory: WebAssembly.Memory }) => {
-  try {
-    const wasm = await WebAssembly.compile(await file);
-    let instance = await WebAssembly.instantiate(wasm, {
-      ...imports,
-      wasi: {
-        'thread-spawn': (startArg: number) => {
-          const threadIdBuffer = new SharedArrayBuffer(4);
-          const id = new Int32Array(threadIdBuffer);
-          Atomics.store(id, 0, -1);
-          postMessage({ cmd: 'thread-spawn', startArg, threadId: id, memory });
-          Atomics.wait(id, 0, -1);
-          const tid = Atomics.load(id, 0);
-          return tid;
-        },
-      },
-      env: { memory },
+  const workerSpans: WorkerSpan[] = [];
+  const workerLabel = `thread-${tid}`;
+  const handler_start_ms = Date.now();
+
+  const tSpan = async <T>(
+    name: string,
+    fn: () => Promise<T> | T,
+    attributes?: WorkerSpan['attributes'],
+  ): Promise<T> => {
+    if (!isTracingEnabled()) return fn();
+    const start_ms = Date.now();
+    const r = await fn();
+    workerSpans.push({
+      name,
+      start_ms,
+      end_ms: Date.now(),
+      attributes,
+      worker_label: workerLabel,
     });
+    return r;
+  };
+
+  try {
+    const wasm = await tSpan('worker.wasm_compile', async () =>
+      WebAssembly.compile(await file),
+    );
+
+    let instance = await tSpan('worker.wasm_instantiate', async () =>
+      WebAssembly.instantiate(wasm, {
+        ...imports,
+        wasi: {
+          'thread-spawn': (startArg: number) => {
+            const threadIdBuffer = new SharedArrayBuffer(4);
+            const id = new Int32Array(threadIdBuffer);
+            Atomics.store(id, 0, -1);
+            parentPort?.postMessage({ cmd: 'thread-spawn', startArg, threadId: id, memory });
+            Atomics.wait(id, 0, -1);
+            const tid = Atomics.load(id, 0);
+            return tid;
+          },
+        },
+        env: { memory },
+      }),
+    );
+
     instance = createInstanceProxy(instance, memory);
-    wasi.start(instance);
-    // @ts-expect-error wasi_thread_start not defined
-    instance.exports.wasi_thread_start(tid, startArg);
+
+    await tSpan('worker.wasi_start', async () => {
+      wasi.start(instance);
+    });
+
+    await tSpan('worker.wasi_thread_start', async () => {
+      // @ts-expect-error wasi_thread_start not defined
+      instance.exports.wasi_thread_start(tid, startArg);
+    }, { tid });
+
+    if (isTracingEnabled()) {
+      workerSpans.push({
+        name: 'worker.thread_total',
+        start_ms: handler_start_ms,
+        end_ms: Date.now(),
+        worker_label: workerLabel,
+        attributes: { tid },
+      });
+      parentPort?.postMessage({ cmd: 'worker-spans', workerSpans });
+    }
   } catch (e) {
     throw e;
   }
