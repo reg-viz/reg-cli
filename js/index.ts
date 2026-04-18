@@ -178,6 +178,11 @@ export type CompareInput = {
   report?: string,
   junitReport?: string,
   json?: string,
+  /** Re-render HTML from an existing reg.json (classic `-F/--from`). */
+  from?: string,
+  /** "none" (default) | "client" — enable the report's browser-side
+   *  second-pass detector (classic `-X/--additionalDetection`). */
+  additionalDetection?: 'none' | 'client',
   update?: boolean,
   extendedErrors?: boolean,
   urlPrefix?: string,
@@ -207,12 +212,17 @@ export type CompareOutput = {
  *  the Wasm binary (which doesn't understand them). */
 const CLI_ONLY_KEYS = new Set<keyof CompareInput>([
   'update',
-  'junitReport',
   'extendedErrors', // meta for exit codes only — Wasm doesn't care
 ]);
 
+/** Library option names that must be forwarded to the Wasm binary under a
+ *  different flag name (Rust uses `--junit`, callers pass `junitReport`). */
+const KEY_REMAP: Record<string, string> = {
+  junitReport: 'junit',
+};
+
 export const compare = (input: CompareInput): EventEmitter => {
-  const { actualDir, expectedDir, diffDir, threshold, update, junitReport, ...rest } = input;
+  const { actualDir, expectedDir, diffDir, threshold, update, ...rest } = input;
 
   // Default `diffFormat` to png so the JSON/HTML report refers to `*.png`
   // files — matching classic reg-cli's output and letting downstream
@@ -232,6 +242,14 @@ export const compare = (input: CompareInput): EventEmitter => {
     rest.thresholdRate = threshold;
   }
 
+  // Translate the historical boolean `enableClientAdditionalDetection` to the
+  // new `additionalDetection: "client"` form that the Rust CLI understands.
+  const restAny = rest as Record<string, unknown>;
+  if (restAny.enableClientAdditionalDetection && restAny.additionalDetection == null) {
+    restAny.additionalDetection = 'client';
+  }
+  delete restAny.enableClientAdditionalDetection;
+
   // Strip CLI-only entries before forwarding.
   for (const k of CLI_ONLY_KEYS) {
     delete (rest as Record<string, unknown>)[k];
@@ -242,26 +260,23 @@ export const compare = (input: CompareInput): EventEmitter => {
     actualDir,
     expectedDir,
     diffDir,
-    ...Object.entries(rest).flatMap(([k, v]) => (v == null || v === '' ? [] : [`--${k}`, String(v)])),
+    ...Object.entries(rest).flatMap(([k, v]) => {
+      if (v == null || v === '') return [];
+      const flag = KEY_REMAP[k] ?? k;
+      return [`--${flag}`, String(v)];
+    }),
   ];
   const inner = run(args);
-  const jsonPath = typeof rest.json === 'string' ? rest.json : './reg.json';
 
-  // We always need to persist reg.json on complete (classic does this
-  // whether or not the caller explicitly asked for it). Writing
-  // junitReport / running `update` also needs to happen before we re-emit
-  // `complete` so subscribers see the final on-disk state.
+  // reg.json + junit.xml are written by the Rust/Wasm side. We only handle
+  // `update` here because it needs JS fs access to copy files across dirs
+  // (potentially outside the WASI sandbox's preopened root).
   const outer = new EventEmitter();
   inner.on('start', () => outer.emit('start'));
   inner.on('compare', (p) => outer.emit('compare', p));
   inner.on('error', (e) => outer.emit('error', e));
   inner.on('complete', async (data: CompareOutput) => {
     try {
-      await writeRegJson(jsonPath, data);
-      if (junitReport) {
-        const { writeJunit } = await import('./junit');
-        await writeJunit(junitReport, data);
-      }
       if (update) {
         await updateExpected(actualDir, expectedDir, data.actualItems ?? []);
         outer.emit('update');

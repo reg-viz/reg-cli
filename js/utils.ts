@@ -119,8 +119,14 @@ export const computeWasiSandbox = (argv: string[]): WasiSandbox => {
   for (const p of positional) if (p) dirs.push(p);
   const report = flagValue('--report');
   const json = flagValue('--json');
+  const junit = flagValue('--junit');
+  const from = flagValue('--from') ?? flagValue('-F');
   if (report) dirs.push(dirname(report) || '.');
   if (json) dirs.push(dirname(json) || '.');
+  if (junit) dirs.push(dirname(junit) || '.');
+  // `-F/--from` reads an existing reg.json, so its parent dir must be in the
+  // sandbox even when no positional dirs are supplied.
+  if (from) dirs.push(dirname(from) || '.');
 
   // Collapse every requested directory into a single shared ancestor.
   //
