@@ -18,16 +18,16 @@
 //
 //   -R/--report, -J/--json, -M/--matchingThreshold, -T/--thresholdRate,
 //   -S/--thresholdPixel, -P/--urlPrefix, -C/--concurrency, -A/--enableAntialias,
-//   --diffFormat
+//   --diffFormat, --junit, -F/--from, -X/--additionalDetection
 //
-// Not yet supported (follow-up PR):
-//   -F/--from, --junit, -X/--additionalDetection
+// reg.json and junit.xml are now written on the Rust/Wasm side so that they
+// land inside the WASI sandbox's preopened directory and so the non-wasm
+// `cargo run` CLI produces identical artefacts.
 //
 import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { run, writeRegJson, type CompareOutput } from './';
-import { writeJunit } from './junit';
+import { run, type CompareOutput } from './';
 
 const HELP = `
   Usage
@@ -38,6 +38,8 @@ const HELP = `
     -J, --json                Output json report to specified path (default ./reg.json).
     -I, --ignoreChange        Exit 0 even when image changes are detected.
     -E, --extendedErrors      Also treat added/deleted images as failures.
+    -F, --from                Render HTML report from an existing reg.json (no diff).
+    -X, --additionalDetection "none" | "client" — enable browser-side second-pass detection.
     -P, --urlPrefix           Prefix for image src in html report.
     -M, --matchingThreshold   YIQ threshold (0-1). Default 0.
     -T, --thresholdRate       Ratio of pixels that may differ before failing.
@@ -78,6 +80,8 @@ try {
       customDiffMessage: { type: 'string', short: 'D' },
       diffFormat: { type: 'string' },
       junit: { type: 'string' },
+      from: { type: 'string', short: 'F' },
+      additionalDetection: { type: 'string', short: 'X' },
     },
     allowPositionals: true,
   });
@@ -89,8 +93,11 @@ try {
 
 const { values, positionals } = parsed;
 const [actualDir, expectedDir, diffDir] = positionals;
+const fromPath = typeof values.from === 'string' ? values.from : undefined;
 
-if (!actualDir || !expectedDir || !diffDir) {
+// `-F/--from` re-renders HTML from an existing reg.json and does not need
+// the positional dirs; classic reg-cli accepts that mode without them.
+if (!fromPath && (!actualDir || !expectedDir || !diffDir)) {
   process.stderr.write('reg-cli: please specify actual, expected and diff directories.\n');
   process.stderr.write(HELP);
   process.exit(1);
@@ -100,9 +107,8 @@ if (!actualDir || !expectedDir || !diffDir) {
 const update = !!values.update;
 const ignoreChange = !!values.ignoreChange;
 const extendedErrors = !!values.extendedErrors;
-const junitPath = typeof values.junit === 'string' ? values.junit : undefined;
 // Default to matching classic reg-cli: diff images are written as PNG,
-// `./reg.json` is always persisted to disk.
+// `./reg.json` is always persisted to disk (in `run()` on the Rust side).
 const diffFormat = typeof values.diffFormat === 'string' ? values.diffFormat : 'png';
 const jsonPath = typeof values.json === 'string' ? values.json : './reg.json';
 const customDiffMessage =
@@ -111,7 +117,10 @@ const customDiffMessage =
     : `\nInspect your code changes, re-run with \`-U\` to update them. `;
 
 // Forward to Wasm: only flags that Rust/clap understands.
-const wasmArgv: string[] = ['--', actualDir, expectedDir, diffDir];
+const wasmArgv: string[] = ['--'];
+if (actualDir) wasmArgv.push(actualDir);
+if (expectedDir) wasmArgv.push(expectedDir);
+if (diffDir) wasmArgv.push(diffDir);
 const pushFlag = (name: string, v: unknown): void => {
   if (v == null || v === false) return;
   if (v === true) wasmArgv.push(`--${name}`);
@@ -119,6 +128,9 @@ const pushFlag = (name: string, v: unknown): void => {
 };
 pushFlag('report', values.report);
 pushFlag('json', jsonPath);
+pushFlag('junit', values.junit);
+pushFlag('from', fromPath);
+pushFlag('additionalDetection', values.additionalDetection);
 pushFlag('matchingThreshold', values.matchingThreshold);
 pushFlag('thresholdRate', values.thresholdRate);
 pushFlag('thresholdPixel', values.thresholdPixel);
@@ -132,7 +144,9 @@ const CROSS = '\u2718'; // ✘
 const PLUS = '\u271A'; // ✚
 const MINUS = '\u2212'; // −
 
-const formatPath = (p: string) => join(actualDir, p);
+// `--from` mode doesn't require a positional actualDir; fall back to just the
+// path when we have no prefix to join.
+const formatPath = (p: string) => (actualDir ? join(actualDir, p) : p);
 
 const emitter = run(wasmArgv);
 
@@ -142,16 +156,10 @@ emitter.once('complete', async (data: CompareOutput) => {
   const added = data.newItems ?? [];
   const deleted = data.deletedItems ?? [];
 
-  // Persist the JSON report to disk. Classic reg-cli always does this (the
-  // `-J / --json` flag only controls the path, not whether it's written).
-  try {
-    await writeRegJson(jsonPath, data);
-  } catch (e) {
-    process.stderr.write(
-      `reg-cli: failed to write ${jsonPath} — ${(e as Error).message}\n`,
-    );
-    process.exitCode = 1;
-  }
+  // NOTE: reg.json and junit.xml are written by the Rust/Wasm side (see
+  // `reg_core::run` + `reg_core::run_from_json`). Doing it there keeps the
+  // files inside the WASI sandbox's preopened root and avoids a duplicate
+  // serialize/write from JS.
 
   // Per-file lines (ordering roughly follows classic reg-cli).
   for (const img of passed) process.stdout.write(`${CHECK} pass    ${formatPath(img)}\n`);
@@ -166,16 +174,12 @@ emitter.once('complete', async (data: CompareOutput) => {
   if (added.length) process.stdout.write(`${PLUS} ${added.length} file(s) appended.\n`);
   if (passed.length) process.stdout.write(`${CHECK} ${passed.length} file(s) passed.\n`);
 
-  if (junitPath) {
-    try {
-      await writeJunit(junitPath, data);
-    } catch (e) {
-      process.stderr.write(`reg-cli: failed to write junit report — ${(e as Error).message}\n`);
-      process.exitCode = 1;
-    }
-  }
-
   if (update) {
+    if (!actualDir || !expectedDir) {
+      process.stderr.write(`reg-cli: --update requires actual/expected dirs (incompatible with --from).\n`);
+      process.exitCode = 1;
+      return;
+    }
     try {
       await updateExpected(actualDir, expectedDir, data.actualItems ?? []);
       process.stdout.write('\u2728 your expected images are updated \u2728\n');

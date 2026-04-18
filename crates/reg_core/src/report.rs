@@ -5,7 +5,7 @@ use std::{
 
 use bytes::Bytes;
 use mustache::MapBuilder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::dir::resolve_dir;
 
@@ -29,10 +29,9 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) expected_dir: &'a Path,
     pub(crate) diff_dir: &'a Path,
     pub(crate) report: &'a Path,
-    // junitReport: string,
     // extendedErrors: boolean,
     pub(crate) url_prefix: Option<url::Url>,
-    // enableClientAdditionalDetection: boolean,
+    pub(crate) enable_client_additional_detection: bool,
     pub(crate) from_json: bool,
     pub(crate) diff_image_extention: &'static str,
 }
@@ -80,7 +79,7 @@ pub(crate) struct ReportJsonInput {
     ximgdiff_config: XimgdiffConfig,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonReport {
     pub failed_items: BTreeSet<PathBuf>,
@@ -188,8 +187,8 @@ pub fn create_reports(input: ReportInput) -> Reports {
             },
             diff_image_extention: input.diff_image_extention,
             ximgdiff_config: XimgdiffConfig {
-                enabled: false,
-                worker_url: "TODO:".to_string(),
+                enabled: input.enable_client_additional_detection,
+                worker_url: "./worker.js".to_string(),
             },
         };
 
@@ -215,4 +214,56 @@ pub fn create_reports(input: ReportInput) -> Reports {
         json: json_report,
         html: html_report,
     }
+}
+
+/// Build a JUnit XML document matching the schema produced by classic reg-cli
+/// (`src/report.js` via xmlbuilder2) and the previous `js/junit.ts` shim:
+///
+/// ```xml
+/// <testsuites>
+///   <testsuite name="reg-cli" tests="N" failures="M">
+///     <testcase classname="reg-cli" name="..."/>              <!-- passed -->
+///     <testcase classname="reg-cli" name="...">
+///       <failure message="changed|new|deleted" />
+///     </testcase>
+///   </testsuite>
+/// </testsuites>
+/// ```
+pub(crate) fn build_junit_xml(report: &JsonReport) -> String {
+    fn esc(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+    }
+
+    let passed = &report.passed_items;
+    let failed = &report.failed_items;
+    let added = &report.new_items;
+    let deleted = &report.deleted_items;
+
+    let tests = passed.len() + failed.len() + added.len() + deleted.len();
+    let failures = failed.len() + added.len() + deleted.len();
+
+    let mut cases: Vec<String> = Vec::with_capacity(tests);
+    for p in passed {
+        cases.push(format!(
+            r#"    <testcase classname="reg-cli" name="{}"/>"#,
+            esc(&p.display().to_string())
+        ));
+    }
+    for (items, msg) in [(failed, "changed"), (added, "new"), (deleted, "deleted")] {
+        for p in items {
+            cases.push(format!(
+                "    <testcase classname=\"reg-cli\" name=\"{}\">\n      <failure message=\"{}\" />\n    </testcase>",
+                esc(&p.display().to_string()),
+                msg
+            ));
+        }
+    }
+
+    format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n  <testsuite name=\"reg-cli\" tests=\"{tests}\" failures=\"{failures}\">\n{cases}\n  </testsuite>\n</testsuites>\n",
+        cases = cases.join("\n"),
+    )
 }

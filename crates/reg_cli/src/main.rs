@@ -1,5 +1,5 @@
 use clap::{Parser, ValueEnum};
-use reg_core::{run, DiffImageFormat, JsonReport, Options, Url};
+use reg_core::{run, run_from_json, DiffImageFormat, JsonReport, Options, Url};
 use std::path::{Path, PathBuf};
 use tracing::info_span;
 
@@ -18,23 +18,33 @@ impl From<DiffFormatArg> for DiffImageFormat {
     }
 }
 
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+enum AdditionalDetection {
+    None,
+    Client,
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[clap(index = 1)]
-    actual_dir: PathBuf,
+    actual_dir: Option<PathBuf>,
 
     #[clap(index = 2)]
-    expected_dir: PathBuf,
+    expected_dir: Option<PathBuf>,
 
     #[clap(index = 3)]
-    diff_dir: PathBuf,
+    diff_dir: Option<PathBuf>,
 
     #[arg(short = 'R', long)]
     report: Option<PathBuf>,
 
     #[arg(short = 'J', long)]
     json: Option<PathBuf>,
+
+    /// Path to write the JUnit XML test report.
+    #[arg(long = "junit")]
+    junit: Option<PathBuf>,
 
     #[arg(short = 'M', long = "matchingThreshold")]
     matching_threshold: Option<f32>,
@@ -58,6 +68,16 @@ struct Args {
     /// Rust/Wasm behaviour. `png` matches the classic JS implementation.
     #[arg(long = "diffFormat", value_enum)]
     diff_format: Option<DiffFormatArg>,
+
+    /// Re-render HTML report from an existing reg.json (no image comparison).
+    /// Mirrors classic reg-cli's `-F, --from`.
+    #[arg(short = 'F', long = "from")]
+    from: Option<PathBuf>,
+
+    /// Enable the HTML report's client-side additional detection pass.
+    /// Mirrors classic reg-cli's `-X, --additionalDetection`.
+    #[arg(short = 'X', long = "additionalDetection", value_enum)]
+    additional_detection: Option<AdditionalDetection>,
 }
 
 #[cfg(not(all(target_os = "wasi", target_env = "p1")))]
@@ -74,11 +94,12 @@ pub fn main() {
 
 fn inner() -> Result<JsonReport, reg_core::CompareError> {
     let _root_span = info_span!("reg_cli_main").entered();
-    
+
     let args = Args::parse();
 
     let options = Options {
         report: args.report.as_deref().map(Path::new),
+        junit_report: args.junit.as_deref().map(Path::new),
         json: args.json.as_deref().map(Path::new),
         matching_threshold: args.matching_threshold,
         threshold_rate: args.threshold_rate,
@@ -87,9 +108,34 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
         enable_antialias: args.enable_antialias,
         url_prefix: args.url_prefix,
         diff_image_format: args.diff_format.map(DiffImageFormat::from),
+        enable_client_additional_detection: args
+            .additional_detection
+            .map(|v| matches!(v, AdditionalDetection::Client)),
     };
 
-    run(args.actual_dir, args.expected_dir, args.diff_dir, options)
+    // `-F / --from` short-circuits the diff pipeline and re-renders HTML from
+    // an existing reg.json. Positional dirs are not required in this mode.
+    if let Some(from) = args.from.as_deref() {
+        return run_from_json(from, options);
+    }
+
+    let actual_dir = args.actual_dir.ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "actual_dir is required (or pass --from to regenerate from reg.json)",
+        )
+    })?;
+    let expected_dir = args.expected_dir.ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "expected_dir is required",
+        )
+    })?;
+    let diff_dir = args.diff_dir.ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "diff_dir is required")
+    })?;
+
+    run(actual_dir, expected_dir, diff_dir, options)
 }
 
 #[cfg(all(target_os = "wasi", target_env = "p1"))]

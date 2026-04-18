@@ -61,7 +61,8 @@ pub(crate) struct DetectedImages {
 #[derive(Debug)]
 pub struct Options<'a> {
     pub report: Option<&'a Path>,
-    // junitReport?: string,
+    /// Where to write the JUnit XML report. `None` means no junit output.
+    pub junit_report: Option<&'a Path>,
     pub json: Option<&'a Path>,
     // update?: boolean,
     // extendedErrors?: boolean,
@@ -75,7 +76,10 @@ pub struct Options<'a> {
     /// (WebP lossless). Setting `Some(Png)` makes the output apples-to-apples
     /// with the classic JS implementation.
     pub diff_image_format: Option<DiffImageFormat>,
-    // enableClientAdditionalDetection?: boolean,
+    /// Mirror of classic reg-cli's `--additionalDetection client`. When set,
+    /// the HTML report's `ximgdiffConfig.enabled` is `true` and the report UI
+    /// runs a second-pass pixel detector in the browser.
+    pub enable_client_additional_detection: Option<bool>,
 }
 
 /// User-facing mirror of `image_diff_rs::EncodeFormat` so that `reg_core`
@@ -109,6 +113,7 @@ impl<'a> Default for Options<'a> {
     fn default() -> Self {
         Self {
             report: None,
+            junit_report: None,
             json: Some(Path::new(DEFAULT_JSON_PATH)),
             url_prefix: None,
             matching_threshold: Some(0.0),
@@ -117,6 +122,7 @@ impl<'a> Default for Options<'a> {
             concurrency: Some(4),
             enable_antialias: None,
             diff_image_format: None,
+            enable_client_additional_detection: None,
         }
     }
 }
@@ -316,6 +322,9 @@ pub fn run(
                 .diff_image_format
                 .unwrap_or_default()
                 .extension(),
+            enable_client_additional_detection: options
+                .enable_client_additional_detection
+                .unwrap_or(false),
         })
     };
 
@@ -334,7 +343,110 @@ pub fn run(
         info!(path = %report_path.display(), "Report written");
     };
 
+    // Persist reg.json to disk. Previously this was done on the JS side after
+    // the Wasm returned the string; moving it to Rust makes the contract
+    // symmetric with HTML / diff images (reg_core writes every artefact it
+    // knows how to produce) and keeps the non-wasm `cargo run` CLI useful.
+    {
+        let _write_span = info_span!("write_json", path = %json_path.display()).entered();
+        if let Some(parent) = json_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        let body = serde_json::to_string_pretty(&report.json).map_err(|e| {
+            eprintln!("Failed to serialize reg.json: {:?}", e);
+            std::io::Error::new(std::io::ErrorKind::Other, e)
+        })?;
+        std::fs::write(json_path, body + "\n").map_err(|e| {
+            eprintln!("Failed to write {:?}: {:?}", json_path, e);
+            e
+        })?;
+    }
+
+    // JUnit XML (optional).
+    if let Some(junit_path) = options.junit_report {
+        let _write_span = info_span!("write_junit", path = %junit_path.display()).entered();
+        if let Some(parent) = junit_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        let xml = report::build_junit_xml(&report.json);
+        std::fs::write(junit_path, xml).map_err(|e| {
+            eprintln!("Failed to write {:?}: {:?}", junit_path, e);
+            e
+        })?;
+    }
+
     info!("Comparison complete");
+    Ok(report.json)
+}
+
+/// Re-render the HTML report from an existing `reg.json` WITHOUT running any
+/// image comparison. Mirrors classic reg-cli's `-F / --from` mode.
+///
+/// `json_path` is the source reg.json; `options.report` is where to write
+/// the resulting HTML; `options.junit_report` / `options.enable_client_*` are
+/// honoured as usual.
+pub fn run_from_json(
+    json_path: impl AsRef<Path>,
+    options: Options,
+) -> Result<JsonReport, CompareError> {
+    let _root = info_span!("run_from_json", path = %json_path.as_ref().display()).entered();
+    let content = std::fs::read_to_string(json_path.as_ref())?;
+    let json: JsonReport = serde_json::from_str(&content).map_err(|e| {
+        eprintln!("Failed to parse {:?}: {:?}", json_path.as_ref(), e);
+        std::io::Error::new(std::io::ErrorKind::InvalidData, e)
+    })?;
+
+    let report_path = options
+        .report
+        .unwrap_or_else(|| Path::new(DEFAULT_REPORT_PATH));
+    let out_json_path = options.json.unwrap_or_else(|| Path::new(DEFAULT_JSON_PATH));
+
+    // Rebuild ReportInput fields from the parsed JsonReport. Note: the JSON's
+    // actualDir / expectedDir / diffDir are already strings the template
+    // expects, so `from_json: true` makes the template use them verbatim
+    // rather than re-resolving via `resolve_dir`.
+    let report = {
+        let _s = info_span!("create_reports_from_json").entered();
+        create_reports(report::ReportInput {
+            passed: json.passed_items.clone(),
+            failed: json.failed_items.clone(),
+            new: json.new_items.clone(),
+            deleted: json.deleted_items.clone(),
+            actual: json.actual_items.clone(),
+            expected: json.expected_items.clone(),
+            differences: json.diff_items.clone(),
+            report: report_path,
+            json: out_json_path,
+            actual_dir: Path::new(&json.actual_dir),
+            expected_dir: Path::new(&json.expected_dir),
+            diff_dir: Path::new(&json.diff_dir),
+            from_json: true,
+            url_prefix: options.url_prefix,
+            diff_image_extention: options
+                .diff_image_format
+                .unwrap_or_default()
+                .extension(),
+            enable_client_additional_detection: options
+                .enable_client_additional_detection
+                .unwrap_or(false),
+        })
+    };
+
+    if let Some(html) = report.html {
+        if let Some(parent) = report_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        std::fs::write(report_path, html)?;
+        info!(path = %report_path.display(), "Report written (from-json mode)");
+    }
+
+    if let Some(junit_path) = options.junit_report {
+        if let Some(parent) = junit_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+        std::fs::write(junit_path, report::build_junit_xml(&report.json))?;
+    }
+
     Ok(report.json)
 }
 
