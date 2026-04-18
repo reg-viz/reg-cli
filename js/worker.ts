@@ -5,6 +5,7 @@ import { argv, env } from 'node:process';
 import { computeWasiSandbox, readWasm, resolveExtention } from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
+import { createPrintErrHook } from './progress';
 import { type WorkerSpan } from './tracing';
 
 const isTracingEnabled = (): boolean =>
@@ -14,6 +15,14 @@ const isTracingEnabled = (): boolean =>
 // table, so we must narrow its sandbox too — not just the main entry one.
 const sandbox = computeWasiSandbox(workerData.argv);
 
+// Live `compare` events from rayon worker threads: Rust's `eprintln!`
+// inside the per-image par_iter closure runs on whichever thread worker
+// is executing that slice. Each worker has its own WASI instance, so each
+// needs its own `printErr` hook to forward progress to the parent.
+const printErr = createPrintErrHook((ev) => {
+  parentPort?.postMessage({ cmd: 'compare-event', event: ev });
+});
+
 // Per-handler buffer. Sent to parent on completion.
 const wasi = new WASI({
   version: 'preview1',
@@ -22,6 +31,7 @@ const wasi = new WASI({
   returnOnExit: true,
   preopens: sandbox.preopens,
   fs: fs as IFs,
+  printErr,
 });
 
 const imports = wasi.getImportObject();

@@ -74,6 +74,38 @@ const waitForComplete = (emitter) =>
 // EventEmitter surface
 // ---------------------------------------------------------------------------
 
+test('compare() emits compare events LIVE, before complete', async () => {
+  // Live per-file events ("pass"/"fail"/"new"/"delete") are wired via the
+  // `__REG_CLI_EVT__` stderr channel (see `js/progress.ts`). This catches
+  // regressions if the channel breaks or if we accidentally go back to
+  // the pre-phase-G batched post-complete emission.
+  const d = await scratch();
+  const emitter = lib.compare({
+    actualDir: `${SAMPLE_REL}/actual`,
+    expectedDir: `${SAMPLE_REL}/expected`,
+    diffDir: `${d.rel}/diff`,
+    json: `${d.rel}/reg.json`,
+  });
+  const received = [];
+  let completeSeen = false;
+  emitter.on('compare', (e) => {
+    received.push({ ...e, afterComplete: completeSeen });
+  });
+  emitter.on('complete', () => {
+    completeSeen = true;
+  });
+  await waitForComplete(emitter);
+
+  // Every compare event should have fired BEFORE complete.
+  assert.ok(
+    received.every((e) => e.afterComplete === false),
+    `expected all compare events before complete; got ${JSON.stringify(received)}`,
+  );
+  // And we should have one event per classified image in the fixture.
+  const kinds = received.map((e) => e.type).sort();
+  assert.deepEqual(kinds, ['fail', 'pass']);
+});
+
 test('compare() fires start → compare(x N) → complete in order', async () => {
   const d = await scratch();
   const emitter = lib.compare({

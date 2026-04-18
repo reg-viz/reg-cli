@@ -74,6 +74,9 @@ export const run = (argv: string[]): EventEmitter => {
         if (Array.isArray(msg.workerSpans)) {
           threadWorkerSpans.push(...msg.workerSpans);
         }
+      } else if (cmd === 'compare-event') {
+        // Rayon thread workers forward tagged progress lines here.
+        if (msg.event) emitter.emit('compare', msg.event);
       }
     });
 
@@ -93,7 +96,14 @@ export const run = (argv: string[]): EventEmitter => {
     return tid;
   };
 
-  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData, workerSpans }) => {
+  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData, workerSpans, event }) => {
+    if (cmd === 'compare-event') {
+      // The main entry worker (`entry.ts`) forwards events from any
+      // non-threaded progress (e.g. `find_images` emitting new/delete
+      // up front). Rayon thread workers' events are handled in `spawn()`.
+      if (event) emitter.emit('compare', event);
+      return;
+    }
     if (cmd === 'complete') {
       const t_post_complete = Date.now();
 
@@ -127,21 +137,10 @@ export const run = (argv: string[]): EventEmitter => {
 
       workers.forEach((w) => w.terminate());
 
-      // Synthesise per-file `compare` events from the final report so that
-      // classic reg-cli subscribers (`emitter.on('compare', ...)`) keep
-      // working. We don't have live per-image timing from the Wasm side
-      // (the diff runs as one batch inside Rust's rayon pool), so fire them
-      // all before `complete`.
-      if (data && typeof data === 'object') {
-        for (const path of data.passedItems ?? [])
-          emitter.emit('compare', { type: 'pass', path });
-        for (const path of data.newItems ?? [])
-          emitter.emit('compare', { type: 'new', path });
-        for (const path of data.deletedItems ?? [])
-          emitter.emit('compare', { type: 'delete', path });
-        for (const path of data.failedItems ?? [])
-          emitter.emit('compare', { type: 'fail', path });
-      }
+      // Per-file `compare` events now fire live from Rust's diff loop via
+      // the `progress.ts` stderr event channel (see `createPrintErrHook`),
+      // matching classic reg-cli's `ProcessAdaptor` behaviour. No need to
+      // replay them here.
 
       // Emit complete and ensure we don't exit before traces are sent
       emitter.emit('complete', data);

@@ -110,18 +110,34 @@ pub(crate) struct Reports {
     pub(crate) html: Option<Bytes>,
 }
 
-// TODO: please validate input on cli input.
+/// Render an image directory path for a reg.json entry, optionally resolved
+/// against `url` when `urlPrefix` was supplied. Falls back to the bare
+/// relative path on unjoinable URLs (e.g. malformed prefix, non-hierarchical
+/// scheme) rather than panicking — classic reg-cli lets garbage
+/// url-prefixes through silently, so we do the same and log. `urlPrefix` is
+/// validated at the clap layer (it takes `url::Url` directly), so this
+/// fallback is defensive and almost never exercised.
 pub fn create_dir_for_json_report<'a>(
     json: &'a Path,
     dir: &'a Path,
     url: Option<url::Url>,
 ) -> String {
+    let relative = resolve_dir(json, dir).to_string_lossy().to_string();
     if let Some(url) = url {
-        url.join(&resolve_dir(json, dir).to_string_lossy())
-            .expect("TODO:")
-            .to_string()
+        match url.join(&relative) {
+            Ok(u) => u.to_string(),
+            Err(e) => {
+                tracing::warn!(
+                    url = %url,
+                    relative = %relative,
+                    error = %e,
+                    "url_prefix.join failed — falling back to relative path in reg.json",
+                );
+                relative
+            }
+        }
     } else {
-        resolve_dir(json, dir).to_string_lossy().to_string()
+        relative
     }
 }
 
