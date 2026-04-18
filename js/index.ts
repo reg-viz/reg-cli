@@ -42,6 +42,10 @@ export const run = (argv: string[]): EventEmitter => {
 
   const emitter = new EventEmitter();
 
+  // Classic reg-cli fires a 'start' event on the next tick of the run so
+  // subscribers (e.g. spinners) can latch on. Mirror that behaviour.
+  setImmediate(() => emitter.emit('start'));
+
   const t_new_entry = Date.now();
   const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
   recordMainSpan('main.new_entry_worker', t_new_entry);
@@ -122,6 +126,23 @@ export const run = (argv: string[]): EventEmitter => {
       }
 
       workers.forEach((w) => w.terminate());
+
+      // Synthesise per-file `compare` events from the final report so that
+      // classic reg-cli subscribers (`emitter.on('compare', ...)`) keep
+      // working. We don't have live per-image timing from the Wasm side
+      // (the diff runs as one batch inside Rust's rayon pool), so fire them
+      // all before `complete`.
+      if (data && typeof data === 'object') {
+        for (const path of data.passedItems ?? [])
+          emitter.emit('compare', { type: 'pass', path });
+        for (const path of data.newItems ?? [])
+          emitter.emit('compare', { type: 'new', path });
+        for (const path of data.deletedItems ?? [])
+          emitter.emit('compare', { type: 'delete', path });
+        for (const path of data.failedItems ?? [])
+          emitter.emit('compare', { type: 'fail', path });
+      }
+
       // Emit complete and ensure we don't exit before traces are sent
       emitter.emit('complete', data);
       return; // Prevent further processing
@@ -182,8 +203,27 @@ export type CompareOutput = {
   diffDir: string,
 };
 
+/** Flags that `compare()` handles itself in JS; they are NOT forwarded to
+ *  the Wasm binary (which doesn't understand them). */
+const CLI_ONLY_KEYS = new Set<keyof CompareInput>([
+  'update',
+  'junitReport',
+  'extendedErrors', // meta for exit codes only — Wasm doesn't care
+]);
+
 export const compare = (input: CompareInput): EventEmitter => {
-  const { actualDir, expectedDir, diffDir, ...rest } = input;
+  const { actualDir, expectedDir, diffDir, threshold, update, junitReport, ...rest } = input;
+
+  // Translate `threshold` → `thresholdRate` (classic's alias).
+  if (threshold != null && rest.thresholdRate == null) {
+    rest.thresholdRate = threshold;
+  }
+
+  // Strip CLI-only entries before forwarding.
+  for (const k of CLI_ONLY_KEYS) {
+    delete (rest as Record<string, unknown>)[k];
+  }
+
   const args = [
     '--',
     actualDir,
@@ -191,5 +231,51 @@ export const compare = (input: CompareInput): EventEmitter => {
     diffDir,
     ...Object.entries(rest).flatMap(([k, v]) => (v == null || v === '' ? [] : [`--${k}`, String(v)])),
   ];
-  return run(args);
+  const inner = run(args);
+
+  // If the caller supplied `update: true` or `junitReport`, we need to do
+  // those side effects AFTER the Wasm run completes but BEFORE emitting
+  // `complete` to the caller — so their handler can observe the final state
+  // on disk. Wrap the inner emitter with one that interposes on `complete`.
+  if (!update && !junitReport) {
+    return inner;
+  }
+
+  const outer = new EventEmitter();
+  inner.on('start', () => outer.emit('start'));
+  inner.on('compare', (p) => outer.emit('compare', p));
+  inner.on('error', (e) => outer.emit('error', e));
+  inner.on('complete', async (data: CompareOutput) => {
+    try {
+      if (junitReport) {
+        const { writeJunit } = await import('./junit');
+        await writeJunit(junitReport, data);
+      }
+      if (update) {
+        await updateExpected(actualDir, expectedDir, data.actualItems ?? []);
+        outer.emit('update');
+      }
+    } catch (e) {
+      outer.emit('error', e);
+      return;
+    }
+    outer.emit('complete', data);
+  });
+
+  return outer;
 };
+
+async function updateExpected(
+  actualDir: string,
+  expectedDir: string,
+  images: string[],
+): Promise<void> {
+  const { mkdir, copyFile } = await import('node:fs/promises');
+  const { dirname, join } = await import('node:path');
+  for (const img of images) {
+    const src = join(actualDir, img);
+    const dst = join(expectedDir, img);
+    await mkdir(dirname(dst), { recursive: true });
+    await copyFile(src, dst);
+  }
+}

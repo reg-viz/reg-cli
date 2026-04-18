@@ -27,6 +27,7 @@ import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { run, type CompareOutput } from './';
+import { writeJunit } from './junit';
 
 const HELP = `
   Usage
@@ -44,6 +45,7 @@ const HELP = `
     -C, --concurrency         Parallel worker count. Default 4.
     -A, --enableAntialias     Count anti-aliased pixels as different.
     -D, --customDiffMessage   Trailing message printed on diff.
+        --junit               Path to write a JUnit XML test report.
         --diffFormat          webp (default) | png
 `;
 
@@ -75,6 +77,7 @@ try {
       enableAntialias: { type: 'boolean', short: 'A' },
       customDiffMessage: { type: 'string', short: 'D' },
       diffFormat: { type: 'string' },
+      junit: { type: 'string' },
     },
     allowPositionals: true,
   });
@@ -97,6 +100,7 @@ if (!actualDir || !expectedDir || !diffDir) {
 const update = !!values.update;
 const ignoreChange = !!values.ignoreChange;
 const extendedErrors = !!values.extendedErrors;
+const junitPath = typeof values.junit === 'string' ? values.junit : undefined;
 const customDiffMessage =
   typeof values.customDiffMessage === 'string'
     ? values.customDiffMessage
@@ -146,6 +150,15 @@ emitter.once('complete', async (data: CompareOutput) => {
   if (deleted.length) process.stdout.write(`${MINUS} ${deleted.length} file(s) deleted.\n`);
   if (added.length) process.stdout.write(`${PLUS} ${added.length} file(s) appended.\n`);
   if (passed.length) process.stdout.write(`${CHECK} ${passed.length} file(s) passed.\n`);
+
+  if (junitPath) {
+    try {
+      await writeJunit(junitPath, data);
+    } catch (e) {
+      process.stderr.write(`reg-cli: failed to write junit report — ${(e as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  }
 
   if (update) {
     try {
