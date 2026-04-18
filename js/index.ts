@@ -75,7 +75,10 @@ export const run = (argv: string[]): EventEmitter => {
 
     worker.on('error', (e: Error) => {
       workers.forEach((w) => w.terminate());
-      throw new Error(e.message);
+      // Forward as an `error` event on the parent emitter so callers can
+      // `emitter.on('error', ...)` instead of wrapping in a global handler.
+      // (Parity with classic reg-cli's EventEmitter surface.)
+      emitter.emit('error', e);
     });
 
     if (threadId) {
@@ -141,7 +144,7 @@ export const run = (argv: string[]): EventEmitter => {
       endRootSpan(false);
     }
     workers.forEach((w) => w.terminate());
-    throw new Error(err.message);
+    emitter.emit('error', err);
   });
 
   return emitter;
