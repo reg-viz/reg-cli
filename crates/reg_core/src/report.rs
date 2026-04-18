@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use bytes::Bytes;
 use mustache::MapBuilder;
 use serde::{Deserialize, Serialize};
@@ -151,6 +152,14 @@ pub fn create_reports(input: ReportInput) -> Reports {
         let template = include_str!("../../../template/template.html");
         let js = include_str!("../../../report/ui/dist/report.js");
         let css = include_str!("../../../report/ui/dist/style.css");
+        // Favicon payloads are committed PNG bytes under `report/assets/`.
+        // Classic reg-cli embeds them as data URLs too
+        // (`src/report.js::loadFaviconAsDataURL`) so the report is a single
+        // self-contained HTML file — no separate asset fetch at view time.
+        let favicon_success: &[u8] =
+            include_bytes!("../../../report/assets/favicon_success.png");
+        let favicon_failure: &[u8] =
+            include_bytes!("../../../report/assets/favicon_failure.png");
 
         let json = ReportJsonInput {
             r#type: if input.failed.is_empty() {
@@ -192,11 +201,23 @@ pub fn create_reports(input: ReportInput) -> Reports {
             },
         };
 
-        // TODO: add favivon data
-        //     faviconData: loadFaviconAsDataURL(faviconType),
+        // Render with base64-encoded PNG bytes so the `<link rel="shortcut
+        // icon" href="{{&faviconData}}">` placeholder gets a self-contained
+        // data URL. Choice of success/failure favicon mirrors
+        // `json.type == Success/Danger` (i.e. presence of failures/new/deleted
+        // in the report), same rule classic uses.
+        let favicon_bytes = match &json.r#type {
+            ReportStatus::Success => favicon_success,
+            ReportStatus::Danger => favicon_failure,
+        };
+        let favicon_data = format!(
+            "data:image/png;base64,{}",
+            BASE64_STANDARD.encode(favicon_bytes)
+        );
         let data = MapBuilder::new()
             .insert_str("js", js)
             .insert_str("css", css)
+            .insert_str("faviconData", favicon_data)
             .insert_str(
                 "report",
                 serde_json::to_string(&json).expect("should convert."),

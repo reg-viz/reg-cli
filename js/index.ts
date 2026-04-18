@@ -269,16 +269,35 @@ export const compare = (input: CompareInput): EventEmitter => {
   const inner = run(args);
 
   // reg.json + junit.xml are written by the Rust/Wasm side. We only handle
-  // `update` here because it needs JS fs access to copy files across dirs
-  // (potentially outside the WASI sandbox's preopened root).
+  // the side-effecting bits here that need host fs access beyond the WASI
+  // preopen: `update` (cross-dir copy) and the `-X client` worker/wasm
+  // assets (classic puts them next to the HTML report).
   const outer = new EventEmitter();
   inner.on('start', () => outer.emit('start'));
   inner.on('compare', (p) => outer.emit('compare', p));
   inner.on('error', (e) => outer.emit('error', e));
   inner.on('complete', async (data: CompareOutput) => {
     try {
+      if (restAny.additionalDetection === 'client' && typeof input.report === 'string') {
+        // Lazy-load so the ximgdiff helper (pulls in x-img-diff-js + fs
+        // reads of the worker_pre.js/report-worker.js shared assets) isn't
+        // in `compare()`'s hot path for users who never enable `-X client`.
+        const { writeXimgdiffAssets } = await import('./ximgdiff');
+        await writeXimgdiffAssets({
+          reportPath: input.report,
+          urlPrefix: typeof input.urlPrefix === 'string' ? input.urlPrefix : '',
+          // `dir()` returns the published `dist/` directory regardless of
+          // which chunk unbuild places this call into, because `dir()` is
+          // defined in a module that always inlines into the entry.
+          distDir: dir(),
+        });
+      }
       if (update) {
-        await updateExpected(actualDir, expectedDir, data.actualItems ?? []);
+        await updateExpected(actualDir, expectedDir, {
+          newItems: data.newItems ?? [],
+          failedItems: data.failedItems ?? [],
+          deletedItems: data.deletedItems ?? [],
+        });
         outer.emit('update');
       }
     } catch (e) {
@@ -298,14 +317,27 @@ export async function writeRegJson(path: string, data: CompareOutput): Promise<v
   await writeFile(path, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+// Match classic reg-cli's `-U` semantics (see src/index.js:134-146 and the
+// same function in cli.ts for context): prune deleted+failed baselines from
+// `expectedDir`, then copy new+failed from `actualDir`. Passed items are
+// left alone so their mtime and git status don't churn.
 async function updateExpected(
   actualDir: string,
   expectedDir: string,
-  images: string[],
+  items: {
+    newItems: string[];
+    failedItems: string[];
+    deletedItems: string[];
+  },
 ): Promise<void> {
-  const { mkdir, copyFile } = await import('node:fs/promises');
+  const { mkdir, copyFile, rm } = await import('node:fs/promises');
   const { dirname, join } = await import('node:path');
-  for (const img of images) {
+  const toRemove = [...items.deletedItems, ...items.failedItems];
+  for (const img of toRemove) {
+    await rm(join(expectedDir, img), { force: true });
+  }
+  const toCopy = [...items.newItems, ...items.failedItems];
+  for (const img of toCopy) {
     const src = join(actualDir, img);
     const dst = join(expectedDir, img);
     await mkdir(dirname(dst), { recursive: true });

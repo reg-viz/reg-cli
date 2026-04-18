@@ -170,7 +170,15 @@ pub fn run(
         .cloned()
         .collect();
 
-    let concurrency = options.concurrency.unwrap_or(4);
+    // Match classic reg-cli (src/index.js:77): for small image sets the
+    // rayon thread-pool spin-up + cross-thread span dance costs more than
+    // any parallelism buys. Force single-threaded until we cross the
+    // classic's 20-image threshold.
+    let concurrency = if targets.len() < 20 {
+        1
+    } else {
+        options.concurrency.unwrap_or(4)
+    };
     info!(target_count = targets.len(), concurrency, "Starting parallel image diff");
 
     let pool = {

@@ -209,6 +209,44 @@ test('compare({ update: true }) copies actualDir → expectedDir and fires "upda
   assert.equal(Buffer.compare(a, e), 0);
 });
 
+test('compare({ update: true }) prunes deleted baselines (classic -U semantics)', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  // One file in both that match (passed). Plus a stale-only-in-expected
+  // baseline that -U should remove.
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
+    join(REPO, actualRel, 'sample1.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
+    join(REPO, expectedRel, 'sample1.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'stale.png'),
+  );
+
+  const emitter = lib.compare({
+    actualDir: actualRel,
+    expectedDir: expectedRel,
+    diffDir: `${d.rel}/diff`,
+    json: `${d.rel}/reg.json`,
+    update: true,
+  });
+  await waitForComplete(emitter);
+
+  // stale.png pruned.
+  await assert.rejects(() =>
+    stat(join(REPO, expectedRel, 'stale.png')),
+  );
+  // sample1.png still present.
+  await stat(join(REPO, expectedRel, 'sample1.png'));
+});
+
 // ---------------------------------------------------------------------------
 // additionalDetection: 'client' flips ximgdiffConfig in HTML
 // ---------------------------------------------------------------------------
