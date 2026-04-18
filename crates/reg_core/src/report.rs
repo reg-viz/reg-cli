@@ -34,6 +34,7 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) url_prefix: Option<url::Url>,
     // enableClientAdditionalDetection: boolean,
     pub(crate) from_json: bool,
+    pub(crate) diff_image_extention: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -185,7 +186,7 @@ pub fn create_reports(input: ReportInput) -> Reports {
             } else {
                 resolve_dir(report, input.diff_dir).into()
             },
-            diff_image_extention: "webp",
+            diff_image_extention: input.diff_image_extention,
             ximgdiff_config: XimgdiffConfig {
                 enabled: false,
                 worker_url: "TODO:".to_string(),
