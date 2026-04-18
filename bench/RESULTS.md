@@ -34,10 +34,13 @@ Before the numbers below are trustworthy, the following gaps had to be closed
 
 | workload | JS (PNG) | Wasm `--diffFormat png` | ratio |
 |---|---:|---:|---:|
-| 20 × 1280×720 | 0.71 s | **0.46 s** | **1.54× faster** |
 | 1 × 1280×720 | 0.31 s | 0.27 s | 1.15× faster |
+| 20 × 1280×720 | 0.71 s | **0.46 s** | **1.54× faster** |
+| **100 × 1280×720** | **1.86 s** | **0.94 s** | **1.98× faster** |
 | 1 × 3840×2160 (4K) | 0.92 s | **0.42 s** | **2.19× faster** |
 | identical × 20 (skip path) | 0.30 s | 0.29 s | ~equal |
+
+At 100 images, Wasm's compute advantage scales — the gap widens from 1.54× (20 img) to 1.98× (100 img), consistent with the theory that startup cost amortizes and per-image compute stays the same.
 
 The `identical × 20` row confirms the pure startup / module-load baseline is
 close between JS and Wasm on this host. The other rows show Wasm's compute
@@ -48,9 +51,10 @@ win when there is actual diff work to do, scaling with image size.
 | workload | JS (PNG) | Wasm (WebP default) | ratio |
 |---|---:|---:|---:|
 | 20 × 1280×720 | 0.71 s | 0.54 s | 1.31× faster |
+| 100 × 1280×720 | 1.86 s | 1.21 s | 1.54× faster |
 
-i.e. even with the format-cost confound left in, Wasm is 1.3× faster out of
-the box.
+i.e. even with the format-cost confound left in, Wasm is 1.3–1.5× faster out
+of the box, and the gap widens with scale.
 
 ## Interesting side finding
 
