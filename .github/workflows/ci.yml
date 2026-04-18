@@ -5,13 +5,15 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/setup-node@master
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
-      - name: yarn
-        run: yarn --frozen-lockfile
+          node-version: 20
+          cache: pnpm
+      - name: install
+        run: pnpm install --frozen-lockfile
       - name: flow
-        run: yarn run flow
+        run: pnpm run flow
       - name: test
-        run: yarn run test
+        run: pnpm run test
