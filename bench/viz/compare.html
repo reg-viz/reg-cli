@@ -63,6 +63,17 @@
         min-width: 240px;
       }
       .controls label { display: inline-flex; gap: 6px; align-items: center; }
+      .controls .ctl-btn {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .controls .ctl-btn:hover { background: #253249; }
       .pill {
         display: inline-flex; gap: 6px; align-items: center;
         padding: 3px 10px;
@@ -195,6 +206,8 @@
           <option value="absolute">absolute time (offset-aligned)</option>
         </select>
       </label>
+      <button type="button" id="collapseAll" class="ctl-btn">collapse all</button>
+      <button type="button" id="expandAll" class="ctl-btn">expand all</button>
       <span class="pill js">JS <strong id="stat-js">—</strong></span>
       <span class="pill wasm">Wasm <strong id="stat-wasm">—</strong></span>
       <span class="pill">ratio <strong id="stat-ratio">—</strong></span>
@@ -280,7 +293,13 @@
         return { spans, minStart, total: maxEnd - minStart };
       }
 
-      // Flatten spans into depth-first order (parents before children, siblings by start)
+      // Span IDs whose sub-tree should be collapsed (hidden in the view).
+      // Shared across lanes. Toggled by clicking the ▸/▾ affordance.
+      const collapsed = new Set();
+
+      // Flatten spans into depth-first order (parents before children, siblings by start).
+      // Skips descendants of spans whose id is in `collapsed`. Marks each row with
+      // `hasChildren` so the renderer can draw the toggle affordance.
       function flatten(trace) {
         if (!trace) return [];
         const byId = new Map(trace.spans.map((s) => [s.id, s]));
@@ -298,8 +317,12 @@
         roots.sort((a, b) => a.start - b.start);
         const out = [];
         const walk = (s, depth) => {
-          out.push({ ...s, depth });
-          for (const c of children.get(s.id) || []) walk(c, depth + 1);
+          const kids = children.get(s.id) || [];
+          const hasChildren = kids.length > 0;
+          out.push({ ...s, depth, hasChildren });
+          if (hasChildren && !collapsed.has(s.id)) {
+            for (const c of kids) walk(c, depth + 1);
+          }
         };
         for (const r of roots) walk(r, 0);
         return out;
@@ -351,15 +374,23 @@
           const opaque = hits.has(s.id);
           const color = COLORS[classify(s.name)];
           const indent = 6 + Math.min(s.depth, 6) * 8;
-          const label = (s.depth > 0 ? '▸ ' : '') + s.name;
+          const isCollapsed = collapsed.has(s.id);
+          // ▾ expanded (has visible children) · ▸ collapsed · (nothing) leaf
+          const arrow = s.hasChildren ? (isCollapsed ? '▸ ' : '▾ ') : '  ';
           const labelClass = opaque ? 'row-label' : 'row-label dim';
           const barOpacity = opaque ? 0.92 : 0.15;
+          const toggleAttr = s.hasChildren ? `data-toggle="1"` : '';
+          const cursorStyle = s.hasChildren ? 'cursor:pointer' : '';
 
-          svg.push(`<g class="bar-group" data-id="${s.id}">`);
-          svg.push(`<text class="${labelClass}" x="${indent}" y="${y + 13}" font-size="11">${escapeHtml(label.slice(0, 40))}</text>`);
+          svg.push(`<g class="bar-group" data-id="${s.id}" ${toggleAttr}>`);
+          // full-row hit target so clicking anywhere on the label row toggles
+          if (s.hasChildren) {
+            svg.push(`<rect x="0" y="${y}" width="${LABEL_W}" height="${ROW_H}" fill="transparent" style="${cursorStyle}" class="row-hit" />`);
+          }
+          svg.push(`<text class="${labelClass}" x="${indent}" y="${y + 13}" font-size="11" style="${cursorStyle}; pointer-events: none;">${escapeHtml(arrow + s.name).slice(0, 42)}</text>`);
           svg.push(`<rect class="bar" x="${x}" y="${y + 3}" width="${w}" height="${ROW_H - 6}" rx="2" ry="2" fill="${color}" fill-opacity="${barOpacity}"><title>${escapeHtml(s.name)}: ${(s.duration / 1000).toFixed(2)}ms</title></rect>`);
           if (w > 56) {
-            svg.push(`<text x="${x + 4}" y="${y + 13}" font-size="10" fill="#111826" font-family="JetBrains Mono">${(s.duration / 1000).toFixed(1)}ms</text>`);
+            svg.push(`<text x="${x + 4}" y="${y + 13}" font-size="10" fill="#111826" font-family="JetBrains Mono" style="pointer-events: none;">${(s.duration / 1000).toFixed(1)}ms</text>`);
           }
           svg.push(`</g>`);
         }
@@ -367,6 +398,21 @@
         el.innerHTML = svg.join('');
 
         el.querySelectorAll('.bar-group').forEach((g) => {
+          // Toggle collapse on click of the label row (only for rows with children)
+          if (g.dataset.toggle) {
+            const hit = g.querySelector('.row-hit');
+            if (hit) {
+              hit.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const id = g.dataset.id;
+                if (collapsed.has(id)) collapsed.delete(id);
+                else collapsed.add(id);
+                // Re-render everything so both lanes stay in sync
+                render();
+              });
+            }
+          }
+
           g.addEventListener('mousemove', (ev) => {
             const s = byId.get(g.dataset.id);
             const tip = document.getElementById('tip');
@@ -463,6 +509,22 @@
       document.getElementById('filter').addEventListener('input', render);
       document.getElementById('showAll').addEventListener('change', render);
       document.getElementById('scaleMode').addEventListener('change', render);
+
+      // Collapse/expand all — operate on the union of parent-span IDs across
+      // both traces so it works regardless of which lane has children.
+      document.getElementById('collapseAll').addEventListener('click', () => {
+        const parents = new Set();
+        for (const t of [js, wasm]) {
+          if (!t) continue;
+          for (const s of t.spans) if (s.parent) parents.add(s.parent);
+        }
+        for (const id of parents) collapsed.add(id);
+        render();
+      });
+      document.getElementById('expandAll').addEventListener('click', () => {
+        collapsed.clear();
+        render();
+      });
       window.addEventListener('resize', () => setTimeout(render, 100));
       load();
     </script>
