@@ -26,7 +26,7 @@
 import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { run, type CompareOutput } from './';
+import { run, writeRegJson, type CompareOutput } from './';
 import { writeJunit } from './junit';
 
 const HELP = `
@@ -101,6 +101,10 @@ const update = !!values.update;
 const ignoreChange = !!values.ignoreChange;
 const extendedErrors = !!values.extendedErrors;
 const junitPath = typeof values.junit === 'string' ? values.junit : undefined;
+// Default to matching classic reg-cli: diff images are written as PNG,
+// `./reg.json` is always persisted to disk.
+const diffFormat = typeof values.diffFormat === 'string' ? values.diffFormat : 'png';
+const jsonPath = typeof values.json === 'string' ? values.json : './reg.json';
 const customDiffMessage =
   typeof values.customDiffMessage === 'string'
     ? values.customDiffMessage
@@ -114,14 +118,14 @@ const pushFlag = (name: string, v: unknown): void => {
   else wasmArgv.push(`--${name}`, String(v));
 };
 pushFlag('report', values.report);
-pushFlag('json', values.json);
+pushFlag('json', jsonPath);
 pushFlag('matchingThreshold', values.matchingThreshold);
 pushFlag('thresholdRate', values.thresholdRate);
 pushFlag('thresholdPixel', values.thresholdPixel);
 pushFlag('urlPrefix', values.urlPrefix);
 pushFlag('concurrency', values.concurrency);
 pushFlag('enableAntialias', values.enableAntialias);
-pushFlag('diffFormat', values.diffFormat);
+pushFlag('diffFormat', diffFormat);
 
 const CHECK = '\u2714'; // ✔
 const CROSS = '\u2718'; // ✘
@@ -137,6 +141,17 @@ emitter.once('complete', async (data: CompareOutput) => {
   const passed = data.passedItems ?? [];
   const added = data.newItems ?? [];
   const deleted = data.deletedItems ?? [];
+
+  // Persist the JSON report to disk. Classic reg-cli always does this (the
+  // `-J / --json` flag only controls the path, not whether it's written).
+  try {
+    await writeRegJson(jsonPath, data);
+  } catch (e) {
+    process.stderr.write(
+      `reg-cli: failed to write ${jsonPath} — ${(e as Error).message}\n`,
+    );
+    process.exitCode = 1;
+  }
 
   // Per-file lines (ordering roughly follows classic reg-cli).
   for (const img of passed) process.stdout.write(`${CHECK} pass    ${formatPath(img)}\n`);

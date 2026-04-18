@@ -214,6 +214,19 @@ const CLI_ONLY_KEYS = new Set<keyof CompareInput>([
 export const compare = (input: CompareInput): EventEmitter => {
   const { actualDir, expectedDir, diffDir, threshold, update, junitReport, ...rest } = input;
 
+  // Default `diffFormat` to png so the JSON/HTML report refers to `*.png`
+  // files — matching classic reg-cli's output and letting downstream
+  // tooling (reg-notify-* / reg-suit) keep working.
+  if ((rest as Record<string, unknown>).diffFormat == null) {
+    (rest as Record<string, unknown>).diffFormat = 'png';
+  }
+
+  // Default `json` to './reg.json' so callers that don't care still get
+  // the persisted report.
+  if (rest.json == null) {
+    rest.json = './reg.json';
+  }
+
   // Translate `threshold` → `thresholdRate` (classic's alias).
   if (threshold != null && rest.thresholdRate == null) {
     rest.thresholdRate = threshold;
@@ -232,21 +245,19 @@ export const compare = (input: CompareInput): EventEmitter => {
     ...Object.entries(rest).flatMap(([k, v]) => (v == null || v === '' ? [] : [`--${k}`, String(v)])),
   ];
   const inner = run(args);
+  const jsonPath = typeof rest.json === 'string' ? rest.json : './reg.json';
 
-  // If the caller supplied `update: true` or `junitReport`, we need to do
-  // those side effects AFTER the Wasm run completes but BEFORE emitting
-  // `complete` to the caller — so their handler can observe the final state
-  // on disk. Wrap the inner emitter with one that interposes on `complete`.
-  if (!update && !junitReport) {
-    return inner;
-  }
-
+  // We always need to persist reg.json on complete (classic does this
+  // whether or not the caller explicitly asked for it). Writing
+  // junitReport / running `update` also needs to happen before we re-emit
+  // `complete` so subscribers see the final on-disk state.
   const outer = new EventEmitter();
   inner.on('start', () => outer.emit('start'));
   inner.on('compare', (p) => outer.emit('compare', p));
   inner.on('error', (e) => outer.emit('error', e));
   inner.on('complete', async (data: CompareOutput) => {
     try {
+      await writeRegJson(jsonPath, data);
       if (junitReport) {
         const { writeJunit } = await import('./junit');
         await writeJunit(junitReport, data);
@@ -264,6 +275,13 @@ export const compare = (input: CompareInput): EventEmitter => {
 
   return outer;
 };
+
+export async function writeRegJson(path: string, data: CompareOutput): Promise<void> {
+  const { writeFile, mkdir } = await import('node:fs/promises');
+  const { dirname } = await import('node:path');
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
 
 async function updateExpected(
   actualDir: string,
