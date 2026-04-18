@@ -46,6 +46,12 @@ struct Args {
     #[arg(long = "junit")]
     junit: Option<PathBuf>,
 
+    /// Escalate added/deleted images to failures in the JUnit XML (and at
+    /// the CLI exit-code layer on the JS wrapper). Mirrors classic
+    /// reg-cli's `-E, --extendedErrors`.
+    #[arg(short = 'E', long = "extendedErrors", default_missing_value = "true", num_args = 0..=1)]
+    extended_errors: Option<bool>,
+
     #[arg(short = 'M', long = "matchingThreshold")]
     matching_threshold: Option<f32>,
 
@@ -101,6 +107,7 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
         report: args.report.as_deref().map(Path::new),
         junit_report: args.junit.as_deref().map(Path::new),
         json: args.json.as_deref().map(Path::new),
+        extended_errors: args.extended_errors,
         matching_threshold: args.matching_threshold,
         threshold_rate: args.threshold_rate,
         threshold_pixel: args.threshold_pixel,

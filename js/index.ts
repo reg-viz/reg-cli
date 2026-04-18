@@ -209,10 +209,10 @@ export type CompareOutput = {
 };
 
 /** Flags that `compare()` handles itself in JS; they are NOT forwarded to
- *  the Wasm binary (which doesn't understand them). */
+ *  the Wasm binary. `extendedErrors` WAS here but now also feeds the
+ *  Rust-side junit generator, so it's forwarded below via KEY_REMAP. */
 const CLI_ONLY_KEYS = new Set<keyof CompareInput>([
   'update',
-  'extendedErrors', // meta for exit codes only — Wasm doesn't care
 ]);
 
 /** Library option names that must be forwarded to the Wasm binary under a

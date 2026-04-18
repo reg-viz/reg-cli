@@ -25,6 +25,7 @@
   },
   "scripts": {
     "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm",
+    "test": "node --test test/",
     "prepublishOnly": "npm run build"
   },
   "keywords": [],
