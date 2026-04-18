@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>reg-cli — JS vs Wasm, aligned-timescale waterfall</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --panel: #111826;
+        --panel-2: #182233;
+        --fg: #e6edf6;
+        --fg-dim: #8ea0b5;
+        --accent: #7dd3fc;
+        --accent-2: #f472b6;
+        --warn: #fbbf24;
+        --grid: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.08);
+        --js-bg: rgba(125, 211, 252, 0.05);
+        --wasm-bg: rgba(244, 114, 182, 0.05);
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--fg); margin: 0; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; }
+
+      header {
+        padding: 20px 32px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+      header h1 .tag { color: var(--accent); }
+      header nav a {
+        color: var(--fg-dim); text-decoration: none; margin-left: 12px; font-size: 13px;
+      }
+      header nav a.active, header nav a:hover { color: var(--fg); }
+
+      .meta { font-size: 12px; color: var(--fg-dim); margin-left: auto; }
+      .meta code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+
+      .controls {
+        padding: 12px 32px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        color: var(--fg-dim);
+        font-size: 13px;
+        border-bottom: 1px solid var(--border);
+      }
+      .controls input[type='text'] {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font: inherit;
+        min-width: 240px;
+      }
+      .controls label { display: inline-flex; gap: 6px; align-items: center; }
+      .pill {
+        display: inline-flex; gap: 6px; align-items: center;
+        padding: 3px 10px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+      }
+      .pill.js { color: var(--accent); }
+      .pill.wasm { color: var(--accent-2); }
+      .pill strong { color: var(--fg); }
+
+      .scene {
+        padding: 0 32px 48px;
+      }
+      .legend {
+        display: flex; gap: 12px; font-size: 11px; color: var(--fg-dim);
+        margin: 10px 0 4px;
+      }
+      .legend .dot { width: 10px; height: 10px; display: inline-block; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+      .combined {
+        margin-top: 8px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .lane {
+        padding: 0;
+        position: relative;
+      }
+      .lane + .lane { border-top: 1px solid var(--border); }
+      .lane-header {
+        display: flex; align-items: baseline; gap: 12px;
+        padding: 10px 14px 0;
+      }
+      .lane-header h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .lane-header .wall {
+        color: var(--warn);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+      }
+      .lane-header .span-count { color: var(--fg-dim); font-size: 12px; }
+      .lane-js   { background: var(--js-bg); }
+      .lane-wasm { background: var(--wasm-bg); }
+
+      svg.waterfall { width: 100%; display: block; }
+      .row-label { font-family: 'JetBrains Mono', monospace; fill: var(--fg); }
+      .row-label.dim { fill: var(--fg-dim); }
+      .bar-group:hover .bar { filter: brightness(1.25); }
+      .axis line { stroke: var(--grid); }
+      .axis text { fill: var(--fg-dim); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+      .cursor-line {
+        position: absolute; top: 0; bottom: 0; width: 1px;
+        background: rgba(251, 191, 36, 0.6);
+        pointer-events: none;
+      }
+
+      .tooltip {
+        position: fixed;
+        background: rgba(15, 22, 33, 0.96);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 120ms;
+        max-width: 420px;
+        z-index: 10;
+      }
+      .tooltip.visible { opacity: 1; }
+      .tooltip .name { font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+      .tooltip .dur { color: var(--warn); }
+      .tooltip table { border-collapse: collapse; margin-top: 4px; }
+      .tooltip td { padding: 1px 6px 1px 0; color: var(--fg-dim); font-family: 'JetBrains Mono', monospace; }
+      .tooltip td.v { color: var(--fg); }
+
+      .empty-state {
+        padding: 48px;
+        text-align: center;
+        color: var(--fg-dim);
+        background: var(--panel);
+        border-radius: 10px;
+        border: 1px dashed var(--border);
+        margin: 16px 32px;
+      }
+      footer {
+        padding: 24px 32px;
+        color: var(--fg-dim);
+        font-size: 11px;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><span class="tag">reg-cli</span> — JS vs Wasm, aligned-timescale waterfall</h1>
+      <nav>
+        <a href="./index.html">individual view</a>
+        <a href="./compare.html" class="active">stacked compare</a>
+      </nav>
+      <div class="meta">
+        source: <code id="source-label">out/traces.json</code>
+      </div>
+    </header>
+
+    <div class="controls">
+      <label>
+        filter:
+        <input type="text" id="filter" placeholder="span name substring (regex OK)" />
+      </label>
+      <label>
+        <input type="checkbox" id="showAll" />
+        show low-value spans (&lt; 1ms)
+      </label>
+      <label>
+        scale:
+        <select id="scaleMode">
+          <option value="max">max of both</option>
+          <option value="absolute">absolute time (offset-aligned)</option>
+        </select>
+      </label>
+      <span class="pill js">JS <strong id="stat-js">—</strong></span>
+      <span class="pill wasm">Wasm <strong id="stat-wasm">—</strong></span>
+      <span class="pill">ratio <strong id="stat-ratio">—</strong></span>
+    </div>
+
+    <div class="scene">
+      <div class="legend">
+        <span><span class="dot" style="background: #7dd3fc"></span>JS host</span>
+        <span><span class="dot" style="background: #c084fc"></span>wasm bridge (entry/worker)</span>
+        <span><span class="dot" style="background: #f472b6"></span>Rust reg_core</span>
+        <span><span class="dot" style="background: #fbbf24"></span>image-diff-rs (decode / compare / encode)</span>
+        <span><span class="dot" style="background: #9ca3af"></span>other</span>
+      </div>
+
+      <div class="combined" id="combined">
+        <div class="lane lane-js">
+          <div class="lane-header">
+            <h2 style="color: var(--accent)">JS</h2>
+            <span class="span-count" id="js-span-count"></span>
+            <span class="wall" id="js-wall"></span>
+          </div>
+          <div id="wf-js"></div>
+        </div>
+        <div class="lane lane-wasm">
+          <div class="lane-header">
+            <h2 style="color: var(--accent-2)">Wasm</h2>
+            <span class="span-count" id="wasm-span-count"></span>
+            <span class="wall" id="wasm-wall"></span>
+          </div>
+          <div id="wf-wasm"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tip"></div>
+
+    <footer>
+      Aligned-timescale view — JS and Wasm share the same x-axis.
+      Both traces start at <code>t=0</code> by default so the height-for-height comparison is true.
+    </footer>
+
+    <script>
+      const DATA_URLS = ['../out/traces.json', 'traces.json', 'out/traces.json'];
+
+      const classify = (name) => {
+        if (name.startsWith('main.')) return 'host';
+        if (name.startsWith('entry.') || name.startsWith('worker.')) return 'bridge';
+        if (
+          name === 'image_diff' || name === 'compare_pixels' ||
+          name === 'expand' ||
+          name.startsWith('decode_') || name.startsWith('encode_') ||
+          name === 'load_from_memory' || name === 'to_rgba8'
+        ) return 'imgdiff';
+        if (['reg-cli', 'reg-cli-js', 'reg_cli_main', 'run', 'compare_images',
+             'find_images', 'create_report', 'create_reports', 'write_report',
+             'parallel_image_diff', 'diff_single_image', 'build_thread_pool',
+             'calculate_diff', 'read_actual_image', 'read_expected_image'].includes(name))
+          return 'rust';
+        return 'other';
+      };
+      const COLORS = {
+        host:    '#7dd3fc',
+        bridge:  '#c084fc',
+        rust:    '#f472b6',
+        imgdiff: '#fbbf24',
+        other:   '#9ca3af',
+      };
+
+      function normalize(trace, service) {
+        if (!trace) return null;
+        const spans = trace.spans.map((s) => ({
+          id: s.spanID,
+          parent: (s.references || []).filter((r) => r.refType === 'CHILD_OF').map((r) => r.spanID)[0] || null,
+          name: s.operationName,
+          start: s.startTime,
+          duration: s.duration,
+          end: s.startTime + s.duration,
+          tags: Object.fromEntries((s.tags || []).map((t) => [t.key, t.value])),
+          service,
+        }));
+        const minStart = Math.min(...spans.map((s) => s.start));
+        const maxEnd = Math.max(...spans.map((s) => s.end));
+        return { spans, minStart, total: maxEnd - minStart };
+      }
+
+      // Flatten spans into depth-first order (parents before children, siblings by start)
+      function flatten(trace) {
+        if (!trace) return [];
+        const byId = new Map(trace.spans.map((s) => [s.id, s]));
+        const children = new Map();
+        const roots = [];
+        for (const s of trace.spans) {
+          if (s.parent && byId.has(s.parent)) {
+            if (!children.has(s.parent)) children.set(s.parent, []);
+            children.get(s.parent).push(s);
+          } else {
+            roots.push(s);
+          }
+        }
+        for (const arr of children.values()) arr.sort((a, b) => a.start - b.start);
+        roots.sort((a, b) => a.start - b.start);
+        const out = [];
+        const walk = (s, depth) => {
+          out.push({ ...s, depth });
+          for (const c of children.get(s.id) || []) walk(c, depth + 1);
+        };
+        for (const r of roots) walk(r, 0);
+        return out;
+      }
+
+      function renderLane(containerId, trace, sharedScale, sharedMinStart, filterRe, minDurUs) {
+        const el = document.getElementById(containerId);
+        if (!trace) { el.innerHTML = `<div class="empty-state">no trace</div>`; return; }
+
+        const flat = flatten(trace).filter((s) => s.duration >= minDurUs);
+        const hits = filterRe
+          ? new Set(flat.filter((s) => filterRe.test(s.name)).map((s) => s.id))
+          : new Set(flat.map((s) => s.id));
+
+        const ROW_H = 18;
+        const LABEL_W = 240;
+        const MARGIN = { top: 28, right: 12, bottom: 6, left: 8 };
+        const W = el.clientWidth > 100 ? el.clientWidth : 1000;
+        const barArea = Math.max(300, W - LABEL_W - MARGIN.left - MARGIN.right);
+        const H = MARGIN.top + flat.length * ROW_H + MARGIN.bottom;
+
+        const tScale = (t_us) =>
+          ((t_us - sharedMinStart) / sharedScale) * barArea;
+
+        // ticks every ~10% of shared scale
+        const ticks = [];
+        const nTicks = 10;
+        for (let i = 0; i <= nTicks; i++) {
+          const t = sharedMinStart + (sharedScale * i) / nTicks;
+          ticks.push({ x: LABEL_W + tScale(t), label: ((t - sharedMinStart) / 1000).toFixed(0) + 'ms' });
+        }
+
+        const svg = [];
+        svg.push(`<svg class="waterfall" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">`);
+        svg.push(`<g class="axis">`);
+        for (const tk of ticks) {
+          svg.push(`<line x1="${tk.x}" x2="${tk.x}" y1="${MARGIN.top - 18}" y2="${H}" />`);
+          svg.push(`<text x="${tk.x + 2}" y="${MARGIN.top - 6}" font-size="10">${tk.label}</text>`);
+        }
+        svg.push(`</g>`);
+
+        const byId = new Map(trace.spans.map((s) => [s.id, s]));
+
+        for (let i = 0; i < flat.length; i++) {
+          const s = flat[i];
+          const x = LABEL_W + tScale(s.start);
+          const w = Math.max(1, tScale(s.end) - tScale(s.start));
+          const y = MARGIN.top + i * ROW_H;
+          const opaque = hits.has(s.id);
+          const color = COLORS[classify(s.name)];
+          const indent = 6 + Math.min(s.depth, 6) * 8;
+          const label = (s.depth > 0 ? '▸ ' : '') + s.name;
+          const labelClass = opaque ? 'row-label' : 'row-label dim';
+          const barOpacity = opaque ? 0.92 : 0.15;
+
+          svg.push(`<g class="bar-group" data-id="${s.id}">`);
+          svg.push(`<text class="${labelClass}" x="${indent}" y="${y + 13}" font-size="11">${escapeHtml(label.slice(0, 40))}</text>`);
+          svg.push(`<rect class="bar" x="${x}" y="${y + 3}" width="${w}" height="${ROW_H - 6}" rx="2" ry="2" fill="${color}" fill-opacity="${barOpacity}"><title>${escapeHtml(s.name)}: ${(s.duration / 1000).toFixed(2)}ms</title></rect>`);
+          if (w > 56) {
+            svg.push(`<text x="${x + 4}" y="${y + 13}" font-size="10" fill="#111826" font-family="JetBrains Mono">${(s.duration / 1000).toFixed(1)}ms</text>`);
+          }
+          svg.push(`</g>`);
+        }
+        svg.push(`</svg>`);
+        el.innerHTML = svg.join('');
+
+        el.querySelectorAll('.bar-group').forEach((g) => {
+          g.addEventListener('mousemove', (ev) => {
+            const s = byId.get(g.dataset.id);
+            const tip = document.getElementById('tip');
+            const tags = (s.tags || [])
+              .filter((t) => !['otel.scope.name','otel.scope.version','otel.library.name','otel.library.version','rust.span_id','rust.target','rust.level','span.kind'].includes(t.key))
+              .map((t) => `<tr><td>${escapeHtml(t.key)}</td><td class="v">${escapeHtml(String(t.value))}</td></tr>`)
+              .join('');
+            tip.innerHTML = `
+              <div class="name">${escapeHtml(s.operationName)}</div>
+              <div>class: ${classify(s.operationName)} · service: ${escapeHtml(trace.spans[0]?.processID ? (trace.processes?.[trace.spans[0].processID]?.serviceName || '—') : '—')}</div>
+              <div class="dur">${(s.duration / 1000).toFixed(3)} ms @ t=+${((s.startTime - sharedMinStart) / 1000).toFixed(1)}ms</div>
+              <table>${tags}</table>`;
+            tip.style.left = ev.clientX + 12 + 'px';
+            tip.style.top = ev.clientY + 12 + 'px';
+            tip.classList.add('visible');
+          });
+          g.addEventListener('mouseleave', () => {
+            document.getElementById('tip').classList.remove('visible');
+          });
+        });
+      }
+
+      // ---- state ----
+      let js = null, wasm = null;
+
+      function render() {
+        const filterEl = document.getElementById('filter');
+        const showAll = document.getElementById('showAll').checked;
+        const scaleMode = document.getElementById('scaleMode').value;
+
+        let re = null;
+        const q = filterEl.value.trim();
+        if (q) {
+          try { re = new RegExp(q, 'i'); } catch {}
+        }
+        const minDurUs = showAll ? 0 : 1000; // 1ms
+
+        // Scale: max(js.total, wasm.total)
+        const jsTotal = js?.total ?? 0;
+        const wasmTotal = wasm?.total ?? 0;
+        const sharedScale = Math.max(jsTotal, wasmTotal);
+
+        if (scaleMode === 'max') {
+          // each trace normalizes to its own minStart, but shares the same scale (width).
+          renderLane('wf-js', js, sharedScale, js?.minStart ?? 0, re, minDurUs);
+          renderLane('wf-wasm', wasm, sharedScale, wasm?.minStart ?? 0, re, minDurUs);
+        } else {
+          // absolute: use global minStart (min of both), show actual time offset
+          const globalMin = Math.min(js?.minStart ?? Infinity, wasm?.minStart ?? Infinity);
+          const globalEnd = Math.max(
+            (js ? js.minStart + js.total : 0),
+            (wasm ? wasm.minStart + wasm.total : 0),
+          );
+          const span = globalEnd - globalMin;
+          renderLane('wf-js', js, span, globalMin, re, minDurUs);
+          renderLane('wf-wasm', wasm, span, globalMin, re, minDurUs);
+        }
+
+        // Stats
+        const f = (us) => (us / 1000).toFixed(1) + ' ms';
+        document.getElementById('stat-js').textContent = jsTotal ? f(jsTotal) : '—';
+        document.getElementById('stat-wasm').textContent = wasmTotal ? f(wasmTotal) : '—';
+        document.getElementById('stat-ratio').textContent =
+          jsTotal && wasmTotal ? (wasmTotal / jsTotal).toFixed(2) + '×' : '—';
+
+        document.getElementById('js-wall').textContent = jsTotal ? f(jsTotal) : '—';
+        document.getElementById('wasm-wall').textContent = wasmTotal ? f(wasmTotal) : '—';
+        document.getElementById('js-span-count').textContent = js ? `${js.spans.length} spans` : '';
+        document.getElementById('wasm-span-count').textContent = wasm ? `${wasm.spans.length} spans` : '';
+      }
+
+      async function load() {
+        let lastErr;
+        for (const url of DATA_URLS) {
+          try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) { lastErr = new Error(res.statusText); continue; }
+            const j = await res.json();
+            document.getElementById('source-label').textContent = url;
+            js = normalize(j.js, 'reg-cli-js');
+            wasm = normalize(j.wasm, 'reg-cli');
+            render();
+            return;
+          } catch (e) { lastErr = e; }
+        }
+        document.getElementById('combined').innerHTML =
+          `<div class="empty-state">traces.json not found. Run <code>./export-traces.sh</code> first.<br>(${lastErr?.message || ''})</div>`;
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      document.getElementById('filter').addEventListener('input', render);
+      document.getElementById('showAll').addEventListener('change', render);
+      document.getElementById('scaleMode').addEventListener('change', render);
+      window.addEventListener('resize', () => setTimeout(render, 100));
+      load();
+    </script>
+  </body>
+</html>
