@@ -318,3 +318,47 @@ test('enableClientAdditionalDetection: true is translated to additionalDetection
   const html = await readFile(join(REPO, reportRel), 'utf8');
   assert.match(html, /ximgdiffConfig[^}]*enabled["\\]+:true/);
 });
+
+// ---------------------------------------------------------------------------
+// Phase-I: reg-suit drop-in compatibility
+// ---------------------------------------------------------------------------
+//
+// reg-suit's `packages/reg-suit-core/src/processor.ts` invokes `compare(…)`
+// with a specific option bag every time. Historically we didn't strip
+// `ignoreChange` or `enableCliAdditionalDetection` from the library surface
+// before forwarding args to the Wasm binary, so Rust clap would abort with
+// "unexpected argument" the moment reg-suit tried to invoke us. This test
+// mirrors reg-suit's exact call shape so that regression is caught at the
+// library level.
+//
+// If this test fails, check whether someone removed a key from
+// `CLI_ONLY_KEYS` in `js/index.ts` — those are the keys reg-suit passes
+// unconditionally but our Rust CLI doesn't understand.
+test('reg-suit compat: compare() accepts reg-suit-shaped options without aborting', async () => {
+  const d = await scratch();
+  const emitter = lib.compare({
+    actualDir: `${SAMPLE_REL}/actual`,
+    expectedDir: `${SAMPLE_REL}/expected`,
+    diffDir: `${d.rel}/diff`,
+    json: `${d.rel}/reg.json`,
+    report: `${d.rel}/report.html`,
+    // Verbatim from `reg-suit-core/processor.ts:105-116`:
+    update: false,
+    ignoreChange: true,
+    urlPrefix: '',
+    threshold: undefined,
+    thresholdPixel: undefined,
+    thresholdRate: undefined,
+    matchingThreshold: 0,
+    enableAntialias: undefined,
+    enableCliAdditionalDetection: true, // ximgdiff.invocationType === 'cli'
+    enableClientAdditionalDetection: true, // ximgdiff.invocationType !== 'none'
+    concurrency: 4,
+  });
+  // The original bug: this would never fire — `error` would fire first with
+  // a clap "unexpected argument" abort. Now we strip those keys in
+  // `CLI_ONLY_KEYS` and `compare()` completes cleanly.
+  const { data } = await waitForComplete(emitter);
+  assert.deepEqual(data.failedItems, ['sample0.png']);
+  assert.deepEqual(data.passedItems, ['sample1.png']);
+});

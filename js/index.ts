@@ -184,6 +184,10 @@ export type CompareInput = {
   additionalDetection?: 'none' | 'client',
   update?: boolean,
   extendedErrors?: boolean,
+  /** Classic reg-cli's `-I/--ignoreChange` — governs the CLI's exit code
+   *  only. Accepted and silently dropped by `compare()` for drop-in
+   *  compat with reg-suit's `processor.ts:107`. */
+  ignoreChange?: boolean,
   urlPrefix?: string,
   matchingThreshold?: number,
   threshold?: number, // alias to thresholdRate.
@@ -192,6 +196,11 @@ export type CompareInput = {
   concurrency?: number,
   enableAntialias?: boolean,
   enableClientAdditionalDetection?: boolean,
+  /** Classic reg-cli's CLI-side x-img-diff extra detection pass. The
+   *  Wasm pipeline's diff already includes the equivalent classification,
+   *  so this is a no-op but accepted for drop-in compat with reg-suit's
+   *  `processor.ts:114`. */
+  enableCliAdditionalDetection?: boolean,
 };
 
 export type CompareOutput = {
@@ -209,9 +218,26 @@ export type CompareOutput = {
 
 /** Flags that `compare()` handles itself in JS; they are NOT forwarded to
  *  the Wasm binary. `extendedErrors` WAS here but now also feeds the
- *  Rust-side junit generator, so it's forwarded below via KEY_REMAP. */
-const CLI_ONLY_KEYS = new Set<keyof CompareInput>([
+ *  Rust-side junit generator, so it's forwarded below via KEY_REMAP.
+ *
+ *  `ignoreChange` and `enableCliAdditionalDetection` are stripped because
+ *  reg-suit unconditionally passes them (see
+ *  reg-viz/reg-suit `packages/reg-suit-core/src/processor.ts` `compare({…})`)
+ *  and the Rust clap layer doesn't recognise them — forwarding would abort
+ *  the binary with "unexpected argument". Semantically both are no-ops at
+ *  the library-event layer:
+ *    - `ignoreChange` only governs classic reg-cli's process exit code;
+ *      the EventEmitter surface never needed it.
+ *    - `enableCliAdditionalDetection` was classic's flag for running an
+ *      extra CLI-side x-img-diff pass; the Wasm port's diff pipeline
+ *      already produces the final pass/fail classification, so toggling
+ *      it changes nothing. (The *client*-side variant is handled via
+ *      `additionalDetection: 'client'` / the legacy
+ *      `enableClientAdditionalDetection: true` alias further down.) */
+const CLI_ONLY_KEYS = new Set<keyof CompareInput | string>([
   'update',
+  'ignoreChange',
+  'enableCliAdditionalDetection',
 ]);
 
 /** Library option names that must be forwarded to the Wasm binary under a
