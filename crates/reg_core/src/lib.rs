@@ -3,7 +3,6 @@ mod report;
 pub mod tracing_layer;
 
 use image_diff_rs::{DiffOption, DiffOutput, EncodeFormat, ImageDiffError};
-use path_clean::PathClean;
 use rayon::{prelude::*, ThreadPoolBuilder};
 use report::create_reports;
 use std::{
@@ -532,6 +531,60 @@ pub fn run_from_json(
     Ok(report.json)
 }
 
+// Recursively collect supported image files under `root`, returning paths
+// relative to `root` (not absolute).
+//
+// We avoid `glob::glob` here even though the upstream API would be a
+// one-liner. Rationale:
+//
+//   `glob::glob("deep/a/b/actual/**/*")` walks from `.` and opens each
+//   intermediate directory (`.`, `deep`, `deep/a`, …) to enumerate. Under
+//   our WASI sandbox the preopen we register is the common-ancestor
+//   directory (e.g. `./deep/a/b`), so `.` / `deep` / `deep/a` are OUTSIDE
+//   the sandbox and `read_dir` on them fails. glob swallows that error
+//   and returns 0 matches — silent data loss: reg.json comes back with
+//   every list empty, exit code 0, HTML report says "success".
+//
+// `std::fs::read_dir(root)` on the other hand starts at an absolute-ish
+// path that wasi-libc's `__wasilibc_find_relpath` CAN resolve to the
+// preopen fd directly (verified empirically). So a direct recursive
+// walker starting at `root` sidesteps the trap without needing any
+// sandbox widening.
+fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
+    let mut out = BTreeSet::new();
+    // `root` itself might not exist (e.g. a brand-new actual/ dir that a
+    // user forgot to populate). Classic reg-cli treats that as "no images
+    // here" rather than erroring out, so we do too.
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return out;
+    };
+    let mut stack: Vec<std::fs::ReadDir> = vec![entries];
+    while let Some(dir) = stack.last_mut() {
+        match dir.next() {
+            Some(Ok(entry)) => {
+                let p = entry.path();
+                let Ok(ft) = entry.file_type() else { continue };
+                if ft.is_dir() {
+                    if let Ok(sub) = std::fs::read_dir(&p) {
+                        stack.push(sub);
+                    }
+                } else if is_supported_extension(&p) {
+                    // Strip `root` so callers get repo-relative paths like
+                    // `sample.png` or `sub/sample.png`, matching what
+                    // glob used to produce after `.strip_prefix(root)`.
+                    if let Ok(rel) = p.strip_prefix(root) {
+                        out.insert(rel.to_path_buf());
+                    }
+                }
+            }
+            Some(Err(_)) | None => {
+                stack.pop();
+            }
+        }
+    }
+    out
+}
+
 #[instrument(fields(expected_dir = %expected_dir.as_ref().display(), actual_dir = %actual_dir.as_ref().display()))]
 pub(crate) fn find_images(
     expected_dir: impl AsRef<Path>,
@@ -540,31 +593,8 @@ pub(crate) fn find_images(
     let expected_dir = expected_dir.as_ref();
     let actual_dir = actual_dir.as_ref();
 
-    let expected: BTreeSet<PathBuf> = glob::glob(&(expected_dir.display().to_string() + "/**/*"))
-        .expect("the pattern should be correct.")
-        .flatten()
-        .filter_map(|p| {
-            is_supported_extension(&p).then_some(
-                p.clean()
-                    .strip_prefix(expected_dir.clean())
-                    .unwrap()
-                    .to_path_buf(),
-            )
-        })
-        .collect();
-
-    let actual: BTreeSet<PathBuf> = glob::glob(&(actual_dir.display().to_string() + "/**/*"))
-        .expect("the pattern should be correct.")
-        .flatten()
-        .filter_map(|p| {
-            is_supported_extension(&p).then_some(
-                p.clean()
-                    .strip_prefix(actual_dir.clean())
-                    .unwrap()
-                    .to_path_buf(),
-            )
-        })
-        .collect();
+    let expected: BTreeSet<PathBuf> = walk_images(expected_dir);
+    let actual: BTreeSet<PathBuf> = walk_images(actual_dir);
 
     let deleted: BTreeSet<PathBuf> = expected.difference(&actual).cloned().collect();
     let new: BTreeSet<PathBuf> = actual.difference(&expected).cloned().collect();
