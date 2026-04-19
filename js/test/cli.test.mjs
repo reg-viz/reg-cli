@@ -421,6 +421,98 @@ test('-X client emits worker.js + detector.wasm next to report', async () => {
   assert.ok(wasmStat.size > 100_000, 'detector.wasm should be the x-img-diff wasm');
 });
 
+// ---------------------------------------------------------------------------
+// Phase-H regression test: multi-segment preopen + sandboxed intermediate
+// directories
+// ---------------------------------------------------------------------------
+//
+// The bug being guarded here: `computeWasiSandbox` registers ONE preopen
+// covering the common ancestor of every touched dir. When that ancestor is
+// deep (e.g. `./packages/app/screenshots`), the filesystem walker inside
+// `reg_core::find_images` must not try to open intermediate dirs like `.`
+// or `packages/` (they're OUTSIDE the sandbox and return EBADF). Earlier
+// reg_core used `glob::glob`, which walks from cwd and trips on those
+// intermediate opendirs, silently returning ZERO matches — reg.json ends
+// up empty, exit code 0, HTML "success". CI goes green while no images
+// were actually compared.
+//
+// The fix in phase-H replaced `glob::glob` with a direct recursive
+// `std::fs::read_dir(actual_dir)` walker that starts AT the sandboxed
+// root instead of traversing to it. This test uses a deliberately deep
+// scratch path to make sure we never regress to the broken glob walker.
+//
+// If this test ever fires, images were silently dropped. Don't mark it
+// as flaky — go read `walk_images` in `crates/reg_core/src/lib.rs` and
+// make sure it's still being called instead of falling back to
+// pattern-based globbing.
+test('multi-segment positional dirs still discover images', async () => {
+  // Scratch path with ≥3 segments so the preopen ends up multi-segment
+  // (the other tests use `.libtest-*` at the repo root which is already
+  // single-segment and wouldn't exercise the previously-broken path).
+  const leaf = `.phase-h-deep/${process.pid}-${++runId}/nested/level`;
+  const actualRel = `${leaf}/actual`;
+  const expectedRel = `${leaf}/expected`;
+  const diffRel = `${leaf}/diff`;
+  const jsonRel = `${leaf}/reg.json`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'sample0.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
+    join(REPO, expectedRel, 'sample0.png'),
+  );
+
+  try {
+    await runCli([actualRel, expectedRel, diffRel, '-J', jsonRel, '-I']);
+    const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+    // The critical assertion: images ARE discovered despite the deep path.
+    // If this ever goes back to `[]`, someone reintroduced a walker that
+    // opens intermediate dirs outside the WASI preopen.
+    assert.deepEqual(report.actualItems, ['sample0.png']);
+    assert.deepEqual(report.expectedItems, ['sample0.png']);
+  } finally {
+    await rm(join(REPO, '.phase-h-deep'), { recursive: true, force: true });
+  }
+});
+
+test('multi-segment positional dirs: nested subdirs still discover images', async () => {
+  // Extra guard: images under a SUBDIRECTORY of actual_dir (not just top
+  // level). The walker must recurse correctly, and the returned paths
+  // must be relative to actual_dir (`sub/a.png`, not an absolute path).
+  const leaf = `.phase-h-subdir/${process.pid}-${++runId}/nested`;
+  const actualRel = `${leaf}/actual`;
+  const expectedRel = `${leaf}/expected`;
+  await mkdir(join(REPO, actualRel, 'sub'), { recursive: true });
+  await mkdir(join(REPO, expectedRel, 'sub'), { recursive: true });
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'sub/a.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
+    join(REPO, expectedRel, 'sub/a.png'),
+  );
+
+  try {
+    await runCli([
+      actualRel,
+      expectedRel,
+      `${leaf}/diff`,
+      '-J',
+      `${leaf}/reg.json`,
+      '-I',
+    ]);
+    const report = JSON.parse(await readFile(join(REPO, leaf, 'reg.json'), 'utf8'));
+    // Path should be actual_dir-relative with forward slashes.
+    assert.deepEqual(report.actualItems, ['sub/a.png']);
+  } finally {
+    await rm(join(REPO, '.phase-h-subdir'), { recursive: true, force: true });
+  }
+});
+
 test('-U prunes deleted baselines and keeps passed files untouched', async () => {
   // Seed a scenario: expected has stale.png (not in actual) → deleted.
   // actual has sample0.png differing from expected → failed/changed.

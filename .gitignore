@@ -4,6 +4,8 @@ report/ui
 /test/__workspace__/*
 /js/test/__workspace__/
 /.libtest-*
+/.phase-h-*
+/.phase-h-subdir/
 .DS_Store
 report.html
 /diff/*
