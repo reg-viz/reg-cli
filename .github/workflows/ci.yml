@@ -3,15 +3,58 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: actions/setup-node@master
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 18
-      - name: yarn
-        run: yarn --frozen-lockfile
+          version: 10.26.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: install
+        run: pnpm install --frozen-lockfile
       - name: flow
-        run: yarn run flow
+        run: pnpm run flow
       - name: test
-        run: yarn run test
+        run: pnpm run test
+
+  # Wasm wrapper: uses the committed js/reg.wasm so we don't pay the
+  # wasi-sdk toolchain cost on every PR. Rust unit tests (`cargo test`) and
+  # the JS CLI/library integration tests (`node:test` via `pnpm test` in
+  # `js/`) both run here and cover junit/reg.json schema compat, -F/-X/-E,
+  # and the `compare()` EventEmitter surface.
+  wasm-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # `reg_core` embeds `report/ui/dist/{report.js,style.css}` via
+      # `include_str!`, so `cargo test` fails before we even compile unless
+      # we materialise them first. The root `build:report` script clones
+      # `reg-viz/reg-cli-report-ui` at a pinned tag and builds it with
+      # yarn (enabled via corepack in setup-node).
+      - name: enable corepack (yarn for report-ui build)
+        run: corepack enable
+      - name: build report-ui (report.js + style.css)
+        run: sh ./scripts/build-ui.sh v0.3.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: cargo test (reg_core)
+        run: cargo test -p reg_core --lib
+      - name: js install
+        working-directory: js
+        run: pnpm install --frozen-lockfile
+      - name: js build (dist + bundle reg.wasm)
+        working-directory: js
+        run: pnpm build
+      - name: js test (CLI + library)
+        working-directory: js
+        run: pnpm test

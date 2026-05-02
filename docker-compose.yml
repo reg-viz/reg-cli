@@ -1,0 +1,30 @@
+# Docker Compose configuration for local development with Jaeger tracing
+#
+# Usage:
+#   docker compose up -d
+#
+# Then run reg-cli with tracing enabled:
+#   OTEL_ENABLED=true OTEL_DEBUG=true node js/dist/cli.mjs ...
+#
+# View traces at: http://localhost:16686
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: reg-cli-jaeger
+    restart: unless-stopped
+    ports:
+      # Jaeger UI
+      - "16686:16686"
+      # OTLP HTTP receiver (OpenTelemetry Protocol)
+      - "4318:4318"
+      # OTLP gRPC receiver
+      - "4317:4317"
+      # Jaeger thrift HTTP receiver (legacy)
+      - "14268:14268"
+      # Jaeger thrift compact (UDP)
+      - "6831:6831/udp"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=info
+

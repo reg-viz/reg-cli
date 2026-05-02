@@ -11,3 +11,4 @@ path = "src/main.rs"
 reg_core = { path = "../reg_core" }
 clap = { version = "4", features = ["derive"] }
 serde_json = { version = "1.0" }
+tracing = "0.1"

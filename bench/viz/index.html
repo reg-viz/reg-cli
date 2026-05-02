@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>reg-cli — JS vs Wasm trace waterfall</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #0b0f17;
+        --panel: #111826;
+        --panel-2: #182233;
+        --fg: #e6edf6;
+        --fg-dim: #8ea0b5;
+        --accent: #7dd3fc;
+        --accent-2: #f472b6;
+        --warn: #fbbf24;
+        --error: #f87171;
+        --grid: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * { box-sizing: border-box; }
+      html, body { background: var(--bg); color: var(--fg); margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+      body { font-size: 14px; line-height: 1.5; }
+
+      header {
+        padding: 24px 32px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      header h1 .tag { color: var(--accent); }
+      header .meta { font-size: 12px; color: var(--fg-dim); }
+      header .meta code {
+        background: var(--panel-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        padding: 16px 32px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+      .card .label { color: var(--fg-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+      .card .value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 600; margin-top: 4px; }
+      .card .sub { color: var(--fg-dim); font-size: 12px; margin-top: 2px; }
+      .js-color { color: var(--accent); }
+      .wasm-color { color: var(--accent-2); }
+
+      .controls {
+        padding: 8px 32px 0;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--fg-dim);
+      }
+      .controls input[type='text'] {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font: inherit;
+        min-width: 220px;
+      }
+      .controls label { display: inline-flex; gap: 6px; align-items: center; }
+      .controls .ctl-btn {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .controls .ctl-btn:hover { background: #253249; }
+
+      section.viz {
+        padding: 16px 32px 48px;
+      }
+      section.viz h2 {
+        font-size: 16px;
+        margin: 24px 0 8px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      section.viz h2 .subtle { color: var(--fg-dim); font-weight: 400; font-size: 12px; margin-left: 8px; }
+
+      .waterfall {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        overflow: hidden;
+      }
+      .waterfall svg { width: 100%; display: block; }
+      .row-label {
+        font-family: 'JetBrains Mono', monospace;
+        fill: var(--fg);
+      }
+      .row-label.dim { fill: var(--fg-dim); }
+      .bar-group:hover .bar { filter: brightness(1.2); }
+      .axis line { stroke: var(--grid); }
+      .axis text { fill: var(--fg-dim); font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+
+      /* tooltip */
+      .tooltip {
+        position: fixed;
+        background: rgba(15, 22, 33, 0.96);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 120ms;
+        max-width: 420px;
+        z-index: 10;
+      }
+      .tooltip.visible { opacity: 1; }
+      .tooltip .name { font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+      .tooltip .dur { color: var(--warn); }
+      .tooltip table { border-collapse: collapse; margin-top: 4px; }
+      .tooltip td { padding: 1px 6px 1px 0; color: var(--fg-dim); font-family: 'JetBrains Mono', monospace; }
+      .tooltip td.v { color: var(--fg); }
+
+      /* top breakdown table */
+      .breakdown-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .breakdown {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .breakdown h3 { margin: 0 0 10px; font-size: 14px; }
+      .breakdown table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      .breakdown th, .breakdown td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+      .breakdown th { color: var(--fg-dim); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+      .breakdown td.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+      .breakdown td.name { font-family: 'JetBrains Mono', monospace; }
+
+      .bar-track {
+        position: relative;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+      .bar-track .fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #c084fc); }
+      .wasm .bar-track .fill { background: linear-gradient(90deg, var(--accent-2), var(--warn)); }
+
+      .legend {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--fg-dim);
+        margin-left: 8px;
+      }
+      .legend .dot { width: 10px; height: 10px; display: inline-block; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+      .empty-state {
+        padding: 48px;
+        text-align: center;
+        color: var(--fg-dim);
+        background: var(--panel);
+        border-radius: 10px;
+        border: 1px dashed var(--border);
+      }
+
+      footer {
+        padding: 24px 32px;
+        color: var(--fg-dim);
+        font-size: 11px;
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><span class="tag">reg-cli</span> — JS vs Wasm trace waterfall</h1>
+      <nav style="font-size: 13px;">
+        <a href="./index.html" style="color:var(--fg); text-decoration:none; margin-right:12px;">individual view</a>
+        <a href="./compare.html" style="color:var(--fg-dim); text-decoration:none;">stacked compare</a>
+      </nav>
+      <div class="meta" style="margin-left:auto;">
+        source: <code id="source-label">bench/out/traces.json</code>
+      </div>
+    </header>
+
+    <div class="summary" id="summary"></div>
+
+    <div class="controls">
+      <label>
+        filter:
+        <input type="text" id="filter" placeholder="span name substring (regex OK)" />
+      </label>
+      <label>
+        <input type="checkbox" id="showPeers" checked />
+        show Rust span attributes
+      </label>
+      <button type="button" id="collapseAll" class="ctl-btn">collapse all</button>
+      <button type="button" id="expandAll" class="ctl-btn">expand all</button>
+      <div class="legend">
+        <span><span class="dot" style="background: #7dd3fc"></span>JS host</span>
+        <span><span class="dot" style="background: #c084fc"></span>wasm bridge</span>
+        <span><span class="dot" style="background: #f472b6"></span>Rust core</span>
+        <span><span class="dot" style="background: #fbbf24"></span>image-diff-rs</span>
+      </div>
+    </div>
+
+    <section class="viz">
+      <h2>
+        JS (classic)
+        <span class="subtle">service=<code>reg-cli-js</code></span>
+      </h2>
+      <div class="waterfall" id="wf-js"></div>
+
+      <h2>
+        Wasm
+        <span class="subtle">service=<code>reg-cli</code> (+ JS bridge spans)</span>
+      </h2>
+      <div class="waterfall" id="wf-wasm"></div>
+
+      <h2>オペレーション集計</h2>
+      <div class="breakdown-grid">
+        <div class="breakdown js">
+          <h3>JS</h3>
+          <div id="bd-js"></div>
+        </div>
+        <div class="breakdown wasm">
+          <h3>Wasm</h3>
+          <div id="bd-wasm"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="tooltip" id="tip"></div>
+
+    <footer>
+      Generated from Jaeger OTLP traces · JS (<code>reg-cli-js</code>) / Wasm (<code>reg-cli</code>) ·
+      <code>bench/fixtures</code>
+    </footer>
+
+    <script>
+      // ---- Data loading -------------------------------------------------
+      // Try ../out/traces.json first (when served from bench/), then fall back
+      // to traces.json (when placed alongside this HTML).
+      const DATA_URLS = ['../out/traces.json', 'traces.json', 'out/traces.json'];
+
+      async function load() {
+        let lastErr = null;
+        for (const url of DATA_URLS) {
+          try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) { lastErr = new Error(res.statusText); continue; }
+            const j = await res.json();
+            document.getElementById('source-label').textContent = url;
+            render(j);
+            return;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        document.getElementById('wf-js').innerHTML =
+          `<div class="empty-state">traces.json not found.<br>Run <code>./export-traces.sh</code> first.<br>Tried: ${DATA_URLS.map((u) => `<code>${u}</code>`).join(', ')}<br><br>(${lastErr?.message || ''})</div>`;
+      }
+
+      // ---- Span helpers --------------------------------------------------
+      const classifySpan = (s) => {
+        const n = s.operationName;
+        if (n.startsWith('main.')) return 'host';
+        if (n.startsWith('entry.') || n.startsWith('worker.')) return 'bridge';
+        if (
+          n.startsWith('decode_') ||
+          n.startsWith('encode_') ||
+          n === 'compare_pixels' ||
+          n === 'image_diff' ||
+          n === 'expand' ||
+          n === 'load_from_memory' ||
+          n === 'to_rgba8'
+        )
+          return 'imgdiff';
+        return 'rust';
+      };
+
+      // Collapsed span IDs (shared across traces). Toggled from the waterfall row.
+      const collapsed = new Set();
+
+      const COLORS = {
+        host:    '#7dd3fc',  // JS host
+        bridge:  '#c084fc',  // wasm bridge
+        rust:    '#f472b6',  // Rust core (reg_core)
+        imgdiff: '#fbbf24',  // image-diff-rs
+        jsclassic: '#7dd3fc',
+      };
+
+      function normalizeTrace(t, service) {
+        if (!t) return null;
+        const spans = t.spans.map((s) => ({
+          id: s.spanID,
+          parent:
+            (s.references || [])
+              .filter((r) => r.refType === 'CHILD_OF')
+              .map((r) => r.spanID)[0] || null,
+          name: s.operationName,
+          start: s.startTime, // microseconds since epoch
+          duration: s.duration, // microseconds
+          end: s.startTime + s.duration,
+          tags: Object.fromEntries((s.tags || []).map((t) => [t.key, t.value])),
+          service: (t.processes && t.processes[s.processID] && t.processes[s.processID].serviceName) || service,
+        }));
+        const minStart = Math.min(...spans.map((s) => s.start));
+        const maxEnd = Math.max(...spans.map((s) => s.end));
+        const total = maxEnd - minStart;
+        return { spans, minStart, maxEnd, total };
+      }
+
+      // ---- Summary cards -------------------------------------------------
+      function renderSummary(js, wasm) {
+        const fmt = (us) => (us / 1000).toFixed(1) + ' ms';
+        const el = document.getElementById('summary');
+        const jsTotal = js ? js.total : null;
+        const wasmTotal = wasm ? wasm.total : null;
+        const rustBlock = wasm
+          ? wasm.spans
+              .filter((s) => ['reg-cli', 'reg_cli_main', 'run'].includes(s.name))
+              .reduce((m, s) => (s.duration > m ? s.duration : m), 0)
+          : null;
+        const ratio =
+          jsTotal && wasmTotal ? (wasmTotal / jsTotal).toFixed(2) + '×' : '—';
+
+        const cards = [
+          {
+            label: 'JS total',
+            value: jsTotal != null ? fmt(jsTotal) : '—',
+            cls: 'js-color',
+            sub: js ? `${js.spans.length} spans` : '',
+          },
+          {
+            label: 'Wasm total',
+            value: wasmTotal != null ? fmt(wasmTotal) : '—',
+            cls: 'wasm-color',
+            sub: wasm ? `${wasm.spans.length} spans` : '',
+          },
+          {
+            label: 'Wasm / JS',
+            value: ratio,
+            sub: 'wall-clock ratio',
+          },
+          {
+            label: 'Rust core (of Wasm)',
+            value: rustBlock != null ? fmt(rustBlock) : '—',
+            sub: 'reg_cli_main or run',
+          },
+        ];
+        el.innerHTML = cards
+          .map(
+            (c) => `
+            <div class="card">
+              <div class="label">${c.label}</div>
+              <div class="value ${c.cls || ''}">${c.value}</div>
+              <div class="sub">${c.sub}</div>
+            </div>`
+          )
+          .join('');
+      }
+
+      // ---- Waterfall (SVG) ----------------------------------------------
+      function renderWaterfall(containerId, trace) {
+        const el = document.getElementById(containerId);
+        if (!trace) {
+          el.innerHTML = `<div class="empty-state">no trace for this service</div>`;
+          return;
+        }
+        const filterEl = document.getElementById('filter');
+        const q = filterEl.value.trim();
+        let filteredIds = new Set(trace.spans.map((s) => s.id));
+        if (q) {
+          let re;
+          try { re = new RegExp(q, 'i'); } catch { re = new RegExp(q.replace(/[^a-z0-9._-]/gi, ''), 'i'); }
+          filteredIds = new Set(trace.spans.filter((s) => re.test(s.name)).map((s) => s.id));
+        }
+
+        // Build tree & flatten to ordered list, honouring `collapsed` set.
+        const byId = new Map(trace.spans.map((s) => [s.id, s]));
+        const children = new Map();
+        const roots = [];
+        for (const s of trace.spans) {
+          if (s.parent && byId.has(s.parent)) {
+            if (!children.has(s.parent)) children.set(s.parent, []);
+            children.get(s.parent).push(s);
+          } else {
+            roots.push(s);
+          }
+        }
+        // Sort siblings by start time
+        for (const arr of children.values()) arr.sort((a, b) => a.start - b.start);
+        roots.sort((a, b) => a.start - b.start);
+
+        const flat = [];
+        function walk(span, depth) {
+          const kids = children.get(span.id) || [];
+          const hasChildren = kids.length > 0;
+          flat.push({ ...span, depth, hasChildren });
+          if (hasChildren && !collapsed.has(span.id)) {
+            for (const c of kids) walk(c, depth + 1);
+          }
+        }
+        for (const r of roots) walk(r, 0);
+
+        // Layout constants
+        const ROW_H = 18;
+        const LABEL_W = 260;
+        const MARGIN = { top: 28, right: 12, bottom: 8, left: 8 };
+        const W = el.clientWidth - 2;
+        const barW = Math.max(300, W - LABEL_W - MARGIN.left - MARGIN.right);
+        const H = MARGIN.top + flat.length * ROW_H + MARGIN.bottom;
+
+        const tMin = trace.minStart;
+        const tRange = trace.total || 1;
+        const tScale = (t) => ((t - tMin) / tRange) * barW;
+
+        // Axis ticks
+        const tickCount = 8;
+        const ticks = [];
+        for (let i = 0; i <= tickCount; i++) {
+          const t = tMin + (tRange * i) / tickCount;
+          ticks.push({ x: LABEL_W + tScale(t), label: ((t - tMin) / 1000).toFixed(0) + 'ms' });
+        }
+
+        const svg = [];
+        svg.push(`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">`);
+
+        // grid
+        svg.push(`<g class="axis">`);
+        for (const tk of ticks) {
+          svg.push(`<line x1="${tk.x}" x2="${tk.x}" y1="${MARGIN.top - 18}" y2="${H}" />`);
+          svg.push(`<text x="${tk.x + 2}" y="${MARGIN.top - 6}" font-size="10">${tk.label}</text>`);
+        }
+        svg.push(`</g>`);
+
+        // bars
+        for (let i = 0; i < flat.length; i++) {
+          const s = flat[i];
+          const x = LABEL_W + tScale(s.start);
+          const w = Math.max(1, tScale(s.end) - tScale(s.start));
+          const y = MARGIN.top + i * ROW_H;
+          const opaque = filteredIds.has(s.id);
+          const color = COLORS[classifySpan(s)] || '#888';
+          const indent = 6 + s.depth * 10;
+          const isCollapsed = collapsed.has(s.id);
+          const arrow = s.hasChildren ? (isCollapsed ? '▸ ' : '▾ ') : '  ';
+          const label = arrow + s.name;
+          const labelClass = opaque ? 'row-label' : 'row-label dim';
+          const barOpacity = opaque ? 0.9 : 0.18;
+          const toggleAttr = s.hasChildren ? 'data-toggle="1"' : '';
+          const cursorStyle = s.hasChildren ? 'cursor:pointer' : '';
+
+          svg.push(
+            `<g class="bar-group" data-id="${s.id}" data-service="${s.service}" ${toggleAttr}>`,
+          );
+          if (s.hasChildren) {
+            svg.push(`<rect x="0" y="${y}" width="${LABEL_W}" height="${ROW_H}" fill="transparent" style="${cursorStyle}" class="row-hit" />`);
+          }
+          svg.push(
+            `<text class="${labelClass}" x="${indent}" y="${y + 13}" font-size="11" style="${cursorStyle}; pointer-events: none;">${escapeHtml(label.slice(0, 44))}</text>`,
+          );
+          svg.push(
+            `<rect class="bar" x="${x}" y="${y + 3}" width="${w}" height="${ROW_H - 6}" rx="2" ry="2" fill="${color}" fill-opacity="${barOpacity}"><title>${escapeHtml(s.name)}: ${(s.duration / 1000).toFixed(2)}ms</title></rect>`,
+          );
+          // duration badge on bar
+          if (w > 48) {
+            svg.push(
+              `<text x="${x + 4}" y="${y + 13}" font-size="10" fill="#111826" font-family="JetBrains Mono" style="pointer-events: none;">${(s.duration / 1000).toFixed(1)}ms</text>`,
+            );
+          }
+          svg.push(`</g>`);
+        }
+
+        svg.push(`</svg>`);
+        el.innerHTML = svg.join('');
+
+        // tooltips + collapse toggle
+        el.querySelectorAll('.bar-group').forEach((g) => {
+          if (g.dataset.toggle) {
+            const hit = g.querySelector('.row-hit');
+            if (hit) {
+              hit.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const id = g.dataset.id;
+                if (collapsed.has(id)) collapsed.delete(id);
+                else collapsed.add(id);
+                rerender();
+              });
+            }
+          }
+          g.addEventListener('mousemove', (ev) => {
+            const s = byId.get(g.dataset.id);
+            const tip = document.getElementById('tip');
+            const showTags = document.getElementById('showPeers').checked;
+            const tags = showTags
+              ? Object.entries(s.tags)
+                  .filter(([k]) => !k.startsWith('otel.') && k !== 'rust.span_id')
+                  .map(
+                    ([k, v]) =>
+                      `<tr><td>${escapeHtml(k)}</td><td class="v">${escapeHtml(String(v))}</td></tr>`,
+                  )
+                  .join('')
+              : '';
+            tip.innerHTML = `
+              <div class="name">${escapeHtml(s.name)}</div>
+              <div>service: ${escapeHtml(s.service)} · class: ${classifySpan(s)}</div>
+              <div class="dur">${(s.duration / 1000).toFixed(3)} ms</div>
+              <table>${tags}</table>`;
+            tip.style.left = ev.clientX + 12 + 'px';
+            tip.style.top = ev.clientY + 12 + 'px';
+            tip.classList.add('visible');
+          });
+          g.addEventListener('mouseleave', () => {
+            document.getElementById('tip').classList.remove('visible');
+          });
+        });
+      }
+
+      // ---- Breakdown table by operation ---------------------------------
+      function renderBreakdown(elId, trace) {
+        const el = document.getElementById(elId);
+        if (!trace) {
+          el.innerHTML = `<div class="empty-state">—</div>`;
+          return;
+        }
+        const agg = new Map();
+        for (const s of trace.spans) {
+          const a = agg.get(s.name) || { count: 0, total: 0, self: 0, max: 0, cls: classifySpan(s) };
+          a.count++;
+          a.total += s.duration;
+          if (s.duration > a.max) a.max = s.duration;
+          agg.set(s.name, a);
+        }
+        const rows = Array.from(agg.entries())
+          .sort((a, b) => b[1].total - a[1].total)
+          .slice(0, 20);
+        const max = rows.length ? rows[0][1].total : 1;
+        el.innerHTML = `
+          <table>
+            <thead>
+              <tr><th>operation</th><th class="num">count</th><th class="num">Σ total</th><th class="num">max</th></tr>
+            </thead>
+            <tbody>
+              ${rows
+                .map(
+                  ([name, a]) => `
+                <tr>
+                  <td class="name" title="${escapeHtml(name)}">
+                    ${escapeHtml(truncate(name, 40))}
+                    <div class="bar-track"><div class="fill" style="width:${((a.total / max) * 100).toFixed(1)}%;background:${COLORS[a.cls] || '#888'}"></div></div>
+                  </td>
+                  <td class="num">${a.count}</td>
+                  <td class="num">${(a.total / 1000).toFixed(2)} ms</td>
+                  <td class="num">${(a.max / 1000).toFixed(2)} ms</td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>`;
+      }
+
+      // ---- Entry ---------------------------------------------------------
+      let jsTrace = null;
+      let wasmTrace = null;
+
+      function render(j) {
+        jsTrace = normalizeTrace(j.js, 'reg-cli-js');
+        wasmTrace = normalizeTrace(j.wasm, 'reg-cli');
+        rerender();
+      }
+      function rerender() {
+        renderSummary(jsTrace, wasmTrace);
+        renderWaterfall('wf-js', jsTrace);
+        renderWaterfall('wf-wasm', wasmTrace);
+        renderBreakdown('bd-js', jsTrace);
+        renderBreakdown('bd-wasm', wasmTrace);
+      }
+
+      // ---- Utils ---------------------------------------------------------
+      function escapeHtml(s) {
+        return String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+      function truncate(s, n) {
+        return s.length <= n ? s : s.slice(0, n - 1) + '…';
+      }
+
+      document.getElementById('filter').addEventListener('input', rerender);
+      document.getElementById('showPeers').addEventListener('change', rerender);
+
+      document.getElementById('collapseAll').addEventListener('click', () => {
+        const parents = new Set();
+        for (const t of [jsTrace, wasmTrace]) {
+          if (!t) continue;
+          for (const s of t.spans) if (s.parent) parents.add(s.parent);
+        }
+        for (const id of parents) collapsed.add(id);
+        rerender();
+      });
+      document.getElementById('expandAll').addEventListener('click', () => {
+        collapsed.clear();
+        rerender();
+      });
+      window.addEventListener('resize', () => setTimeout(rerender, 100));
+
+      load();
+    </script>
+  </body>
+</html>

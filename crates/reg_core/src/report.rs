@@ -3,9 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use bytes::Bytes;
 use mustache::MapBuilder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::dir::resolve_dir;
 
@@ -29,11 +30,11 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) expected_dir: &'a Path,
     pub(crate) diff_dir: &'a Path,
     pub(crate) report: &'a Path,
-    // junitReport: string,
     // extendedErrors: boolean,
     pub(crate) url_prefix: Option<url::Url>,
-    // enableClientAdditionalDetection: boolean,
+    pub(crate) enable_client_additional_detection: bool,
     pub(crate) from_json: bool,
+    pub(crate) diff_image_extention: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,7 +80,7 @@ pub(crate) struct ReportJsonInput {
     ximgdiff_config: XimgdiffConfig,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JsonReport {
     pub failed_items: BTreeSet<PathBuf>,
@@ -109,18 +110,34 @@ pub(crate) struct Reports {
     pub(crate) html: Option<Bytes>,
 }
 
-// TODO: please validate input on cli input.
+/// Render an image directory path for a reg.json entry, optionally resolved
+/// against `url` when `urlPrefix` was supplied. Falls back to the bare
+/// relative path on unjoinable URLs (e.g. malformed prefix, non-hierarchical
+/// scheme) rather than panicking — classic reg-cli lets garbage
+/// url-prefixes through silently, so we do the same and log. `urlPrefix` is
+/// validated at the clap layer (it takes `url::Url` directly), so this
+/// fallback is defensive and almost never exercised.
 pub fn create_dir_for_json_report<'a>(
     json: &'a Path,
     dir: &'a Path,
     url: Option<url::Url>,
 ) -> String {
+    let relative = resolve_dir(json, dir).to_string_lossy().to_string();
     if let Some(url) = url {
-        url.join(&resolve_dir(json, dir).to_string_lossy())
-            .expect("TODO:")
-            .to_string()
+        match url.join(&relative) {
+            Ok(u) => u.to_string(),
+            Err(e) => {
+                tracing::warn!(
+                    url = %url,
+                    relative = %relative,
+                    error = %e,
+                    "url_prefix.join failed — falling back to relative path in reg.json",
+                );
+                relative
+            }
+        }
     } else {
-        resolve_dir(json, dir).to_string_lossy().to_string()
+        relative
     }
 }
 
@@ -151,6 +168,14 @@ pub fn create_reports(input: ReportInput) -> Reports {
         let template = include_str!("../../../template/template.html");
         let js = include_str!("../../../report/ui/dist/report.js");
         let css = include_str!("../../../report/ui/dist/style.css");
+        // Favicon payloads are committed PNG bytes under `report/assets/`.
+        // Classic reg-cli embeds them as data URLs too
+        // (`src/report.js::loadFaviconAsDataURL`) so the report is a single
+        // self-contained HTML file — no separate asset fetch at view time.
+        let favicon_success: &[u8] =
+            include_bytes!("../../../report/assets/favicon_success.png");
+        let favicon_failure: &[u8] =
+            include_bytes!("../../../report/assets/favicon_failure.png");
 
         let json = ReportJsonInput {
             r#type: if input.failed.is_empty() {
@@ -185,18 +210,30 @@ pub fn create_reports(input: ReportInput) -> Reports {
             } else {
                 resolve_dir(report, input.diff_dir).into()
             },
-            diff_image_extention: "webp",
+            diff_image_extention: input.diff_image_extention,
             ximgdiff_config: XimgdiffConfig {
-                enabled: false,
-                worker_url: "TODO:".to_string(),
+                enabled: input.enable_client_additional_detection,
+                worker_url: "./worker.js".to_string(),
             },
         };
 
-        // TODO: add favivon data
-        //     faviconData: loadFaviconAsDataURL(faviconType),
+        // Render with base64-encoded PNG bytes so the `<link rel="shortcut
+        // icon" href="{{&faviconData}}">` placeholder gets a self-contained
+        // data URL. Choice of success/failure favicon mirrors
+        // `json.type == Success/Danger` (i.e. presence of failures/new/deleted
+        // in the report), same rule classic uses.
+        let favicon_bytes = match &json.r#type {
+            ReportStatus::Success => favicon_success,
+            ReportStatus::Danger => favicon_failure,
+        };
+        let favicon_data = format!(
+            "data:image/png;base64,{}",
+            BASE64_STANDARD.encode(favicon_bytes)
+        );
         let data = MapBuilder::new()
             .insert_str("js", js)
             .insert_str("css", css)
+            .insert_str("faviconData", favicon_data)
             .insert_str(
                 "report",
                 serde_json::to_string(&json).expect("should convert."),
@@ -213,5 +250,255 @@ pub fn create_reports(input: ReportInput) -> Reports {
     Reports {
         json: json_report,
         html: html_report,
+    }
+}
+
+/// Build a JUnit XML document byte-compatible with classic reg-cli's
+/// `src/report.js` output (via `xmlbuilder2`).
+///
+/// ```xml
+/// <?xml version="1.0"?>
+/// <testsuites name="reg-cli tests" tests="N" failures="M">
+///   <testsuite name="reg-cli" tests="N" failures="M">
+///     <testcase name="passed.png"/>
+///     <testcase name="failed.png">
+///       <failure message="failed"/>
+///     </testcase>
+///   </testsuite>
+/// </testsuites>
+/// ```
+///
+/// Semantics (match classic exactly):
+///   - `failedItems` always emit `<failure message="failed"/>`.
+///   - `newItems` / `deletedItems` become `<failure message="newItem"|"deletedItem"/>`
+///     ONLY when `extended_errors` is set; otherwise they are reported as
+///     passed testcases.
+///   - `passedItems` emit bare `<testcase name="..."/>`.
+///   - `tests` / `failures` attributes appear on BOTH `<testsuites>` and the
+///     nested `<testsuite>`.
+///   - Output is pretty-printed with 2-space indent, no `encoding=`
+///     declaration, no trailing newline (xmlbuilder2's `prettyPrint: true`).
+pub(crate) fn build_junit_xml(report: &JsonReport, extended_errors: bool) -> String {
+    fn esc(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+    }
+
+    // Classify items. In non-extended mode, new/deleted are treated as
+    // successful tests so CI doesn't go red on baseline additions.
+    let mut passed_names: Vec<String> = Vec::new();
+    let mut failure_cases: Vec<(String, &'static str)> = Vec::new();
+
+    for p in &report.failed_items {
+        failure_cases.push((p.display().to_string(), "failed"));
+    }
+    for p in &report.new_items {
+        if extended_errors {
+            failure_cases.push((p.display().to_string(), "newItem"));
+        } else {
+            passed_names.push(p.display().to_string());
+        }
+    }
+    for p in &report.deleted_items {
+        if extended_errors {
+            failure_cases.push((p.display().to_string(), "deletedItem"));
+        } else {
+            passed_names.push(p.display().to_string());
+        }
+    }
+    for p in &report.passed_items {
+        passed_names.push(p.display().to_string());
+    }
+
+    let failures = failure_cases.len();
+    let tests = passed_names.len() + failures;
+
+    // Classic's testcase ordering is: failed, new, deleted, passed (the order
+    // classic's forEach loop visits them). `failure_cases` already holds
+    // failed→new→deleted in that order; `passed_names` holds
+    // new-treated-as-passed → deleted-as-passed → passed in order.
+    let mut cases: Vec<String> = Vec::with_capacity(tests);
+    for p in &report.failed_items {
+        cases.push(format!(
+            "    <testcase name=\"{}\">\n      <failure message=\"failed\"/>\n    </testcase>",
+            esc(&p.display().to_string())
+        ));
+    }
+    for p in &report.new_items {
+        if extended_errors {
+            cases.push(format!(
+                "    <testcase name=\"{}\">\n      <failure message=\"newItem\"/>\n    </testcase>",
+                esc(&p.display().to_string())
+            ));
+        } else {
+            cases.push(format!(
+                "    <testcase name=\"{}\"/>",
+                esc(&p.display().to_string())
+            ));
+        }
+    }
+    for p in &report.deleted_items {
+        if extended_errors {
+            cases.push(format!(
+                "    <testcase name=\"{}\">\n      <failure message=\"deletedItem\"/>\n    </testcase>",
+                esc(&p.display().to_string())
+            ));
+        } else {
+            cases.push(format!(
+                "    <testcase name=\"{}\"/>",
+                esc(&p.display().to_string())
+            ));
+        }
+    }
+    for p in &report.passed_items {
+        cases.push(format!(
+            "    <testcase name=\"{}\"/>",
+            esc(&p.display().to_string())
+        ));
+    }
+
+    // No encoding attr, no trailing newline — matches xmlbuilder2's default
+    // when created with `{ version: '1.0' }` and rendered with `prettyPrint: true`.
+    if cases.is_empty() {
+        format!(
+            "<?xml version=\"1.0\"?>\n<testsuites name=\"reg-cli tests\" tests=\"{tests}\" failures=\"{failures}\">\n  <testsuite name=\"reg-cli\" tests=\"{tests}\" failures=\"{failures}\"/>\n</testsuites>"
+        )
+    } else {
+        format!(
+            "<?xml version=\"1.0\"?>\n<testsuites name=\"reg-cli tests\" tests=\"{tests}\" failures=\"{failures}\">\n  <testsuite name=\"reg-cli\" tests=\"{tests}\" failures=\"{failures}\">\n{cases}\n  </testsuite>\n</testsuites>",
+            cases = cases.join("\n"),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mk_report(
+        passed: &[&str],
+        failed: &[&str],
+        new: &[&str],
+        deleted: &[&str],
+    ) -> JsonReport {
+        let to_set = |s: &[&str]| -> BTreeSet<PathBuf> {
+            s.iter().map(|x| PathBuf::from(x)).collect()
+        };
+        JsonReport {
+            passed_items: to_set(passed),
+            failed_items: to_set(failed),
+            new_items: to_set(new),
+            deleted_items: to_set(deleted),
+            // The rest are irrelevant to junit output; empty is fine.
+            expected_items: BTreeSet::new(),
+            actual_items: BTreeSet::new(),
+            diff_items: BTreeSet::new(),
+            actual_dir: String::new(),
+            expected_dir: String::new(),
+            diff_dir: String::new(),
+        }
+    }
+
+    // Reference bytes come from classic reg-cli (src/report.js via
+    // xmlbuilder2, { version: '1.0' }, prettyPrint: true). The
+    // `test/cli.test.mjs` snapshot tests pin these exact bytes, so the
+    // expected strings below are the same ones the classic test suite
+    // asserts on.
+
+    #[test]
+    fn junit_single_failure() {
+        let r = mk_report(&[], &["sample(cal).png"], &[], &[]);
+        let xml = build_junit_xml(&r, /*extended=*/ false);
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="1" failures="1">
+  <testsuite name="reg-cli" tests="1" failures="1">
+    <testcase name="sample(cal).png">
+      <failure message="failed"/>
+    </testcase>
+  </testsuite>
+</testsuites>"#
+        );
+    }
+
+    #[test]
+    fn junit_passed_and_failed_mix() {
+        let r = mk_report(&["ok.png"], &["bad.png"], &[], &[]);
+        let xml = build_junit_xml(&r, false);
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="2" failures="1">
+  <testsuite name="reg-cli" tests="2" failures="1">
+    <testcase name="bad.png">
+      <failure message="failed"/>
+    </testcase>
+    <testcase name="ok.png"/>
+  </testsuite>
+</testsuites>"#
+        );
+    }
+
+    #[test]
+    fn junit_new_and_deleted_not_extended_are_passed() {
+        // Without -E, new/deleted items are counted as passed tests.
+        let r = mk_report(&[], &[], &["added.png"], &["gone.png"]);
+        let xml = build_junit_xml(&r, false);
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="2" failures="0">
+  <testsuite name="reg-cli" tests="2" failures="0">
+    <testcase name="added.png"/>
+    <testcase name="gone.png"/>
+  </testsuite>
+</testsuites>"#
+        );
+    }
+
+    #[test]
+    fn junit_new_and_deleted_extended_are_failures() {
+        // With -E, they become <failure message="newItem"|"deletedItem"/>.
+        let r = mk_report(&[], &[], &["added.png"], &["gone.png"]);
+        let xml = build_junit_xml(&r, true);
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="2" failures="2">
+  <testsuite name="reg-cli" tests="2" failures="2">
+    <testcase name="added.png">
+      <failure message="newItem"/>
+    </testcase>
+    <testcase name="gone.png">
+      <failure message="deletedItem"/>
+    </testcase>
+  </testsuite>
+</testsuites>"#
+        );
+    }
+
+    #[test]
+    fn junit_escapes_xml_special_chars_in_name() {
+        let r = mk_report(&[], &[r#"a&b<c>d".png"#], &[], &[]);
+        let xml = build_junit_xml(&r, false);
+        // Only attribute-value escapes matter here (name="..."). Classic
+        // xmlbuilder2 also escapes all five, but quoting is consistent.
+        assert!(xml.contains(r#"name="a&amp;b&lt;c&gt;d&quot;.png""#));
+    }
+
+    #[test]
+    fn junit_empty_report_has_self_closing_testsuite() {
+        let r = mk_report(&[], &[], &[], &[]);
+        let xml = build_junit_xml(&r, false);
+        assert_eq!(
+            xml,
+            r#"<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="0" failures="0">
+  <testsuite name="reg-cli" tests="0" failures="0"/>
+</testsuites>"#
+        );
     }
 }
