@@ -362,3 +362,108 @@ test('reg-suit compat: compare() accepts reg-suit-shaped options without abortin
   assert.deepEqual(data.failedItems, ['sample0.png']);
   assert.deepEqual(data.passedItems, ['sample1.png']);
 });
+
+// ---------------------------------------------------------------------------
+// reg-suit drop-in: full processor.ts surface
+// (https://github.com/reg-viz/reg-suit/blob/5c09c8e/packages/reg-suit-core/src/processor.ts#L18)
+//
+// Pin every key reg-suit's `processor.ts` actually passes, every event it
+// subscribes to, and every CompareOutput field it accesses. If wasm
+// reg-cli ever stops being a drop-in, this test fires first.
+// ---------------------------------------------------------------------------
+
+test('reg-suit drop-in: every event + CompareOutput field consumed by processor.ts is honoured', async () => {
+  const d = await scratch();
+  const emitter = lib.compare({
+    actualDir: `${SAMPLE_REL}/actual`,
+    expectedDir: `${SAMPLE_REL}/expected`,
+    diffDir: `${d.rel}/diff`,
+    json: `${d.rel}/reg.json`,
+    report: `${d.rel}/report.html`,
+    update: false,
+    ignoreChange: true,
+    urlPrefix: '',
+    threshold: 0,
+    thresholdPixel: 0,
+    thresholdRate: 0,
+    matchingThreshold: 0,
+    enableAntialias: false,
+    enableCliAdditionalDetection: true,
+    enableClientAdditionalDetection: false,
+    concurrency: 4,
+  });
+
+  let errorFired = false;
+  emitter.on('error', () => (errorFired = true));
+
+  const { data, startEmitted, compareEvents } = await waitForComplete(emitter);
+
+  // Events processor.ts listens for: 'start', 'compare', 'complete', 'error'.
+  assert.equal(startEmitted, true, "'start' event must fire (processor logs spinner from it)");
+  assert.equal(errorFired, false, "'error' must NOT fire when inputs are clean");
+  assert.ok(compareEvents.length > 0, "'compare' events must fire per file");
+  for (const ev of compareEvents) {
+    assert.equal(typeof ev.type, 'string', "compare event missing string `type`");
+    assert.equal(typeof ev.path, 'string', "compare event missing string `path`");
+  }
+
+  // CompareOutput keys processor.ts reads (see processor.ts lines ~132-137).
+  for (const k of ['failedItems', 'newItems', 'deletedItems', 'passedItems']) {
+    assert.ok(Array.isArray(data[k]), `data.${k} must be an array, got ${typeof data[k]}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Per-image failure tolerance at the library level (mirror of
+// crates/reg_core/src/lib.rs::per_image_failure_tests::corrupt_png_…).
+//
+// reg-suit calls compare() and expects `complete` to fire with a normal
+// CompareOutput even when individual files are unreadable — it surfaces
+// those via `failedItems`. If we regress to firing `error` on the first
+// bad PNG, the whole pipeline aborts.
+// ---------------------------------------------------------------------------
+
+test('compare() does NOT fire `error` when a single image fails to decode', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  const { writeFile } = await import('node:fs/promises');
+  // One valid pair so the run produces normal events too.
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'good.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'good.png'),
+  );
+  // …and a corrupt pair the decoder will reject (different bytes so the
+  // diff lib doesn't byte-eq fast-path).
+  await writeFile(join(REPO, actualRel, 'bad.png'), 'not a png AAA');
+  await writeFile(join(REPO, expectedRel, 'bad.png'), 'not a png BBB');
+
+  const emitter = lib.compare({
+    actualDir: actualRel,
+    expectedDir: expectedRel,
+    diffDir: `${d.rel}/diff`,
+    json: `${d.rel}/reg.json`,
+  });
+
+  const { data, compareEvents } = await waitForComplete(emitter);
+  assert.ok(
+    data.failedItems.includes('bad.png'),
+    `bad.png must be in failedItems, got ${JSON.stringify(data.failedItems)}`,
+  );
+  assert.ok(
+    data.passedItems.includes('good.png'),
+    `good.png must still pass; got ${JSON.stringify(data.passedItems)}`,
+  );
+  // We also got a 'fail' compare-event for bad.png so live spinners update.
+  assert.ok(
+    compareEvents.some((e) => e.path === 'bad.png' && e.type === 'fail'),
+    `expected a fail compare-event for bad.png; got ${JSON.stringify(compareEvents)}`,
+  );
+});
