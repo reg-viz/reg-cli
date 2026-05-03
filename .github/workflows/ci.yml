@@ -10,8 +10,21 @@ jobs:
   # integration tests (`node:test` via `pnpm test` in `js/`) both run here
   # and cover junit/reg.json schema compat, -F/-X/-E, and the `compare()`
   # EventEmitter surface (reg-suit drop-in).
+  # Matrix runs on Linux + macOS + Windows so any path-separator,
+  # WASI-sandbox, or shell-script regression is caught before publish.
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Force bash on every OS (Windows runners default to PowerShell). Our
+    # scripts are sh/bash; with `shell: bash` Windows runs them via the
+    # git-bash that ships with the runner image.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
