@@ -28,9 +28,17 @@ jobs:
       - name: build report-ui (report.js + style.css)
         run: sh ./scripts/build-ui.sh v0.3.0
       - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
+        if: runner.os != 'Windows'
         with:
           toolchain: stable
+      # Skip on Windows: the host-native build of `image-diff-rs` pulls in
+      # libwebp's SSE4.1 intrinsics (`VP8LDspInitSSE41` etc.), which the
+      # MSVC linker can't resolve. The published artefact is `reg.wasm`,
+      # built by wasi-sdk's clang and identical across OSes — Windows
+      # users still get full coverage of what they actually run via the
+      # JS test suite below. Linux + macOS cover the host-native compile.
       - name: cargo test (reg_core)
+        if: runner.os != 'Windows'
         run: cargo test -p reg_core --lib
       - name: install
         run: pnpm install --frozen-lockfile
