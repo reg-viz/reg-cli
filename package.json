@@ -28,7 +28,7 @@
     "reg-cli": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "tsdown && cp reg.wasm ./dist/shared/reg.wasm",
+    "build": "tsdown && node ./scripts/stage-assets.mjs",
     "build:report": "sh ./scripts/build-ui.sh v0.3.0",
     "build:wasm": "bash ./scripts/build-wasm.sh",
     "release:prep": "bash ./scripts/release.sh",
