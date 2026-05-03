@@ -8,7 +8,7 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, SpanStatusCode, context, ROOT_CONTEXT, type Span, type Context } from '@opentelemetry/api';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 let sdk: NodeSDK | null = null;
@@ -79,7 +79,7 @@ export const initTracing = (): void => {
   });
 
   sdk = new NodeSDK({
-    resource: new Resource({
+    resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reg-cli',
       [ATTR_SERVICE_VERSION]: '0.18.10',
     }),
