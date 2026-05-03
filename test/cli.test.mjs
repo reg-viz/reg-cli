@@ -1,6 +1,5 @@
 import test from 'ava';
 import fs from 'fs';
-import path from 'path';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
 // $FlowIgnore
@@ -667,7 +666,7 @@ test.serial('perf', async t => {
     const p = spawn(
       './dist/cli.js',
       [`${WORKSPACE}/resource/actual`, `${WORKSPACE}/resource/expected`, `${WORKSPACE}/diff`],
-      { cwd: path.resolve(__dirname, '../') },
+      { cwd: process.cwd() },
     );
     p.on('close', code => resolve(code));
     // p.stdout.on('data', data => console.log(data));
