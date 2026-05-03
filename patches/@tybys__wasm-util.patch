@@ -1,5 +1,5 @@
 diff --git a/lib/cjs/wasi/preview1.js b/lib/cjs/wasi/preview1.js
-index 588e67b87398accf9fd805ba25e0f40eed305023..f0485266821fae6bf793a6292c447d07903b4a5a 100644
+index 588e67b87398accf9fd805ba25e0f40eed305023..56567268e843c43c736a96697f01c8f51cfab7f3 100644
 --- a/lib/cjs/wasi/preview1.js
 +++ b/lib/cjs/wasi/preview1.js
 @@ -1,3 +1,9 @@
@@ -51,7 +51,7 @@ index 588e67b87398accf9fd805ba25e0f40eed305023..f0485266821fae6bf793a6292c447d07
 +            try {
 +                r = fs.openSync(resolved_path, flagsRes, 0o666);
 +            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
++                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' flagsRes=0x' + (flagsRes >>> 0).toString(16) + ' (' + flagsRes + ') err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
 +                throw _e;
 +            }
              const filetype = wasi.fds.getFileTypeByFd(r);
@@ -73,7 +73,7 @@ index 588e67b87398accf9fd805ba25e0f40eed305023..f0485266821fae6bf793a6292c447d07
              if ((o_flags & types_1.WasiFileControlFlag.O_DIRECTORY) !== 0 && filetype !== types_1.WasiFileType.DIRECTORY) {
                  return types_1.WasiErrno.ENOTDIR;
 diff --git a/lib/mjs/wasi/preview1.mjs b/lib/mjs/wasi/preview1.mjs
-index 0227fde4b5181bb9bb8c45a50a559476252ff6f8..76e0df0a0fca7ed998d00eeb83c5007a3f49ebed 100644
+index 0227fde4b5181bb9bb8c45a50a559476252ff6f8..26f861d75d15934381c035b77e32531373266714 100644
 --- a/lib/mjs/wasi/preview1.mjs
 +++ b/lib/mjs/wasi/preview1.mjs
 @@ -1,3 +1,9 @@
@@ -125,7 +125,7 @@ index 0227fde4b5181bb9bb8c45a50a559476252ff6f8..76e0df0a0fca7ed998d00eeb83c5007a
 +            try {
 +                r = fs.openSync(resolved_path, flagsRes, 0o666);
 +            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
++                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' flagsRes=0x' + (flagsRes >>> 0).toString(16) + ' (' + flagsRes + ') err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
 +                throw _e;
 +            }
              const filetype = wasi.fds.getFileTypeByFd(r);
