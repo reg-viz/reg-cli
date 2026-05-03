@@ -46,7 +46,7 @@ test.serial('should display default diff message', async t => {
   t.true(stdout.indexOf('Inspect your code changes, re-run with `-U` to update them') !== -1);
 });
 
-test.serial.only('should display custom diff message', async t => {
+test.serial('should display custom diff message', async t => {
   const stdout = await new Promise(async resolve => {
     const chunks = [];
     rimraf(`${WORKSPACE}/resource/expected`, () => {
