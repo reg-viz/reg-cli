@@ -1,40 +1,23 @@
 name: CI
 on: [push, pull_request]
-permissions:
-  contents: read
 
 jobs:
-  # Wasm pipeline (the only pipeline now that the legacy JS impl is gone):
-  # uses the committed js/reg.wasm so we don't pay the wasi-sdk toolchain
-  # cost on every PR. Rust unit tests (`cargo test`) and the JS CLI/library
-  # integration tests (`node:test` via `pnpm test` in `js/`) both run here
-  # and cover junit/reg.json schema compat, -F/-X/-E, and the `compare()`
-  # EventEmitter surface (reg-suit drop-in).
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/setup-node@dda4788290998366da86b6a4f497909644397bb2
         with:
-          node-version: 20
-      # `reg_core` embeds `report/ui/dist/{report.js,style.css}` via
-      # `include_str!`, so `cargo test` fails before we even compile unless
-      # we materialise them first. The `build-ui.sh` script clones
-      # `reg-viz/reg-cli-report-ui` at a pinned tag and builds it with
-      # yarn (enabled via corepack in setup-node).
-      - name: enable corepack (yarn for report-ui build)
+          node-version: 22
+      - name: corepack enable
         run: corepack enable
-      - name: build report-ui (report.js + style.css)
-        run: sh ./scripts/build-ui.sh v0.3.0
-      - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
-        with:
-          toolchain: stable
-      - name: cargo test (reg_core)
-        run: cargo test -p reg_core --lib
-      - name: install
+      - name: corepack prepare pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+      - name: pnpm install
         run: pnpm install --frozen-lockfile
-      - name: build (dist + bundle reg.wasm)
-        run: pnpm build
-      - name: test (CLI + library)
-        run: pnpm test
+      - name: install chrome for puppeteer
+        run: pnpm exec puppeteer browsers install chrome
+      - name: flow
+        run: pnpm run flow
+      - name: test
+        run: pnpm run test
