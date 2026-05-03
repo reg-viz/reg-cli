@@ -5,9 +5,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "engines": {
@@ -15,7 +20,7 @@
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.cts",
   "files": [
     "dist"
   ],
@@ -23,7 +28,7 @@
     "reg-cli": "./dist/cli.mjs"
   },
   "scripts": {
-    "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm",
+    "build": "tsdown && cp reg.wasm ./dist/shared/reg.wasm",
     "build:report": "sh ./scripts/build-ui.sh v0.3.0",
     "build:wasm": "bash ./scripts/build-wasm.sh",
     "release:prep": "bash ./scripts/release.sh",
@@ -42,14 +47,15 @@
     "@tybys/wasm-util": "^0.9.0",
     "x-img-diff-js": "^0.3.5",
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/sdk-node": "^0.216.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "@opentelemetry/sdk-trace-node": "^2.7.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.216.0",
     "@opentelemetry/resources": "^2.7.1",
     "@opentelemetry/semantic-conventions": "^1.40.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.5",
-    "unbuild": "^3.0.0"
+    "tsdown": "^0.21.10"
   },
   "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8"
 }
