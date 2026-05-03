@@ -1,8 +1,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFile } from 'node:fs/promises';
-import { dirname, join, resolve as pathResolve } from 'node:path';
-import { env as procEnv, cwd as procCwd } from 'node:process';
+import { dirname, join, resolve as pathResolve, sep as pathSep } from 'node:path';
+import { env as procEnv, cwd as procCwd, platform as procPlatform } from 'node:process';
 
 export const isCJS = typeof __dirname !== 'undefined';
 
@@ -43,7 +43,10 @@ const commonAncestor = (paths: string[]): string => {
   if (defined.length === 1) return defined[0];
   // If absolute and relative are mixed we can't compute a meaningful common
   // ancestor without risking opening "/". Bail to CWD.
-  const isAbs = (p: string) => p.startsWith('/');
+  // Recognise both POSIX (`/foo`) and Windows-drive (`D:/foo`) forms
+  // because the Windows path shim normalises drives into POSIX-style
+  // paths before they reach `computeWasiSandbox`.
+  const isAbs = (p: string) => p.startsWith('/') || /^[A-Za-z]:\//.test(p);
   const anyAbs = defined.some(isAbs);
   const allAbs = defined.every(isAbs);
   if (anyAbs && !allAbs) return '.';
@@ -162,4 +165,59 @@ export const computeWasiSandbox = (argv: string[]): WasiSandbox => {
   }
 
   return { preopens, env };
+};
+
+/** argv flags whose immediate next entry is a path. Anything else is
+ *  treated as a non-path scalar (numbers, booleans, identifiers like
+ *  `client`, etc.) and left untouched. */
+const PATH_FLAGS = new Set(['--report', '--json', '--junit', '--from', '-F', '-R', '-J']);
+
+/**
+ * On Windows, convert any path-shaped argv entry to absolute POSIX form
+ * (`D:/a/b/c`) before it crosses into wasm.
+ *
+ * Background: Node's WASI shim on Windows can't resolve relative paths
+ * passed to `path_open` against a preopened directory — it returns
+ * `EINVAL` (`Os { code: 28 }`). The wasm CLI then panics on the first
+ * write of `reg.json` / `report.html` / a diff image. Symptom in CI:
+ * `Failed to write ".libtest-…/reg.json"` and ~32/38 tests fail.
+ *
+ * The shim DOES handle absolute POSIX-style paths (`D:/a/b/...`)
+ * correctly — they get matched directly against the host directory
+ * registered as a preopen, no re-resolution required. So we walk argv
+ * here, rewrite the positional dirs and the value following each path-
+ * shaped flag, and let the rest of the pipeline (`computeWasiSandbox`
+ * et al.) handle them as pre-normalised absolute paths.
+ *
+ * No-op on Linux/macOS: those WASI shims handle relative paths
+ * correctly, AND existing tests pin behaviour against relative-path
+ * round-tripping. Skipping the rewrite on POSIX hosts keeps that
+ * coverage honest.
+ */
+export const normalizeArgvPathsForWasi = (argv: string[]): string[] => {
+  if (procPlatform !== 'win32') return argv;
+
+  const toPosix = (p: string): string => {
+    if (!p) return p;
+    const abs = pathResolve(p);
+    return pathSep === '\\' ? abs.split('\\').join('/') : abs;
+  };
+
+  const out = [...argv];
+  // Skip the leading `--` sentinel that `compare()` injects so we land on
+  // the first positional dir (actual / expected / diff).
+  let i = out[0] === '--' ? 1 : 0;
+  let positionalCount = 0;
+  for (; i < out.length && positionalCount < 3; i++) {
+    if (out[i].startsWith('-')) break;
+    out[i] = toPosix(out[i]);
+    positionalCount++;
+  }
+  for (; i < out.length; i++) {
+    if (PATH_FLAGS.has(out[i]) && i + 1 < out.length) {
+      out[i + 1] = toPosix(out[i + 1]);
+      i++;
+    }
+  }
+  return out;
 };

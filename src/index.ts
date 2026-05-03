@@ -1,6 +1,6 @@
 import EventEmitter from 'node:events';
 import { Worker } from 'node:worker_threads';
-import { isCJS, resolveExtention } from './utils';
+import { isCJS, resolveExtention, normalizeArgvPathsForWasi } from './utils';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'url';
 import {
@@ -28,6 +28,14 @@ const recordMainSpan = (name: string, start_ms: number, attributes?: WorkerSpan[
 };
 
 export const run = (argv: string[]): EventEmitter => {
+  // Windows-only path shim: convert relative path-shaped argv entries to
+  // absolute POSIX-style (`D:/foo/bar`) before forwarding to wasm. Node's
+  // WASI shim on Windows can't resolve relative paths against preopens
+  // reliably (returns EINVAL on `path_open`); absolute POSIX-form paths
+  // sidestep the bug because the shim can match them directly to a
+  // preopen's host directory.
+  argv = normalizeArgvPathsForWasi(argv);
+
   const run_start_ms = Date.now();
 
   // Initialize tracing if enabled (may be ~tens of ms on first run).
