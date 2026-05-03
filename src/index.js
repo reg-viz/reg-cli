@@ -2,7 +2,7 @@
 
 import glob from 'glob'; // $FlowIgnore
 import mkdirp from 'make-dir'; // $FlowIgnore
-import del from 'del'; // $FlowIgnore
+import { deleteAsync } from 'del'; // $FlowIgnore
 import fs from 'fs';
 import path from 'path';
 import { range } from 'lodash';
@@ -107,7 +107,7 @@ const cleanupExpectedDir = (expectedDir, changedFiles) => {
     return escapeGlob(path.posix.join(...directories, image));
   });
   // force: true needed to allow deleting outside working directory
-  return del(paths, { force: true });
+  return deleteAsync(paths, { force: true });
 };
 
 const escapeGlob = fileName => {

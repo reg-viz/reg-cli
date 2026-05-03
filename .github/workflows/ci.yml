@@ -8,15 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.26.2
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: pnpm
-      - name: install
+          node-version: 22
+      - name: corepack enable
+        run: corepack enable
+      - name: corepack prepare pnpm
+        run: corepack prepare pnpm@10.14.0 --activate
+      - name: pnpm install
         run: pnpm install --frozen-lockfile
+      - name: install chrome for puppeteer
+        run: pnpm exec puppeteer browsers install chrome
       - name: flow
         run: pnpm run flow
       - name: test

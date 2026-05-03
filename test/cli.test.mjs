@@ -1,6 +1,5 @@
 import test from 'ava';
 import fs from 'fs';
-import path from 'path';
 import copyfiles from 'copyfiles';
 import rimraf from 'rimraf';
 // $FlowIgnore
@@ -46,7 +45,7 @@ test.serial('should display default diff message', async t => {
   t.true(stdout.indexOf('Inspect your code changes, re-run with `-U` to update them') !== -1);
 });
 
-test.serial.only('should display custom diff message', async t => {
+test.serial('should display custom diff message', async t => {
   const stdout = await new Promise(async resolve => {
     const chunks = [];
     rimraf(`${WORKSPACE}/resource/expected`, () => {
@@ -667,7 +666,7 @@ test.serial('perf', async t => {
     const p = spawn(
       './dist/cli.js',
       [`${WORKSPACE}/resource/actual`, `${WORKSPACE}/resource/expected`, `${WORKSPACE}/diff`],
-      { cwd: path.resolve(__dirname, '../') },
+      { cwd: process.cwd() },
     );
     p.on('close', code => resolve(code));
     // p.stdout.on('data', data => console.log(data));
