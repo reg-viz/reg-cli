@@ -6,5 +6,4 @@
 # self-contained `pnpm install`.
 packages: []
 
-patchedDependencies:
-  '@tybys/wasm-util': patches/@tybys__wasm-util.patch
+patchedDependencies: { '@tybys/wasm-util': patches/@tybys__wasm-util.patch }

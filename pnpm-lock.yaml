@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@tybys/wasm-util':
-    hash: 399716868196966cf63d79f1874fb8b3c45c3982e88394e19ec41bcfd917608f
+    hash: 082247ef3207be839f75ea7e2ae005c9d75d2e50c4e30d687f6a2a9bbe73f495
     path: patches/@tybys__wasm-util.patch
 
 importers:
@@ -29,8 +29,8 @@ importers:
         specifier: ^1.28.0
         version: 1.38.0
       '@tybys/wasm-util':
-        specifier: ^0.10.1
-        version: 0.10.1(patch_hash=399716868196966cf63d79f1874fb8b3c45c3982e88394e19ec41bcfd917608f)
+        specifier: ^0.9.0
+        version: 0.9.0(patch_hash=082247ef3207be839f75ea7e2ae005c9d75d2e50c4e30d687f6a2a9bbe73f495)
       x-img-diff-js:
         specifier: ^0.3.5
         version: 0.3.5
@@ -712,8 +712,8 @@ packages:
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
     engines: {node: '>=10.13.0'}
 
-  '@tybys/wasm-util@0.10.1':
-    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
+  '@tybys/wasm-util@0.9.0':
+    resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -2209,7 +2209,7 @@ snapshots:
 
   '@trysound/sax@0.2.0': {}
 
-  '@tybys/wasm-util@0.10.1(patch_hash=399716868196966cf63d79f1874fb8b3c45c3982e88394e19ec41bcfd917608f)':
+  '@tybys/wasm-util@0.9.0(patch_hash=082247ef3207be839f75ea7e2ae005c9d75d2e50c4e30d687f6a2a9bbe73f495)':
     dependencies:
       tslib: 2.7.0
 
