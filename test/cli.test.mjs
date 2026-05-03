@@ -916,3 +916,167 @@ test('non-PNG image formats (.jpg) are accepted and diffed', async () => {
     `a.jpg should pass; got passedItems=${JSON.stringify(report.passedItems)}`,
   );
 });
+
+// ---------------------------------------------------------------------------
+// Output / option flag coverage
+// ---------------------------------------------------------------------------
+
+test('--diffFormat png writes .png diff (and reg.json diffItems uses .png)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    `${d.rel}/reg.json`,
+    '-I',
+    '--diffFormat',
+    'png',
+  ]);
+  assert.equal(code, 0);
+  // sample0 differs → diff written. Filename keeps the basename, only ext changes.
+  await stat(join(REPO, `${d.rel}/diff/sample0.png`));
+  await assert.rejects(() =>
+    stat(join(REPO, `${d.rel}/diff/sample0.webp`)),
+  );
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  assert.ok(
+    report.diffItems.every((p) => p.endsWith('.png')),
+    `diffItems must all be .png with --diffFormat png; got ${JSON.stringify(report.diffItems)}`,
+  );
+});
+
+test('--diffFormat webp writes .webp diff (and reg.json diffItems uses .webp)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    `${d.rel}/reg.json`,
+    '-I',
+    '--diffFormat',
+    'webp',
+  ]);
+  assert.equal(code, 0);
+  await stat(join(REPO, `${d.rel}/diff/sample0.webp`));
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  assert.ok(
+    report.diffItems.every((p) => p.endsWith('.webp')),
+    `diffItems must all be .webp with --diffFormat webp; got ${JSON.stringify(report.diffItems)}`,
+  );
+});
+
+test('-P / --urlPrefix is applied to actualDir/expectedDir/diffDir in reg.json', async () => {
+  // Note: the prefix is consumed by `create_dir_for_json_report` in
+  // crates/reg_core/src/report.rs — it only kicks in when reg.json is
+  // being written, not in the HTML-embedded payload (which still uses
+  // relative paths). reg-suit + downstream notify plugins read reg.json,
+  // so the reg.json path is the one that has to honour `-P`.
+  const d = await scratch();
+  const jsonRel = `${d.rel}/reg.json`;
+  await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+    '-I',
+    '-P',
+    'https://cdn.example.com/regs/',
+  ]);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  for (const k of ['actualDir', 'expectedDir', 'diffDir']) {
+    assert.ok(
+      typeof report[k] === 'string' && report[k].startsWith('https://cdn.example.com/'),
+      `${k} should start with the URL prefix; got ${report[k]}`,
+    );
+  }
+});
+
+test('-A / --enableAntialias is accepted and produces a usable run', async () => {
+  // Constructing a fixture where antialiased pixels actually flip
+  // pass/fail is fragile (exact thresholds depend on the diff lib's
+  // YIQ heuristic). At minimum, lock in that the flag parses, the run
+  // exits cleanly, and writes a usable reg.json.
+  const d = await scratch();
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+    '-I',
+    '-A',
+  ]);
+  assert.equal(code, 0, `--enableAntialias should not abort: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(Array.isArray(report.passedItems), 'reg.json keys still present with -A');
+});
+
+test('-M / --matchingThreshold is accepted', async () => {
+  const d = await scratch();
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-I',
+    '-M',
+    '0.1',
+  ]);
+  assert.equal(code, 0, `--matchingThreshold should not abort: ${stderr}`);
+});
+
+test('-C / --concurrency accepts an explicit thread count', async () => {
+  const d = await scratch();
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-I',
+    '-C',
+    '2',
+  ]);
+  assert.equal(code, 0, `--concurrency 2 should not abort: ${stderr}`);
+});
+
+// ---------------------------------------------------------------------------
+// Argv / dir shape edge cases
+// ---------------------------------------------------------------------------
+
+test('trailing slash on positional dirs is accepted (`actual/` ≡ `actual`)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual/`,   // ← trailing slash
+    `${SAMPLE_REL}/expected/`, // ← trailing slash
+    `${d.rel}/diff/`,          // ← trailing slash
+    '-I',
+    '-J',
+    `${d.rel}/reg.json`,
+  ]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  // sample1 is identical; assert that something landed in passedItems.
+  assert.ok(
+    report.passedItems.length > 0,
+    `expected at least one passed item; got ${JSON.stringify(report)}`,
+  );
+});
+
+test('both actual and expected dirs empty → all-empty report, exit 0', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code } = await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.failedItems, []);
+  assert.deepEqual(report.passedItems, []);
+  assert.deepEqual(report.newItems, []);
+  assert.deepEqual(report.deletedItems, []);
+});
