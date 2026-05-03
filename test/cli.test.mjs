@@ -1,782 +1,684 @@
-// End-to-end tests for the Wasm reg-cli wrapper.
-//
-// These spawn the built CLI the same way a user or CI pipeline would, then
-// inspect the on-disk artefacts (reg.json / junit.xml / report.html). The
-// goal is twofold:
-//
-//   1. Catch regressions in the JS→Wasm plumbing (flag forwarding, WASI
-//      sandbox preopens, EventEmitter surface, exit codes).
-//   2. Pin **byte-for-byte compatibility** with classic reg-cli's JUnit XML
-//      and reg.json schemas so that downstream tooling (reg-suit,
-//      reg-notify-*, CI JUnit parsers) keeps working when users migrate.
-//
-// Paths throughout are relative to the repo root (which is used as `cwd`
-// when spawning the CLI). Real users invoke reg-cli this way in CI too, and
-// it avoids a known limitation where absolute paths don't round-trip
-// cleanly through `glob` inside the WASI sandbox.
-//
-// Run with: `node --test js/test/cli.test.mjs`
+import test from 'ava';
+import fs from 'fs';
+import copyfiles from 'copyfiles';
+import rimraf from 'rimraf';
+// $FlowIgnore
+import spawn from 'cross-spawn';
 
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { mkdir, readFile, rm, cp, stat } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+const IMAGE_FILES = '/**/*.+(tiff|jpeg|jpg|gif|png|bmp)';
+const WORKSPACE = 'test/__workspace__';
+const RESOURCE = 'resource';
+const SAMPLE_IMAGE = 'sample(cal).png';
+const SAMPLE_DIFF_IMAGE = 'sample(cal).png';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..');
-const CLI = join(REPO, 'dist', 'cli.mjs');
-const SAMPLE_REL = 'sample'; // repo-relative
-// Unique scratch dir per test, rooted under the repo so the WASI preopen
-// computed from positional dirs comfortably covers it.
-const TMP_ROOT_ABS = join(REPO, 'test', '__workspace__');
-const TMP_ROOT_REL = relative(REPO, TMP_ROOT_ABS); // 'test/__workspace__'
-
-let runId = 0;
-// Returns { abs, rel } for a fresh scratch dir.
-const scratch = async () => {
-  const tag = `t${process.pid}-${++runId}-${Math.random().toString(36).slice(2, 8)}`;
-  const abs = join(TMP_ROOT_ABS, tag);
-  await mkdir(abs, { recursive: true });
-  return { abs, rel: join(TMP_ROOT_REL, tag) };
+const replaceReportPath = report => {
+  Object.keys(report).forEach(key => {
+    report[key] =
+      typeof report[key] === 'string' ? report[key].replace(/\\/g, '/') : report[key].map(r => r.replace(/\\/g, '/'));
+  });
+  return report;
 };
 
-const runCli = (args, opts = {}) =>
-  new Promise((resolve, reject) => {
-    const p = spawn(process.execPath, [CLI, ...args], {
-      cwd: opts.cwd ?? REPO,
-      env: { ...process.env, ...opts.env },
+test.beforeEach(async t => {
+  await new Promise(resolve => copyfiles([`${RESOURCE}${IMAGE_FILES}`, WORKSPACE], resolve));
+  await new Promise(resolve => copyfiles([`${RESOURCE}/reg.json`, WORKSPACE], resolve));
+});
+
+test.serial('should display default diff message', async t => {
+  const stdout = await new Promise(async resolve => {
+    const chunks = [];
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+      ]);
+      p.stdout.on('data', chunk => {
+        chunks.push(Buffer.from(chunk));
+      });
+      p.on('close', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
     });
-    const out = [];
-    const err = [];
-    p.stdout.on('data', (d) => out.push(d));
-    p.stderr.on('data', (d) => err.push(d));
-    p.on('error', reject);
-    p.on('close', (code) =>
-      resolve({
-        code,
-        stdout: Buffer.concat(out).toString('utf8'),
-        stderr: Buffer.concat(err).toString('utf8'),
-      }),
-    );
   });
+  t.true(stdout.indexOf('Inspect your code changes, re-run with `-U` to update them') !== -1);
+});
 
-test.before(async () => {
-  await mkdir(TMP_ROOT_ABS, { recursive: true });
-  // Guard: dist must exist. We never rebuild from here — that belongs to CI.
-  await stat(CLI).catch(() => {
-    throw new Error(
-      `Built CLI not found at ${CLI}. Run 'pnpm --filter ./js build' first.`,
-    );
+test.serial('should display custom diff message', async t => {
+  const stdout = await new Promise(async resolve => {
+    const chunks = [];
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+        '-D Custom diff message',
+      ]);
+      p.stdout.on('data', chunk => {
+        chunks.push(Buffer.from(chunk));
+      });
+      p.on('close', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+    });
   });
+  t.true(stdout.indexOf('Custom diff message') !== -1);
 });
 
-test.after(async () => {
-  await rm(TMP_ROOT_ABS, { recursive: true, force: true });
+test.serial('should display error message when passing only 1 argument', async t => {
+  const stdout = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', ['./sample/actual']);
+    p.stdout.on('data', data => resolve(data));
+    p.stderr.on('data', data => console.error(data));
+  });
+  t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
 
-// ---------------------------------------------------------------------------
-// Basic exit-code semantics
-// ---------------------------------------------------------------------------
-
-test('exit 1 when images differ and no -I', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-  ]);
-  assert.equal(code, 1);
+test.serial('should display error message when passing only 2 argument', async t => {
+  const stdout = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', ['./sample/actual', './sample/expected']);
+    p.stdout.on('data', data => resolve(data));
+    p.stderr.on('data', data => console.error(data));
+  });
+  t.true(stdout.indexOf('please specify actual, expected and diff images directory') !== -1);
 });
 
-test('exit 0 when -I is set despite differences', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-I',
-  ]);
-  assert.equal(code, 0);
-});
-
-test('exit 1 when -E and only a new image exists', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sample0.png'),
-  );
-  // No file in expected → sample0 appears as "new".
-  const { code } = await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-E']);
-  assert.equal(code, 1);
-});
-
-test('missing positional dirs prints error and exits non-zero', async () => {
-  const { code, stderr } = await runCli(['only-one-dir']);
-  assert.notEqual(code, 0);
-  assert.match(stderr, /actual.*expected.*diff/i);
-});
-
-// ---------------------------------------------------------------------------
-// reg.json schema compat
-// ---------------------------------------------------------------------------
-
-test('reg.json schema matches classic shape (failed case)', async () => {
-  const d = await scratch();
-  const jsonRel = `${d.rel}/reg.json`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-J',
-    jsonRel,
-    '-I',
-  ]);
-  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-  // Keys classic reg-cli guarantees (see src/report.js).
-  for (const k of [
-    'actualItems',
-    'expectedItems',
-    'diffItems',
-    'failedItems',
-    'newItems',
-    'deletedItems',
-    'passedItems',
-    'actualDir',
-    'expectedDir',
-    'diffDir',
-  ]) {
-    assert.ok(k in report, `missing key ${k} in reg.json`);
-  }
-  assert.deepEqual(report.failedItems, ['sample0.png']);
-  assert.deepEqual(report.passedItems, ['sample1.png']);
-  assert.deepEqual(report.newItems, []);
-  assert.deepEqual(report.deletedItems, []);
-});
-
-// ---------------------------------------------------------------------------
-// JUnit XML byte-for-byte compat with classic reg-cli
-// ---------------------------------------------------------------------------
-
-test('junit XML matches classic format (single failure)', async () => {
-  const d = await scratch();
-  const junitRel = `${d.rel}/junit.xml`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '--junit',
-    junitRel,
-    '-I',
-  ]);
-  const xml = await readFile(join(REPO, junitRel), 'utf8');
-  assert.equal(
-    xml,
-    `<?xml version="1.0"?>
-<testsuites name="reg-cli tests" tests="2" failures="1">
-  <testsuite name="reg-cli" tests="2" failures="1">
-    <testcase name="sample0.png">
-      <failure message="failed"/>
-    </testcase>
-    <testcase name="sample1.png"/>
-  </testsuite>
-</testsuites>`,
-  );
-});
-
-test('junit XML: new/deleted without -E are passed testcases', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
-    join(REPO, actualRel, 'added.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'expected/sample1.png'),
-    join(REPO, expectedRel, 'gone.png'),
-  );
-  const junitRel = `${d.rel}/junit.xml`;
-  await runCli([actualRel, expectedRel, `${d.rel}/diff`, '--junit', junitRel]);
-  const xml = await readFile(join(REPO, junitRel), 'utf8');
-  assert.equal(
-    xml,
-    `<?xml version="1.0"?>
-<testsuites name="reg-cli tests" tests="2" failures="0">
-  <testsuite name="reg-cli" tests="2" failures="0">
-    <testcase name="added.png"/>
-    <testcase name="gone.png"/>
-  </testsuite>
-</testsuites>`,
-  );
-});
-
-test('junit XML: new/deleted with -E become <failure> entries', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
-    join(REPO, actualRel, 'added.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'expected/sample1.png'),
-    join(REPO, expectedRel, 'gone.png'),
-  );
-  const junitRel = `${d.rel}/junit.xml`;
-  await runCli([
-    actualRel,
-    expectedRel,
-    `${d.rel}/diff`,
-    '-E',
-    '-I',
-    '--junit',
-    junitRel,
-  ]);
-  const xml = await readFile(join(REPO, junitRel), 'utf8');
-  assert.equal(
-    xml,
-    `<?xml version="1.0"?>
-<testsuites name="reg-cli tests" tests="2" failures="2">
-  <testsuite name="reg-cli" tests="2" failures="2">
-    <testcase name="added.png">
-      <failure message="newItem"/>
-    </testcase>
-    <testcase name="gone.png">
-      <failure message="deletedItem"/>
-    </testcase>
-  </testsuite>
-</testsuites>`,
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Report / -X client / -F from
-// ---------------------------------------------------------------------------
-
-test('-R writes an HTML report file', async () => {
-  const d = await scratch();
-  const reportRel = `${d.rel}/report.html`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-R',
-    reportRel,
-    '-I',
-  ]);
-  const html = await readFile(join(REPO, reportRel), 'utf8');
-  assert.ok(html.length > 1000);
-  // ximgdiffConfig.enabled defaults to false.
-  assert.match(html, /ximgdiffConfig[^}]*enabled["\\]+:false/);
-});
-
-test('-X client flips ximgdiffConfig.enabled in the HTML report', async () => {
-  const d = await scratch();
-  const reportRel = `${d.rel}/report.html`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-R',
-    reportRel,
-    '-X',
-    'client',
-    '-I',
-  ]);
-  const html = await readFile(join(REPO, reportRel), 'utf8');
-  assert.match(html, /ximgdiffConfig[^}]*enabled["\\]+:true/);
-});
-
-test('-F regenerates HTML + junit from an existing reg.json without diffing', async () => {
-  const d = await scratch();
-  const jsonRel = `${d.rel}/reg.json`;
-
-  // Step 1: run a normal comparison to get a reg.json.
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-J',
-    jsonRel,
-    '-I',
-  ]);
-  const jsonBefore = await readFile(join(REPO, jsonRel), 'utf8');
-
-  // Step 2: wipe diff dir, run -F mode. It must NOT re-create any diff image.
-  await rm(join(REPO, d.rel, 'diff'), { recursive: true, force: true });
-  const reportRel = `${d.rel}/from.html`;
-  const junitRel = `${d.rel}/from.xml`;
-  const { code } = await runCli([
-    '-F',
-    jsonRel,
-    '-R',
-    reportRel,
-    '--junit',
-    junitRel,
-    '-I',
-  ]);
-
-  assert.equal(code, 0);
-  assert.ok((await stat(join(REPO, reportRel))).size > 1000);
-  assert.ok((await stat(join(REPO, junitRel))).size > 0);
-  // -F shouldn't mutate the source reg.json…
-  assert.equal(await readFile(join(REPO, jsonRel), 'utf8'), jsonBefore);
-  // …and shouldn't have re-created diff/.
-  await assert.rejects(() => stat(join(REPO, d.rel, 'diff')));
-});
-
-// ---------------------------------------------------------------------------
-// CLI stdout formatting (per-file + summary lines)
-// ---------------------------------------------------------------------------
-
-test('stdout shows per-file status lines and summary', async () => {
-  const d = await scratch();
-  const { stdout } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-I',
-  ]);
-  assert.match(stdout, /change\s+.*sample0\.png/);
-  assert.match(stdout, /pass\s+.*sample1\.png/);
-  assert.match(stdout, /1 file\(s\) changed/);
-  assert.match(stdout, /1 file\(s\) passed/);
-});
-
-test('-D custom diff message shows up on failure', async () => {
-  const d = await scratch();
-  const { stdout } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-D',
-    'custom-trailer-msg',
-    '-I',
-  ]);
-  assert.ok(stdout.includes('custom-trailer-msg'));
-});
-
-// ---------------------------------------------------------------------------
-// Phase-F: --version / favicon / -X client assets / -U semantics
-// ---------------------------------------------------------------------------
-
-test('--version prints the package.json version', async () => {
-  const { code, stdout } = await runCli(['--version']);
-  assert.equal(code, 0);
-  // Must look like semver-ish (at least digits + dot), not the classic
-  // "reg-cli-wasm" placeholder.
-  assert.match(stdout.trim(), /^\d+\.\d+\.\d+/);
-});
-
-test('HTML report embeds a favicon data URL', async () => {
-  const d = await scratch();
-  const reportRel = `${d.rel}/report.html`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-R',
-    reportRel,
-    '-I',
-  ]);
-  const html = await readFile(join(REPO, reportRel), 'utf8');
-  // `<link rel="shortcut icon" href="data:image/png;base64,...">` — check
-  // the placeholder was replaced with real PNG bytes.
-  assert.match(
-    html,
-    /<link rel="shortcut icon" href="data:image\/png;base64,[A-Za-z0-9+/=]{20,}"/,
-  );
-});
-
-test('-X client emits worker.js + detector.wasm next to report', async () => {
-  const d = await scratch();
-  const reportRel = `${d.rel}/report.html`;
-  await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-R',
-    reportRel,
-    '-X',
-    'client',
-    '-I',
-  ]);
-  const reportDir = dirname(join(REPO, reportRel));
-  // Classic reg-cli test asserts on the *existence* of these files
-  // (test/cli.test.mjs:250-275). Match that at minimum; also sanity-check
-  // sizes so we catch an empty-write regression.
-  const workerStat = await stat(join(reportDir, 'worker.js'));
-  const wasmStat = await stat(join(reportDir, 'detector.wasm'));
-  assert.ok(workerStat.size > 10_000, 'worker.js should contain the concatenated bundle');
-  assert.ok(wasmStat.size > 100_000, 'detector.wasm should be the x-img-diff wasm');
-});
-
-// ---------------------------------------------------------------------------
-// Phase-H regression test: multi-segment preopen + sandboxed intermediate
-// directories
-// ---------------------------------------------------------------------------
-//
-// The bug being guarded here: `computeWasiSandbox` registers ONE preopen
-// covering the common ancestor of every touched dir. When that ancestor is
-// deep (e.g. `./packages/app/screenshots`), the filesystem walker inside
-// `reg_core::find_images` must not try to open intermediate dirs like `.`
-// or `packages/` (they're OUTSIDE the sandbox and return EBADF). Earlier
-// reg_core used `glob::glob`, which walks from cwd and trips on those
-// intermediate opendirs, silently returning ZERO matches — reg.json ends
-// up empty, exit code 0, HTML "success". CI goes green while no images
-// were actually compared.
-//
-// The fix in phase-H replaced `glob::glob` with a direct recursive
-// `std::fs::read_dir(actual_dir)` walker that starts AT the sandboxed
-// root instead of traversing to it. This test uses a deliberately deep
-// scratch path to make sure we never regress to the broken glob walker.
-//
-// If this test ever fires, images were silently dropped. Don't mark it
-// as flaky — go read `walk_images` in `crates/reg_core/src/lib.rs` and
-// make sure it's still being called instead of falling back to
-// pattern-based globbing.
-test('multi-segment positional dirs still discover images', async () => {
-  // Scratch path with ≥3 segments so the preopen ends up multi-segment
-  // (the other tests use `.libtest-*` at the repo root which is already
-  // single-segment and wouldn't exercise the previously-broken path).
-  const leaf = `.phase-h-deep/${process.pid}-${++runId}/nested/level`;
-  const actualRel = `${leaf}/actual`;
-  const expectedRel = `${leaf}/expected`;
-  const diffRel = `${leaf}/diff`;
-  const jsonRel = `${leaf}/reg.json`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sample0.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
-    join(REPO, expectedRel, 'sample0.png'),
-  );
-
+test.serial('should generate image diff with exit code 1', async t => {
+  const code = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ]);
+    p.on('close', code => resolve(code));
+  });
+  t.true(code === 1);
   try {
-    await runCli([actualRel, expectedRel, diffRel, '-J', jsonRel, '-I']);
-    const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-    // The critical assertion: images ARE discovered despite the deep path.
-    // If this ever goes back to `[]`, someone reintroduced a walker that
-    // opens intermediate dirs outside the WASI preopen.
-    assert.deepEqual(report.actualItems, ['sample0.png']);
-    assert.deepEqual(report.expectedItems, ['sample0.png']);
-  } finally {
-    await rm(join(REPO, '.phase-h-deep'), { recursive: true, force: true });
+    fs.readFileSync(`${WORKSPACE}/diff/${SAMPLE_DIFF_IMAGE}`);
+    t.pass();
+  } catch (e) {
+    console.log(e);
+    t.fail();
   }
 });
 
-test('multi-segment positional dirs: nested subdirs still discover images', async () => {
-  // Extra guard: images under a SUBDIRECTORY of actual_dir (not just top
-  // level). The walker must recurse correctly, and the returned paths
-  // must be relative to actual_dir (`sub/a.png`, not an absolute path).
-  const leaf = `.phase-h-subdir/${process.pid}-${++runId}/nested`;
-  const actualRel = `${leaf}/actual`;
-  const expectedRel = `${leaf}/expected`;
-  await mkdir(join(REPO, actualRel, 'sub'), { recursive: true });
-  await mkdir(join(REPO, expectedRel, 'sub'), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sub/a.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
-    join(REPO, expectedRel, 'sub/a.png'),
-  );
-
-  try {
-    await runCli([
-      actualRel,
-      expectedRel,
-      `${leaf}/diff`,
-      '-J',
-      `${leaf}/reg.json`,
+test.serial('should exit process without error when ignore change option set', async t => {
+  const code = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
       '-I',
     ]);
-    const report = JSON.parse(await readFile(join(REPO, leaf, 'reg.json'), 'utf8'));
-    // Path should be actual_dir-relative with forward slashes.
-    assert.deepEqual(report.actualItems, ['sub/a.png']);
-  } finally {
-    await rm(join(REPO, '.phase-h-subdir'), { recursive: true, force: true });
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+    p.on('error', e => {
+      t.fail();
+      console.error(e);
+    });
+  });
+  t.true(code === 0);
+});
+
+test.serial('should exit with code 1 when extended error option set and file added', async t => {
+  const code = await new Promise(async resolve => {
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 1);
+});
+
+test.serial('should exit with code 1 when extended error option set and file deleted', async t => {
+  const code = await new Promise(async resolve => {
+    rimraf(`${WORKSPACE}/resource/actual`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-E',
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 1);
+});
+
+test.serial('should generate report json to `./reg.json` when not specified dist path', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+  try {
+    fs.readFileSync(`./reg.json`);
+    t.pass();
+  } catch (e) {
+    t.fail();
   }
 });
 
-test('-U prunes deleted baselines and keeps passed files untouched', async () => {
-  // Seed a scenario: expected has stale.png (not in actual) → deleted.
-  // actual has sample0.png differing from expected → failed/changed.
-  // expected has sample1.png identical to actual → passed.
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
+test.serial('should generate report json to `${WORKSPACE}/dist/reg.json` when dist path specified', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-J`,
+      `${WORKSPACE}/dist/reg.json`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
 
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sample0.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
-    join(REPO, actualRel, 'sample1.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'expected/sample0.png'),
-    join(REPO, expectedRel, 'sample0.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
-    join(REPO, expectedRel, 'sample1.png'),
-  );
-  // Stale baseline only in expected → should be removed by -U.
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, expectedRel, 'stale.png'),
-  );
-  // Capture pre-update mtime for the passed file so we can assert we
-  // didn't needlessly rewrite it.
-  const passedBefore = await stat(join(REPO, expectedRel, 'sample1.png'));
-
-  const { code } = await runCli([
-    actualRel,
-    expectedRel,
-    `${d.rel}/diff`,
-    '-U',
-  ]);
-  assert.equal(code, 0);
-
-  // stale.png: pruned.
-  await assert.rejects(() => stat(join(REPO, expectedRel, 'stale.png')));
-
-  // sample0.png: overwritten with actual/sample0.png — bytes now match.
-  const a0 = await readFile(join(REPO, actualRel, 'sample0.png'));
-  const e0 = await readFile(join(REPO, expectedRel, 'sample0.png'));
-  assert.equal(Buffer.compare(a0, e0), 0);
-
-  // sample1.png (passed): bytes unchanged AND mtime unchanged.
-  const passedAfter = await stat(join(REPO, expectedRel, 'sample1.png'));
-  assert.equal(
-    passedAfter.mtimeMs,
-    passedBefore.mtimeMs,
-    'passed file should not be rewritten by -U',
-  );
+  try {
+    fs.readFileSync(`${WORKSPACE}/dist/reg.json`);
+    t.pass();
+  } catch (e) {
+    t.fail();
+  }
 });
 
-// ---------------------------------------------------------------------------
-// Threshold-rate / threshold-pixel boundary parity with classic reg-cli
-// (mirrors `test/cli.test.mjs` "fail with -T 0.00", "pass with -T 1.00",
-//  "fail with -S 0", "pass with -S 10000000" on the JS branch).
-// ---------------------------------------------------------------------------
+test.serial('should generate report html to `${WORKSPACE}/dist/report.html` when `-R` option enabled', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-R`,
+      `${WORKSPACE}/dist/report.html`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
 
-test('-T 0.00 (strict thresholdRate) fails on any pixel difference', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-T',
-    '0.00',
-  ]);
-  assert.equal(code, 1);
+  try {
+    fs.readFileSync(`${WORKSPACE}/dist/report.html`);
+    t.pass();
+  } catch (e) {
+    console.error(e);
+    t.fail();
+  }
 });
 
-test('-T 1.00 (lax thresholdRate) accepts everything', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-T',
-    '1.00',
-  ]);
-  assert.equal(code, 0);
+test.serial('should generate junit report xml to `${WORKSPACE}/dist/report.xml` when `--junit` option enabled', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `--junit`,
+      `${WORKSPACE}/dist/report.xml`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    let report = fs.readFileSync(`${WORKSPACE}/dist/report.xml`);
+    t.is(report.toString(),
+      `<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="1" failures="1">
+  <testsuite name="reg-cli" tests="1" failures="1">
+    <testcase name="sample(cal).png">
+      <failure message="failed"/>
+    </testcase>
+  </testsuite>
+</testsuites>`);
+    t.pass();
+  } catch (e) {
+    console.error(e);
+    t.fail();
+  }
 });
 
-test('-S 0 (strict thresholdPixel) fails on any pixel difference', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-S',
-    '0',
-  ]);
-  assert.equal(code, 1);
+test.serial(
+  'should generate worker js and wasm files under `${WORKSPACE}/dist` when `-R -X` option enabled',
+  async t => {
+    await new Promise(resolve => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        `-R`,
+        `${WORKSPACE}/dist/report.html`,
+        `-X`,
+        'client',
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+
+    try {
+      t.truthy(fs.existsSync(`${WORKSPACE}/dist/worker.js`));
+      t.truthy(fs.existsSync(`${WORKSPACE}/dist/detector.wasm`));
+    } catch (e) {
+      console.error(e);
+      t.fail();
+    }
+  },
+);
+
+test.serial('should generate fail report', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
 });
 
-test('-S 10000000 (lax thresholdPixel) accepts everything', async () => {
-  const d = await scratch();
-  const { code } = await runCli([
-    `${SAMPLE_REL}/actual`,
-    `${SAMPLE_REL}/expected`,
-    `${d.rel}/diff`,
-    '-S',
-    '10000000',
-  ]);
-  assert.equal(code, 0);
+test.serial('should generate fail report with -T 0.00', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-T`,
+      '0.00',
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
 });
 
-// ---------------------------------------------------------------------------
-// Identical / disjoint directory shapes (parity gaps from the JS branch's
-// "success report", "new item report", "deleted item report" tests).
-// ---------------------------------------------------------------------------
+test.serial('should not generate fail report with -T 1.00', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-T`,
+      '1.00',
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
 
-test('identical dirs → passedItems populated, failedItems empty, exit 0', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  // Same bytes on both sides → guaranteed pass.
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sample0.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, expectedRel, 'sample0.png'),
-  );
-
-  const jsonRel = `${d.rel}/reg.json`;
-  const { code } = await runCli([
-    actualRel,
-    expectedRel,
-    `${d.rel}/diff`,
-    '-J',
-    jsonRel,
-  ]);
-  assert.equal(code, 0);
-  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-  assert.deepEqual(report.failedItems, []);
-  assert.deepEqual(report.newItems, []);
-  assert.deepEqual(report.deletedItems, []);
-  assert.deepEqual(report.passedItems, ['sample0.png']);
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [`${SAMPLE_IMAGE}`],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
 });
 
-test('actual empty → all expected items appear in deletedItems', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, expectedRel, 'sample0.png'),
-  );
+test.serial('should generate fail report with -S 0', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-S`,
+      '0',
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
 
-  const jsonRel = `${d.rel}/reg.json`;
-  await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel, '-I']);
-  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-  assert.deepEqual(report.deletedItems, ['sample0.png']);
-  assert.deepEqual(report.newItems, []);
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+      failedItems: [`${SAMPLE_IMAGE}`],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
 });
 
-// ---------------------------------------------------------------------------
-// Edge cases the JS branch never had: corrupt / non-image inputs.
-// Backed by reg_core's per-image failure tolerance (see
-// `crates/reg_core/src/lib.rs::per_image_failure_tests`).
-// ---------------------------------------------------------------------------
+test.serial('should not generate fail report with -S 10000000', async t => {
+  await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      `-S`,
+      '100000000',
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
 
-test('corrupt PNG → failedItems entry, run continues for siblings, exit 1', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-
-  // One valid pair (will pass)…
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'good.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, expectedRel, 'good.png'),
-  );
-  // …plus a corrupt pair the decoder will reject.
-  await import('node:fs/promises').then(({ writeFile }) =>
-    Promise.all([
-      writeFile(join(REPO, actualRel, 'bad.png'), 'not a png AAA'),
-      writeFile(join(REPO, expectedRel, 'bad.png'), 'not a png BBB'),
-    ]),
-  );
-
-  const jsonRel = `${d.rel}/reg.json`;
-  const { code, stderr } = await runCli([
-    actualRel,
-    expectedRel,
-    `${d.rel}/diff`,
-    '-J',
-    jsonRel,
-  ]);
-  assert.equal(code, 1, `expected exit 1 due to bad.png; stderr: ${stderr}`);
-  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-  assert.ok(
-    report.failedItems.includes('bad.png'),
-    `bad.png should be in failedItems; got ${JSON.stringify(report.failedItems)}`,
-  );
-  assert.ok(
-    report.passedItems.includes('good.png'),
-    `good.png should still pass; got ${JSON.stringify(report.passedItems)}`,
-  );
-  assert.match(
-    stderr,
-    /bad\.png/,
-    'stderr should name the failing file so users can find it',
-  );
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [`${SAMPLE_IMAGE}`],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
 });
 
-test('non-image files in actual/expected dirs are silently skipped', async () => {
-  const d = await scratch();
-  const actualRel = `${d.rel}/actual`;
-  const expectedRel = `${d.rel}/expected`;
-  await mkdir(join(REPO, actualRel), { recursive: true });
-  await mkdir(join(REPO, expectedRel), { recursive: true });
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, actualRel, 'sample0.png'),
-  );
-  await cp(
-    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
-    join(REPO, expectedRel, 'sample0.png'),
-  );
-  await import('node:fs/promises').then(({ writeFile }) =>
-    Promise.all([
-      writeFile(join(REPO, actualRel, 'README.md'), '# notes\n'),
-      writeFile(join(REPO, expectedRel, 'data.json'), '{}'),
-    ]),
-  );
+test.serial('should update images with `-U` option', async t => {
+  let code = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/actual`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+      '-U',
+    ]);
+    p.on('close', code => resolve(code));
+    // p.stdout.on('data', data => console.log(data.toString()));
+    p.stderr.on('data', data => console.error(data));
+  });
+  t.true(code === 0);
+  const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+  const expected = {
+    actualItems: [`${SAMPLE_IMAGE}`],
+    expectedItems: [`${SAMPLE_IMAGE}`],
+    diffItems: [`${SAMPLE_DIFF_IMAGE}`],
+    failedItems: [`${SAMPLE_IMAGE}`],
+    newItems: [],
+    deletedItems: [],
+    passedItems: [],
+    actualDir: `./${WORKSPACE}/resource/actual`,
+    expectedDir: `./${WORKSPACE}/resource/expected`,
+    diffDir: `./${WORKSPACE}/diff`,
+  };
+  t.deepEqual(report, expected);
+});
 
-  const jsonRel = `${d.rel}/reg.json`;
-  const { code } = await runCli([
-    actualRel,
-    expectedRel,
-    `${d.rel}/diff`,
-    '-J',
-    jsonRel,
-  ]);
-  assert.equal(code, 0);
-  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
-  for (const bucket of [
-    report.passedItems,
-    report.failedItems,
-    report.newItems,
-    report.deletedItems,
-  ]) {
-    assert.ok(
-      bucket.every((n) => !n.endsWith('.md') && !n.endsWith('.json')),
-      `non-image leaked into bucket: ${JSON.stringify(bucket)}`,
+test.serial('should delete from /expected when they are missing from /actual with `-U` option', async t => {
+  const code = await new Promise(resolve => {
+    rimraf(`${WORKSPACE}/resource/actual/${SAMPLE_IMAGE}`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+        '-U',
+      ]);
+      p.on('close', code => resolve(code));
+      // p.stdout.on('data', data => console.log(data.toString()));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+  t.true(code === 0);
+  const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+  const expected = {
+    actualItems: [],
+    expectedItems: [],
+    diffItems: [],
+    failedItems: [],
+    newItems: [],
+    deletedItems: [`${SAMPLE_IMAGE}`],
+    passedItems: [],
+    actualDir: `./${WORKSPACE}/resource/actual`,
+    expectedDir: `./${WORKSPACE}/resource/expected`,
+    diffDir: `./${WORKSPACE}/diff`,
+  };
+  t.deepEqual(report, expected);
+  const wasDeleted = !fs.existsSync(`${WORKSPACE}/resource/expected/${SAMPLE_IMAGE}`);
+  t.true(wasDeleted, `File ${SAMPLE_IMAGE} was not deleted from /expected`);
+});
+
+test.serial('should generate success report', async t => {
+  const stdout = await new Promise(resolve => {
+    const p = spawn('./dist/cli.js', [
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/resource/expected`,
+      `${WORKSPACE}/diff`,
+    ]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => console.error(data));
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [],
+      passedItems: [`${SAMPLE_IMAGE}`],
+      actualDir: `./${WORKSPACE}/resource/expected`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate newItem report', async t => {
+  const stdout = await new Promise(async resolve => {
+    rimraf(`${WORKSPACE}/resource/expected`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [`${SAMPLE_IMAGE}`],
+      expectedItems: [],
+      diffItems: [],
+      failedItems: [],
+      newItems: [`${SAMPLE_IMAGE}`],
+      deletedItems: [],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate deletedItem report', async t => {
+  const stdout = await new Promise(async resolve => {
+    rimraf(`${WORKSPACE}/resource/actual`, () => {
+      const p = spawn('./dist/cli.js', [
+        `${WORKSPACE}/resource/actual`,
+        `${WORKSPACE}/resource/expected`,
+        `${WORKSPACE}/diff`,
+      ]);
+      p.on('close', code => resolve(code));
+      p.stderr.on('data', data => console.error(data));
+    });
+  });
+
+  try {
+    const report = replaceReportPath(JSON.parse(fs.readFileSync(`./reg.json`, 'utf8')));
+    const expected = {
+      actualItems: [],
+      expectedItems: [`${SAMPLE_IMAGE}`],
+      diffItems: [],
+      failedItems: [],
+      newItems: [],
+      deletedItems: [`${SAMPLE_IMAGE}`],
+      passedItems: [],
+      actualDir: `./${WORKSPACE}/resource/actual`,
+      expectedDir: `./${WORKSPACE}/resource/expected`,
+      diffDir: `./${WORKSPACE}/diff`,
+    };
+    t.deepEqual(report, expected);
+  } catch (e) {
+    t.fail();
+  }
+});
+
+test.serial('should generate report from json', async t => {
+  await new Promise((resolve, reject) => {
+    const p = spawn('./dist/cli.js', [`-F`, `${WORKSPACE}/resource/reg.json`, `-R`, `./from-json.html`]);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => reject(data));
+  });
+
+  try {
+    const report = fs.readFileSync(`./from-json.html`);
+    t.true(!!report);
+  } catch (e) {
+    console.log(e);
+    t.fail();
+  }
+});
+
+
+test.serial('should generate Junit report from json', async t => {
+  await new Promise((resolve, reject) => {
+    const p = spawn('./dist/cli.js', [`-F`, `${WORKSPACE}/resource/reg.json`, '--junit','./from-json.xml']);
+    p.on('close', code => resolve(code));
+    p.stderr.on('data', data => reject(data));
+  });
+
+  try {
+    const report = fs.readFileSync(`./from-json.xml`);
+    t.true(!!report);
+    t.is(report.toString(),
+      `<?xml version="1.0"?>
+<testsuites name="reg-cli tests" tests="1" failures="1">
+  <testsuite name="reg-cli" tests="1" failures="1">
+    <testcase name="sample.png">
+      <failure message="failed"/>
+    </testcase>
+  </testsuite>
+</testsuites>`);
+  } catch (e) {
+    console.log(e);
+    t.fail();
+  }
+});
+
+test.serial('perf', async t => {
+  const copy = (s, d, done) => {
+    const r = fs.createReadStream(s);
+    const w = fs.createWriteStream(d);
+    r.pipe(w);
+    w.on('close', ex => {
+      done();
+    });
+  };
+  for (let i = 0; i < 100; i++) {
+    await Promise.all([
+      new Promise(resolve =>
+        copy(`${WORKSPACE}/resource/actual/sample(cal).png`, `${WORKSPACE}/resource/actual/sample${i}.png`, resolve),
+      ),
+      new Promise(resolve =>
+        copy(
+          `${WORKSPACE}/resource/expected/sample(cal).png`,
+          `${WORKSPACE}/resource/expected/sample${i}.png`,
+          resolve,
+        ),
+      ),
+    ]);
+  }
+
+  console.time('100images');
+  await new Promise(resolve => {
+    const p = spawn(
+      './dist/cli.js',
+      [`${WORKSPACE}/resource/actual`, `${WORKSPACE}/resource/expected`, `${WORKSPACE}/diff`],
+      { cwd: process.cwd() },
     );
-  }
+    p.on('close', code => resolve(code));
+    // p.stdout.on('data', data => console.log(data));
+    p.stderr.on('data', data => {
+      console.error(data.toString());
+    });
+  });
+  console.timeEnd('100images');
+  t.pass();
+});
+
+test.afterEach.always(async t => {
+  await new Promise(done => rimraf(`${WORKSPACE}${IMAGE_FILES}`, done));
+  await new Promise(done => rimraf(`./reg.json`, done));
 });

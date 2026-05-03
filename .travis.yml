@@ -1,0 +1,14 @@
+os:
+  - linux
+
+language: node_js
+node_js:
+  - '12'
+  - '10'
+addons:
+  apt:
+    packages:
+      - xvfb
+before_install:
+  - export DISPLAY=':99.0'
+  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
