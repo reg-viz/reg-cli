@@ -29,6 +29,17 @@ pub enum CompareError {
 
 static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "bmp", "webp"];
 
+/// Per-file outcome of the parallel diff loop. We never propagate
+/// per-image errors out of the rayon closure — instead each failure is
+/// logged to stderr, fired as a `compare-event` of kind "fail", and
+/// folded into the `failedItems` bucket downstream. This matches classic
+/// reg-cli's tolerance (it forks per image, so a single corrupt PNG
+/// can't sink the whole batch).
+enum ImageOutcome {
+    Ok(DiffOutput),
+    Failed,
+}
+
 static DEFAULT_JSON_PATH: &'static str = "./reg.json";
 static DEFAULT_REPORT_PATH: &'static str = "./report.html";
 
@@ -238,35 +249,48 @@ pub fn run(
                     // Explicitly set parent span for cross-thread context propagation
                     let image_span = info_span!(parent: parent_span.clone(), "diff_single_image", image = %path.display());
                     let _image_guard = image_span.enter();
-                    
+
                     let actual_path = actual_dir.join(path);
                     let expected_path = expected_dir.join(path);
-                    
-                    // Read actual image
-                    let img1 = {
-                        let _read_span = info_span!(parent: image_span.clone(), "read_actual_image", path = %actual_path.display()).entered();
-                        std::fs::read(&actual_path).map_err(|e| {
-                            eprintln!("Failed to read actual file: {:?}, error: {:?}", actual_path, e);
-                            e
-                        })?
+
+                    // Per-file failure policy: read OR decode errors are
+                    // logged to stderr, classified as "fail" via a live
+                    // compare-event, and counted into `failedItems`. We
+                    // never propagate them up — one corrupt PNG must not
+                    // abort a 1000-image batch (parity with classic
+                    // reg-cli, which forks-per-image and tolerates child
+                    // crashes individually).
+                    let img1 = match std::fs::read(&actual_path) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            eprintln!(
+                                "[reg-cli] failed to read actual {}: {}",
+                                actual_path.display(),
+                                e
+                            );
+                            emit_progress("fail", &path.display().to_string());
+                            return (path.clone(), ImageOutcome::Failed);
+                        }
                     };
-                    
-                    // Read expected image
-                    let img2 = {
-                        let _read_span = info_span!(parent: image_span.clone(), "read_expected_image", path = %expected_path.display()).entered();
-                        std::fs::read(&expected_path).map_err(|e| {
-                            eprintln!("Failed to read expected file: {:?}, error: {:?}", expected_path, e);
-                            e
-                        })?
+                    let img2 = match std::fs::read(&expected_path) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            eprintln!(
+                                "[reg-cli] failed to read expected {}: {}",
+                                expected_path.display(),
+                                e
+                            );
+                            emit_progress("fail", &path.display().to_string());
+                            return (path.clone(), ImageOutcome::Failed);
+                        }
                     };
-                    
-                    // Calculate diff
+
                     let res = {
                         let _calc_span = info_span!(parent: image_span.clone(), "calculate_diff",
                             actual_size = img1.len(),
                             expected_size = img2.len()
                         ).entered();
-                        image_diff_rs::diff(
+                        match image_diff_rs::diff(
                             img1,
                             img2,
                             &DiffOption {
@@ -276,7 +300,18 @@ pub fn run(
                                     .diff_image_format
                                     .map(EncodeFormat::from),
                             },
-                        )?
+                        ) {
+                            Ok(r) => r,
+                            Err(e) => {
+                                eprintln!(
+                                    "[reg-cli] failed to diff {}: {}",
+                                    path.display(),
+                                    e
+                                );
+                                emit_progress("fail", &path.display().to_string());
+                                return (path.clone(), ImageOutcome::Failed);
+                            }
+                        }
                     };
 
                     // Fire the live pass/fail event as early as we can —
@@ -308,15 +343,10 @@ pub fn run(
                     };
                     emit_progress(kind, &path.display().to_string());
 
-                    Ok((path.clone(), res))
+                    (path.clone(), ImageOutcome::Ok(res))
                 })
-                .inspect(|r| {
-                    if let Err(e) = r {
-                        dbg!(&e);
-                    }
-                })
-                .collect::<Result<Vec<(PathBuf, DiffOutput)>, CompareError>>()
-        })?
+                .collect::<Vec<(PathBuf, ImageOutcome)>>()
+        })
     };
 
     let mut differences = BTreeSet::new();
@@ -325,15 +355,20 @@ pub fn run(
 
     for (image_name, item) in result.iter() {
         match item {
-            DiffOutput::Eq => {
+            ImageOutcome::Failed => {
+                // Per-file read/decode failure: count as failed but
+                // don't try to write a diff image (we have no pixels).
+                failed.insert(image_name.clone());
+            }
+            ImageOutcome::Ok(DiffOutput::Eq) => {
                 passed.insert(image_name.clone());
             }
-            DiffOutput::NotEq {
+            ImageOutcome::Ok(DiffOutput::NotEq {
                 diff_count,
                 diff_image,
                 width,
                 height,
-            } => {
+            }) => {
                 if is_passed(
                     width.clone(),
                     height.clone(),
@@ -630,5 +665,94 @@ fn is_passed(
         ratio <= t
     } else {
         diff_count == 0
+    }
+}
+
+#[cfg(test)]
+mod per_image_failure_tests {
+    use super::*;
+    use std::fs;
+
+    /// Smallest possible 1×1 PNG (transparent pixel). Used for the
+    /// "valid neighbour" image so we can assert that a corrupt sibling
+    /// doesn't sink the whole batch.
+    const TINY_PNG: &[u8] = &[
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f,
+        0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ];
+
+    fn mkdirs(root: &Path) -> (PathBuf, PathBuf, PathBuf) {
+        let actual = root.join("actual");
+        let expected = root.join("expected");
+        let diff = root.join("diff");
+        fs::create_dir_all(&actual).unwrap();
+        fs::create_dir_all(&expected).unwrap();
+        fs::create_dir_all(&diff).unwrap();
+        (actual, expected, diff)
+    }
+
+    /// A single corrupt PNG (0 bytes) on both sides must NOT bubble up
+    /// as `Err(CompareError)`. It must show up as a `failedItems` entry,
+    /// while the neighbouring valid pair still passes through normally.
+    #[test]
+    fn corrupt_png_is_recorded_as_failed_not_propagated() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (actual, expected, diff) = mkdirs(tmp.path());
+
+        // Valid pair (same bytes → pass)
+        fs::write(actual.join("good.png"), TINY_PNG).unwrap();
+        fs::write(expected.join("good.png"), TINY_PNG).unwrap();
+
+        // Corrupt pair: looks like a PNG (right extension, file exists,
+        // non-zero so find_images doesn't drop it as a delete) but the
+        // bytes are not a valid image — image_diff_rs will Err on decode.
+        // Bytes must DIFFER between sides so the lib can't byte-eq fast-path
+        // its way to a fake "pass".
+        fs::write(actual.join("bad.png"), b"this is definitely not a png AAA").unwrap();
+        fs::write(expected.join("bad.png"), b"this is definitely not a png BBB").unwrap();
+
+        let report = run(&actual, &expected, &diff, Options::default())
+            .expect("per-image decode failures must not propagate as Err");
+
+        // good.png passed, bad.png went into failedItems.
+        let passed: Vec<String> = report.passed_items.iter().map(|p| p.display().to_string()).collect();
+        let failed: Vec<String> = report.failed_items.iter().map(|p| p.display().to_string()).collect();
+        assert!(passed.iter().any(|s| s == "good.png"), "good.png should pass, got passed={:?}", passed);
+        assert!(failed.iter().any(|s| s == "bad.png"), "bad.png should fail, got failed={:?}", failed);
+    }
+
+/// Non-image extensions (`.txt`, `.md`, etc.) are filtered out by
+    /// `find_images` upstream — they should NOT show up in any of the
+    /// output buckets. This locks in the "silently skip non-images"
+    /// contract documented in `SUPPORTED_EXTENTIONS`.
+    #[test]
+    fn non_image_extensions_are_silently_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (actual, expected, diff) = mkdirs(tmp.path());
+
+        fs::write(actual.join("ok.png"), TINY_PNG).unwrap();
+        fs::write(expected.join("ok.png"), TINY_PNG).unwrap();
+        // Random non-image siblings on both sides.
+        fs::write(actual.join("README.md"), b"hello").unwrap();
+        fs::write(expected.join("notes.txt"), b"world").unwrap();
+
+        let report = run(&actual, &expected, &diff, Options::default()).unwrap();
+
+        for bucket in [
+            &report.passed_items,
+            &report.failed_items,
+            &report.new_items,
+            &report.deleted_items,
+        ] {
+            let names: Vec<String> = bucket.iter().map(|p| p.display().to_string()).collect();
+            assert!(
+                names.iter().all(|n| !n.ends_with(".md") && !n.ends_with(".txt")),
+                "non-image leaked into a bucket: {:?}",
+                names
+            );
+        }
     }
 }
