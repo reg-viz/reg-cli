@@ -24,8 +24,11 @@
   },
   "scripts": {
     "build": "unbuild && cp reg.wasm ./dist/shared/reg.wasm",
-    "test": "node --test test/",
     "build:report": "sh ./scripts/build-ui.sh v0.3.0",
+    "build:wasm": "bash ./scripts/build-wasm.sh",
+    "release:prep": "bash ./scripts/release.sh",
+    "release:pack": "bash ./scripts/release.sh --pack",
+    "test": "node --test test/",
     "prepublishOnly": "npm run build"
   },
   "repository": {
