@@ -1,0 +1,90 @@
+diff --git a/dist/wasm-util.esm-bundler.js b/dist/wasm-util.esm-bundler.js
+index e5677632ecfb2b3abd0fa75f997c3e77a866a0d9..edb63b2ea9abdbf70542896aab65022e099b6374 100644
+--- a/dist/wasm-util.esm-bundler.js
++++ b/dist/wasm-util.esm-bundler.js
+@@ -1114,7 +1114,11 @@ function syscallWrap(self, name, f) {
+         });
+ }
+ function resolvePathSync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = fs.readlinkSync(resolvedPath);
+@@ -1128,7 +1132,11 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+     return resolvedPath;
+ }
+ async function resolvePathAsync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = await fs.promises.readlink(resolvedPath);
+diff --git a/dist/wasm-util.esm.js b/dist/wasm-util.esm.js
+index c7368ea81e3c3bae5d9562110d6b126b5c296f46..27a9052b30b3ff2774a31ea82a5b4e6fd5018f00 100644
+--- a/dist/wasm-util.esm.js
++++ b/dist/wasm-util.esm.js
+@@ -1114,7 +1114,11 @@ function syscallWrap(self, name, f) {
+         });
+ }
+ function resolvePathSync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = fs.readlinkSync(resolvedPath);
+@@ -1128,7 +1132,11 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+     return resolvedPath;
+ }
+ async function resolvePathAsync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = await fs.promises.readlink(resolvedPath);
+diff --git a/dist/wasm-util.js b/dist/wasm-util.js
+index 975fbb317689c90b9f11eee6fd62f5a98347596c..ff2caa68e8b7b7052ab0735b346fa63d7836a610 100644
+--- a/dist/wasm-util.js
++++ b/dist/wasm-util.js
+@@ -1120,7 +1120,11 @@
+             });
+     }
+     function resolvePathSync(fs, fileDescriptor, path, flags) {
+-        let resolvedPath = resolve(fileDescriptor.realPath, path);
++        // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+         if ((flags & 1) === 1) {
+             try {
+                 resolvedPath = fs.readlinkSync(resolvedPath);
+@@ -1134,7 +1138,11 @@
+         return resolvedPath;
+     }
+     async function resolvePathAsync(fs, fileDescriptor, path, flags) {
+-        let resolvedPath = resolve(fileDescriptor.realPath, path);
++        // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
++    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
++    let resolvedPath = (typeof process !== 'undefined' && process.platform === 'win32')
++        ? require('node:path').resolve(fileDescriptor.realPath, path).split('\\').join('/')
++        : resolve(fileDescriptor.realPath, path);
+         if ((flags & 1) === 1) {
+             try {
+                 resolvedPath = await fs.promises.readlink(resolvedPath);
