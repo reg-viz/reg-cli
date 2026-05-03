@@ -55,16 +55,3 @@ jobs:
         run: pnpm build
       - name: test (CLI + library)
         run: pnpm test
-      # Diagnostic: pick up wasi-diag.log produced by the patched
-      # @tybys/wasm-util on Windows. POSIX hosts won't produce one (the
-      # Windows-only branch is gated). Always run so we get logs from
-      # failing test runs too.
-      - name: upload wasi-diag.log
-        if: always() && runner.os == 'Windows'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: wasi-diag-${{ matrix.os }}
-          path: |
-            wasi-diag.log
-            **/wasi-diag.log
-          if-no-files-found: ignore
