@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, rm, cp, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
@@ -50,7 +50,10 @@ test.before(async () => {
     throw new Error(`Build artefacts missing at ${DIST}. Run 'pnpm --filter ./js build' first.`);
   });
   process.chdir(REPO);
-  lib = await import(DIST);
+  // On Windows the absolute path string `D:\…\index.mjs` is parsed as a
+  // URL with scheme `d:` and rejected by the ESM loader. Convert to a
+  // proper file:// URL so the loader accepts it on every OS.
+  lib = await import(pathToFileURL(DIST).href);
 });
 
 test.after(async () => {
