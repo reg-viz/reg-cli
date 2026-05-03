@@ -81,7 +81,6 @@
     ]
   },
   "dependencies": {
-    "@pyroscope/nodejs": "^0.4.1",
     "bluebird": "3.7.2",
     "chalk": "4.1.2",
     "cli-spinner": "0.2.10",
