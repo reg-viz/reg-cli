@@ -59,7 +59,12 @@ const commonAncestor = (paths: string[]): string => {
     else break;
   }
   if (common.length === 0) return allAbs ? '/' : '.';
-  return (allAbs ? '/' : '') + common.join('/');
+  // Windows-drive paths (`D:/foo/bar`) keep the drive letter as the
+  // first segment — adding a leading `/` here would yield `/D:/foo`,
+  // which the WASI shim then re-resolves into `D:\D:\…` (host-side
+  // doubled-drive-letter bug). Detect that case and skip the prefix.
+  const isWindowsDriveAbs = allAbs && /^[A-Za-z]:$/.test(common[0]);
+  return ((allAbs && !isWindowsDriveAbs) ? '/' : '') + common.join('/');
 };
 
 export type WasiSandbox = {
