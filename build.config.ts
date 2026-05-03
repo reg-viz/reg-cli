@@ -25,7 +25,7 @@ async function stageXimgdiffSources(outDir: string): Promise<void> {
 }
 
 export default defineBuildConfig({
-  entries: ['./index.ts', './cli.ts', './worker.ts', './entry.ts'],
+  entries: ['./src/index.ts', './src/cli.ts', './src/worker.ts', './src/entry.ts'],
   declaration: true,
   rollup: {
     emitCJS: true,
