@@ -200,7 +200,7 @@ $ pnpm test                              # → 50 node:test cases (CLI + library
 $ cargo test -p reg_core --lib --locked  # → 12 Rust unit tests (Linux / macOS)
 ```
 
-CI runs the JS tests on Ubuntu, macOS, and Windows. The native `cargo test` runs on Linux + macOS only (the host-native build of `image-diff-rs` pulls in libwebp's SSE intrinsics, which don't link cleanly under MSVC). Windows users still get full coverage of the actual published artefact — `reg.wasm` is built with wasi-sdk's clang and runs identically across all three OSes.
+CI runs both the JS tests and `cargo test` on Ubuntu and macOS. **Windows is not in the matrix:** Node's built-in WASI runtime returns `EINVAL` when the wasm bin writes to preopened relative paths (`reg.json` / `report.html` / `diff/*.png`) — a bug in Node's WASI path translation, not in `reg.wasm` itself. Until that's fixed upstream, Windows users should run reg-cli under WSL or git-bash; the wasm bin itself is OS-independent.
 
 ## Contribute
 
