@@ -10,25 +10,19 @@ jobs:
   # integration tests (`node:test` via `pnpm test` in `js/`) both run here
   # and cover junit/reg.json schema compat, -F/-X/-E, and the `compare()`
   # EventEmitter surface (reg-suit drop-in).
-  # Matrix runs on Linux + macOS so any path-separator, WASI-sandbox,
-  # or shell-script regression is caught before publish.
-  #
-  # Windows is intentionally absent: Node's built-in WASI runtime returns
-  # `EINVAL` (`Os { code: 28, kind: InvalidInput }`) when reg.wasm writes
-  # to a preopened relative path (reg.json / report.html / diff/*).
-  # Symptom: `Failed to write ".libtest-…/reg.json"` and ~32/38 tests
-  # fail. The bug is in Node's WASI path translation on Windows
-  # (preopens map to host-absolute Windows paths, but the wasi32 file
-  # syscalls then re-validate the path as POSIX). Not something this
-  # repo can fix — tracked for follow-up; recommend WSL / git-bash for
-  # Windows users in the meantime.
+  # Matrix runs on Linux + macOS + Windows. Windows depends on the
+  # @tybys/wasm-util 0.10.x uvwasi sync — earlier 0.9.x failed
+  # `path_open` on Windows preopens with EINVAL.
   test:
     name: test (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -45,9 +39,15 @@ jobs:
       - name: build report-ui (report.js + style.css)
         run: sh ./scripts/build-ui.sh v0.3.0
       - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
+        if: runner.os != 'Windows'
         with:
           toolchain: stable
+      # Skip on Windows: image-diff-rs's host-native build pulls in
+      # libwebp's SSE4.1 intrinsics (`VP8LDspInitSSE41`), which the MSVC
+      # linker can't resolve. The published artefact (reg.wasm) is
+      # built with wasi-sdk's clang and is OS-independent.
       - name: cargo test (reg_core)
+        if: runner.os != 'Windows'
         run: cargo test -p reg_core --lib
       - name: install
         run: pnpm install --frozen-lockfile
