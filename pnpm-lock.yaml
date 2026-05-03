@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@tybys/wasm-util':
-    hash: db7001be24ec6ba71e1ce799c61e1794dbc586b5b72b2141df3ecf88bab69370
+    hash: 2b919dadbea8e1f6221f3661390344e2fdfa331af3f60448ff40aee02901696a
     path: patches/@tybys__wasm-util.patch
 
 importers:
@@ -30,7 +30,7 @@ importers:
         version: 1.38.0
       '@tybys/wasm-util':
         specifier: ^0.9.0
-        version: 0.9.0(patch_hash=db7001be24ec6ba71e1ce799c61e1794dbc586b5b72b2141df3ecf88bab69370)
+        version: 0.9.0(patch_hash=2b919dadbea8e1f6221f3661390344e2fdfa331af3f60448ff40aee02901696a)
       x-img-diff-js:
         specifier: ^0.3.5
         version: 0.3.5
@@ -2209,7 +2209,7 @@ snapshots:
 
   '@trysound/sax@0.2.0': {}
 
-  '@tybys/wasm-util@0.9.0(patch_hash=db7001be24ec6ba71e1ce799c61e1794dbc586b5b72b2141df3ecf88bab69370)':
+  '@tybys/wasm-util@0.9.0(patch_hash=2b919dadbea8e1f6221f3661390344e2fdfa331af3f60448ff40aee02901696a)':
     dependencies:
       tslib: 2.7.0
 

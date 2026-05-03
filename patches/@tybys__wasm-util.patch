@@ -1,222 +1,148 @@
-diff --git a/dist/wasm-util.esm-bundler.js b/dist/wasm-util.esm-bundler.js
-index 0c7a3f6dd2218278a4a787deaf87e8bc427e5a62..573bed6e5c282a45f8aa0a82554c2100b2e235f4 100644
---- a/dist/wasm-util.esm-bundler.js
-+++ b/dist/wasm-util.esm-bundler.js
-@@ -1,3 +1,9 @@
-+import * as _nodePathPatched from 'node:path';
-+import * as _nodeFsPatched from 'node:fs';
-+function _wasiDiag(line) {
-+  try { (typeof process !== 'undefined') && console.error(line); } catch(_){}
-+  try { _nodeFsPatched.appendFileSync('wasi-diag.log', line + '\n'); } catch(_){}
-+}
- const _WebAssembly = typeof WebAssembly !== 'undefined'
-     ? WebAssembly
-     : typeof WXWebAssembly !== 'undefined'
-@@ -1097,7 +1103,13 @@ function syscallWrap(self, name, f) {
-     });
- }
- function resolvePathSync(fs, fileDescriptor, path, flags) {
--    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
-+        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
-+        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
-+    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
-+    }
-     if ((flags & 1) === 1) {
-         try {
-             resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1111,7 +1123,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
-     return resolvedPath;
- }
- async function resolvePathAsync(fs, fileDescriptor, path, flags) {
--    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
-+        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
-+        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
-+    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
-+    }
-     if ((flags & 1) === 1) {
-         try {
-             resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2256,7 +2274,13 @@ class WASI$1 {
-             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-             const fs = getFs(this);
-             const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
--            const r = fs.openSync(resolved_path, flagsRes, 0o666);
-+            let r;
-+            try {
-+                r = fs.openSync(resolved_path, flagsRes, 0o666);
-+            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
-+                throw _e;
-+            }
-             const filetype = wasi.fds.getFileTypeByFd(r);
-             if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                 return 54 /* WasiErrno.ENOTDIR */;
-@@ -2290,7 +2314,13 @@ class WASI$1 {
-             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-             const fs = getFs(this);
-             const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
--            const r = await fs.promises.open(resolved_path, flagsRes, 0o666);
-+            let r;
-+            try {
-+                r = await fs.promises.open(resolved_path, flagsRes, 0o666);
-+            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] promises.open FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
-+                throw _e;
-+            }
-             const filetype = await wasi.fds.getFileTypeByFd(r);
-             if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                 return 54 /* WasiErrno.ENOTDIR */;
-diff --git a/dist/wasm-util.esm.js b/dist/wasm-util.esm.js
-index e06c07b68230ab1ec92b28d3c764d4406b9ab532..c2a2b4060e501b8fb93497a281873b9970a68d22 100644
---- a/dist/wasm-util.esm.js
-+++ b/dist/wasm-util.esm.js
-@@ -1,3 +1,9 @@
-+import * as _nodePathPatched from 'node:path';
-+import * as _nodeFsPatched from 'node:fs';
-+function _wasiDiag(line) {
-+  try { (typeof process !== 'undefined') && console.error(line); } catch(_){}
-+  try { _nodeFsPatched.appendFileSync('wasi-diag.log', line + '\n'); } catch(_){}
-+}
- const _WebAssembly = typeof WebAssembly !== 'undefined'
-     ? WebAssembly
-     : typeof WXWebAssembly !== 'undefined'
-@@ -1097,7 +1103,13 @@ function syscallWrap(self, name, f) {
-     });
- }
- function resolvePathSync(fs, fileDescriptor, path, flags) {
--    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
-+        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
-+        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
-+    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
-+    }
-     if ((flags & 1) === 1) {
-         try {
-             resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1111,7 +1123,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
-     return resolvedPath;
- }
- async function resolvePathAsync(fs, fileDescriptor, path, flags) {
--    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
-+        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
-+        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
-+    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
-+    }
-     if ((flags & 1) === 1) {
-         try {
-             resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2256,7 +2274,13 @@ class WASI$1 {
-             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-             const fs = getFs(this);
-             const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
--            const r = fs.openSync(resolved_path, flagsRes, 0o666);
-+            let r;
-+            try {
-+                r = fs.openSync(resolved_path, flagsRes, 0o666);
-+            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
-+                throw _e;
-+            }
-             const filetype = wasi.fds.getFileTypeByFd(r);
-             if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                 return 54 /* WasiErrno.ENOTDIR */;
-@@ -2290,7 +2314,13 @@ class WASI$1 {
-             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-             const fs = getFs(this);
-             const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
--            const r = await fs.promises.open(resolved_path, flagsRes, 0o666);
-+            let r;
-+            try {
-+                r = await fs.promises.open(resolved_path, flagsRes, 0o666);
-+            } catch (_e) {
-+                _wasiDiag('[WASI-DIAG] promises.open FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
-+                throw _e;
-+            }
-             const filetype = await wasi.fds.getFileTypeByFd(r);
-             if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                 return 54 /* WasiErrno.ENOTDIR */;
-diff --git a/dist/wasm-util.js b/dist/wasm-util.js
-index 6d29fd7697362150c5128bd665ff6a388aafab85..72a840bcc8230c1f530694b73f0e9025a3f20126 100644
---- a/dist/wasm-util.js
-+++ b/dist/wasm-util.js
+diff --git a/lib/cjs/wasi/preview1.js b/lib/cjs/wasi/preview1.js
+index 588e67b87398accf9fd805ba25e0f40eed305023..f0485266821fae6bf793a6292c447d07903b4a5a 100644
+--- a/lib/cjs/wasi/preview1.js
++++ b/lib/cjs/wasi/preview1.js
 @@ -1,3 +1,9 @@
 +var _nodePathPatched = (typeof require !== 'undefined') ? require('node:path') : null;
 +var _nodeFsPatched   = (typeof require !== 'undefined') ? require('node:fs')   : null;
 +function _wasiDiag(line) {
-+  try { (typeof process !== 'undefined') && console.error(line); } catch(_){}
++  try { console.error(line); } catch(_){}
 +  try { _nodeFsPatched && _nodeFsPatched.appendFileSync('wasi-diag.log', line + '\n'); } catch(_){}
 +}
- (function (global, factory) {
-     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-     typeof define === 'function' && define.amd ? define(['exports'], factory) :
-@@ -1103,7 +1109,13 @@
-         });
-     }
-     function resolvePathSync(fs, fileDescriptor, path, flags) {
--        let resolvedPath = resolve(fileDescriptor.realPath, path);
-+        let resolvedPath;
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.WASI = void 0;
+@@ -90,7 +96,13 @@ function syscallWrap(self, name, f) {
+     });
+ }
+ function resolvePathSync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = (0, path_1.resolve)(fileDescriptor.realPath, path);
++    let resolvedPath;
 +    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
 +        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
 +        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
 +    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
++        resolvedPath = (0, path_1.resolve)(fileDescriptor.realPath, path);
 +    }
-         if ((flags & 1) === 1) {
-             try {
-                 resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1117,7 +1129,13 @@
-         return resolvedPath;
-     }
-     async function resolvePathAsync(fs, fileDescriptor, path, flags) {
--        let resolvedPath = resolve(fileDescriptor.realPath, path);
-+        let resolvedPath;
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = fs.readlinkSync(resolvedPath);
+@@ -104,7 +116,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+     return resolvedPath;
+ }
+ async function resolvePathAsync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = (0, path_1.resolve)(fileDescriptor.realPath, path);
++    let resolvedPath;
 +    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
 +        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
 +        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
 +    } else {
-+        resolvedPath = resolve(fileDescriptor.realPath, path);
++        resolvedPath = (0, path_1.resolve)(fileDescriptor.realPath, path);
 +    }
-         if ((flags & 1) === 1) {
-             try {
-                 resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2262,7 +2280,13 @@
-                 const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-                 const fs = getFs(this);
-                 const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
--                const r = fs.openSync(resolved_path, flagsRes, 0o666);
-+                let r;
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = await fs.promises.readlink(resolvedPath);
+@@ -1249,7 +1267,13 @@ class WASI {
+             const pathString = decoder.decode((0, util_1.unsharedSlice)(HEAPU8, path, path + path_len));
+             const fs = getFs(this);
+             const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
+-            const r = fs.openSync(resolved_path, flagsRes, 0o666);
++            let r;
 +            try {
 +                r = fs.openSync(resolved_path, flagsRes, 0o666);
 +            } catch (_e) {
 +                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
 +                throw _e;
 +            }
-                 const filetype = wasi.fds.getFileTypeByFd(r);
-                 if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                     return 54 /* WasiErrno.ENOTDIR */;
-@@ -2296,7 +2320,13 @@
-                 const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
-                 const fs = getFs(this);
-                 const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
--                const r = await fs.promises.open(resolved_path, flagsRes, 0o666);
-+                let r;
+             const filetype = wasi.fds.getFileTypeByFd(r);
+             if ((o_flags & types_1.WasiFileControlFlag.O_DIRECTORY) !== 0 && filetype !== types_1.WasiFileType.DIRECTORY) {
+                 return types_1.WasiErrno.ENOTDIR;
+@@ -1283,7 +1307,13 @@ class WASI {
+             const pathString = decoder.decode((0, util_1.unsharedSlice)(HEAPU8, path, path + path_len));
+             const fs = getFs(this);
+             const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
+-            const r = await fs.promises.open(resolved_path, flagsRes, 0o666);
++            let r;
 +            try {
 +                r = await fs.promises.open(resolved_path, flagsRes, 0o666);
 +            } catch (_e) {
 +                _wasiDiag('[WASI-DIAG] promises.open FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
 +                throw _e;
 +            }
-                 const filetype = await wasi.fds.getFileTypeByFd(r);
-                 if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
-                     return 54 /* WasiErrno.ENOTDIR */;
+             const filetype = await wasi.fds.getFileTypeByFd(r);
+             if ((o_flags & types_1.WasiFileControlFlag.O_DIRECTORY) !== 0 && filetype !== types_1.WasiFileType.DIRECTORY) {
+                 return types_1.WasiErrno.ENOTDIR;
+diff --git a/lib/mjs/wasi/preview1.mjs b/lib/mjs/wasi/preview1.mjs
+index 0227fde4b5181bb9bb8c45a50a559476252ff6f8..76e0df0a0fca7ed998d00eeb83c5007a3f49ebed 100644
+--- a/lib/mjs/wasi/preview1.mjs
++++ b/lib/mjs/wasi/preview1.mjs
+@@ -1,3 +1,9 @@
++import * as _nodePathPatched from 'node:path';
++import * as _nodeFsPatched from 'node:fs';
++function _wasiDiag(line) {
++  try { console.error(line); } catch(_){}
++  try { _nodeFsPatched.appendFileSync('wasi-diag.log', line + '\n'); } catch(_){}
++}
+ import { _WebAssembly } from "../webassembly.mjs";
+ import { resolve } from "./path.mjs";
+ import { WasiErrno, WasiRights, FileControlFlag, WasiFileControlFlag, WasiFdFlag, WasiFileType, WasiClockid, WasiFstFlag, WasiEventType, WasiSubclockflags } from "./types.mjs";
+@@ -87,7 +93,13 @@ function syscallWrap(self, name, f) {
+     });
+ }
+ function resolvePathSync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    let resolvedPath;
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
++    } else {
++        resolvedPath = resolve(fileDescriptor.realPath, path);
++    }
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = fs.readlinkSync(resolvedPath);
+@@ -101,7 +113,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+     return resolvedPath;
+ }
+ async function resolvePathAsync(fs, fileDescriptor, path, flags) {
+-    let resolvedPath = resolve(fileDescriptor.realPath, path);
++    let resolvedPath;
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        _wasiDiag('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath));
++    } else {
++        resolvedPath = resolve(fileDescriptor.realPath, path);
++    }
+     if ((flags & 1) === 1) {
+         try {
+             resolvedPath = await fs.promises.readlink(resolvedPath);
+@@ -1246,7 +1264,13 @@ export class WASI {
+             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
+             const fs = getFs(this);
+             const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
+-            const r = fs.openSync(resolved_path, flagsRes, 0o666);
++            let r;
++            try {
++                r = fs.openSync(resolved_path, flagsRes, 0o666);
++            } catch (_e) {
++                _wasiDiag('[WASI-DIAG] openSync FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
++                throw _e;
++            }
+             const filetype = wasi.fds.getFileTypeByFd(r);
+             if ((o_flags & WasiFileControlFlag.O_DIRECTORY) !== 0 && filetype !== WasiFileType.DIRECTORY) {
+                 return WasiErrno.ENOTDIR;
+@@ -1280,7 +1304,13 @@ export class WASI {
+             const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
+             const fs = getFs(this);
+             const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
+-            const r = await fs.promises.open(resolved_path, flagsRes, 0o666);
++            let r;
++            try {
++                r = await fs.promises.open(resolved_path, flagsRes, 0o666);
++            } catch (_e) {
++                _wasiDiag('[WASI-DIAG] promises.open FAILED resolved_path=' + JSON.stringify(resolved_path) + ' err.code=' + (_e && _e.code) + ' err.errno=' + (_e && _e.errno) + ' err.syscall=' + (_e && _e.syscall) + ' err.path=' + JSON.stringify(_e && _e.path) + ' msg=' + (_e && _e.message));
++                throw _e;
++            }
+             const filetype = await wasi.fds.getFileTypeByFd(r);
+             if ((o_flags & WasiFileControlFlag.O_DIRECTORY) !== 0 && filetype !== WasiFileType.DIRECTORY) {
+                 return WasiErrno.ENOTDIR;
