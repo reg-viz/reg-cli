@@ -1,0 +1,9 @@
+# Single-package "workspace" — only the repo root is a member. We need
+# this file solely so pnpm v10 picks up `patchedDependencies` (which
+# moved out of package.json in v10). The empty `packages:` list keeps
+# nested directories like `report/ui` (cloned by scripts/build-ui.sh)
+# from being treated as workspace members, which would break their
+# self-contained `pnpm install`.
+packages: []
+
+patchedDependencies: { '@tybys/wasm-util': patches/@tybys__wasm-util.patch }
