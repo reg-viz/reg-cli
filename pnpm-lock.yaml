@@ -13,6 +13,13 @@ importers:
 
   .:
     dependencies:
+      '@tybys/wasm-util':
+        specifier: ^0.9.0
+        version: 0.9.0(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)
+      x-img-diff-js:
+        specifier: ^0.3.5
+        version: 0.3.5
+    devDependencies:
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
@@ -31,13 +38,6 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.40.0
         version: 1.40.0
-      '@tybys/wasm-util':
-        specifier: ^0.9.0
-        version: 0.9.0(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)
-      x-img-diff-js:
-        specifier: ^0.3.5
-        version: 0.3.5
-    devDependencies:
       '@types/node':
         specifier: ^22.5.5
         version: 22.5.5

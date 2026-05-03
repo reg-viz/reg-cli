@@ -3,16 +3,33 @@
  *
  * This module receives trace data from the Rust/WASM side and converts it
  * to OpenTelemetry spans that can be exported to Jaeger or other backends.
+ *
+ * The @opentelemetry/* packages are declared as **optional peer
+ * dependencies** — they are loaded lazily inside `initTracing()` only when
+ * `OTEL_ENABLED=true` (or `JAEGER_ENABLED=true`). Default installs of this
+ * package therefore pay zero install or runtime cost for OTel.
  */
 
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { trace, SpanStatusCode, context, ROOT_CONTEXT, type Span, type Context } from '@opentelemetry/api';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import type { Span, Context } from '@opentelemetry/api';
 
-let provider: NodeTracerProvider | null = null;
+type OtelApi = typeof import('@opentelemetry/api');
+type OtelResources = typeof import('@opentelemetry/resources');
+type OtelSdkBase = typeof import('@opentelemetry/sdk-trace-base');
+type OtelSdkNode = typeof import('@opentelemetry/sdk-trace-node');
+type OtelExporter = typeof import('@opentelemetry/exporter-trace-otlp-http');
+type OtelSemconv = typeof import('@opentelemetry/semantic-conventions');
+
+interface OtelModules {
+  api: OtelApi;
+  resources: OtelResources;
+  sdkBase: OtelSdkBase;
+  sdkNode: OtelSdkNode;
+  exporter: OtelExporter;
+  semconv: OtelSemconv;
+}
+
+let otel: OtelModules | null = null;
+let provider: InstanceType<OtelSdkNode['NodeTracerProvider']> | null = null;
 let isInitialized = false;
 
 // Store current root span context for propagation to Rust
@@ -62,29 +79,58 @@ export const isTracingEnabled = (): boolean => {
 };
 
 /**
+ * Lazily import the @opentelemetry/* packages. Returns null and prints a
+ * single warning if any are missing — keeps the CLI working without OTel
+ * installed even when the env vars are set.
+ */
+const loadOtel = async (): Promise<OtelModules | null> => {
+  if (otel) return otel;
+  try {
+    const [api, resources, sdkBase, sdkNode, exporter, semconv] = await Promise.all([
+      import('@opentelemetry/api'),
+      import('@opentelemetry/resources'),
+      import('@opentelemetry/sdk-trace-base'),
+      import('@opentelemetry/sdk-trace-node'),
+      import('@opentelemetry/exporter-trace-otlp-http'),
+      import('@opentelemetry/semantic-conventions'),
+    ]);
+    otel = { api, resources, sdkBase, sdkNode, exporter, semconv };
+    return otel;
+  } catch (err) {
+    console.warn(
+      '[Tracing] OTEL_ENABLED is set but @opentelemetry/* packages are not installed. ' +
+        'Install them as peer deps to enable tracing. Continuing without tracing.',
+    );
+    if (process.env.OTEL_DEBUG === 'true') {
+      console.warn('[Tracing] Import error:', err);
+    }
+    return null;
+  }
+};
+
+/**
  * Initialize OpenTelemetry SDK
  */
-export const initTracing = (): void => {
-  if (!isTracingEnabled()) {
+export const initTracing = async (): Promise<void> => {
+  if (!isTracingEnabled() || isInitialized) {
     return;
   }
 
-  if (isInitialized) {
-    return;
-  }
+  const mods = await loadOtel();
+  if (!mods) return;
 
   const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
 
-  const otlpExporter = new OTLPTraceExporter({
+  const otlpExporter = new mods.exporter.OTLPTraceExporter({
     url: otlpEndpoint,
   });
 
-  provider = new NodeTracerProvider({
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'reg-cli',
-      [ATTR_SERVICE_VERSION]: '0.18.10',
+  provider = new mods.sdkNode.NodeTracerProvider({
+    resource: mods.resources.resourceFromAttributes({
+      [mods.semconv.ATTR_SERVICE_NAME]: 'reg-cli',
+      [mods.semconv.ATTR_SERVICE_VERSION]: '0.18.10',
     }),
-    spanProcessors: [new BatchSpanProcessor(otlpExporter)],
+    spanProcessors: [new mods.sdkBase.BatchSpanProcessor(otlpExporter)],
   });
 
   provider.register();
@@ -127,20 +173,20 @@ export const shutdownTracing = async (): Promise<void> => {
  * Get the tracer instance
  */
 const getTracer = () => {
-  return trace.getTracer('reg-cli-wasm', '0.18.10');
+  return otel!.api.trace.getTracer('reg-cli-wasm', '0.18.10');
 };
 
 /**
  * Start a root span and return context info to pass to Rust
  */
 export const startRootSpan = (name: string): TraceContext | null => {
-  if (!isTracingEnabled() || !isInitialized) {
+  if (!isTracingEnabled() || !isInitialized || !otel) {
     return null;
   }
 
   const tracer = getTracer();
   currentRootSpan = tracer.startSpan(name);
-  currentRootContext = trace.setSpan(ROOT_CONTEXT, currentRootSpan);
+  currentRootContext = otel.api.trace.setSpan(otel.api.ROOT_CONTEXT, currentRootSpan);
 
   // Get the span context to pass to Rust
   const spanContext = currentRootSpan.spanContext();
@@ -161,11 +207,11 @@ export const startRootSpan = (name: string): TraceContext | null => {
  * End the current root span
  */
 export const endRootSpan = (success: boolean = true): void => {
-  if (currentRootSpan) {
+  if (currentRootSpan && otel) {
     if (success) {
-      currentRootSpan.setStatus({ code: SpanStatusCode.OK });
+      currentRootSpan.setStatus({ code: otel.api.SpanStatusCode.OK });
     } else {
-      currentRootSpan.setStatus({ code: SpanStatusCode.ERROR });
+      currentRootSpan.setStatus({ code: otel.api.SpanStatusCode.ERROR });
     }
     currentRootSpan.end();
 
@@ -249,7 +295,7 @@ const topologicalSortSpans = (spans: RustSpanData[]): RustSpanData[] => {
  * we reconstruct them with their recorded timestamps.
  */
 export const processRustTraceData = (traceData: RustTraceData): void => {
-  if (!isTracingEnabled() || !isInitialized) {
+  if (!isTracingEnabled() || !isInitialized || !otel) {
     return;
   }
 
@@ -274,7 +320,7 @@ export const processRustTraceData = (traceData: RustTraceData): void => {
     // Determine parent context
     let parentContext: Context;
     let parentInfo: string;
-    
+
     if (rustSpan.parent_span_id && spanContextMap.has(rustSpan.parent_span_id)) {
       // Has a Rust parent span that was already processed
       parentContext = spanContextMap.get(rustSpan.parent_span_id)!;
@@ -285,9 +331,9 @@ export const processRustTraceData = (traceData: RustTraceData): void => {
       parentInfo = `js parent: ${currentRootSpan?.spanContext().spanId}`;
     } else {
       // No parent available (orphan or parent not found)
-      parentContext = currentRootContext || ROOT_CONTEXT;
-      parentInfo = rustSpan.parent_span_id 
-        ? `orphan (parent ${rustSpan.parent_span_id} not found)` 
+      parentContext = currentRootContext || otel.api.ROOT_CONTEXT;
+      parentInfo = rustSpan.parent_span_id
+        ? `orphan (parent ${rustSpan.parent_span_id} not found)`
         : 'root (no js context)';
     }
 
@@ -313,18 +359,18 @@ export const processRustTraceData = (traceData: RustTraceData): void => {
     // Set status
     if (rustSpan.status === 'error') {
       span.setStatus({
-        code: SpanStatusCode.ERROR,
+        code: otel.api.SpanStatusCode.ERROR,
         message: rustSpan.error_message || 'Unknown error',
       });
     } else {
-      span.setStatus({ code: SpanStatusCode.OK });
+      span.setStatus({ code: otel.api.SpanStatusCode.OK });
     }
 
     // End span with recorded end time
     span.end([Math.floor(endTimeNs / 1_000_000_000), endTimeNs % 1_000_000_000]);
 
     // Store context for child spans
-    const ctx = trace.setSpan(parentContext, span);
+    const ctx = otel.api.trace.setSpan(parentContext, span);
     spanContextMap.set(rustSpan.span_id, ctx);
 
     if (process.env.OTEL_DEBUG === 'true') {
@@ -354,10 +400,10 @@ export const processWorkerSpans = (
   spans: WorkerSpan[],
   workerLabel: string,
 ): void => {
-  if (!isTracingEnabled() || !isInitialized || !spans?.length) return;
+  if (!isTracingEnabled() || !isInitialized || !otel || !spans?.length) return;
 
   const tracer = getTracer();
-  const parentCtx = currentRootContext ?? ROOT_CONTEXT;
+  const parentCtx = currentRootContext ?? otel.api.ROOT_CONTEXT;
 
   for (const s of spans) {
     const startNs = s.start_ms * 1_000_000;
@@ -384,11 +430,12 @@ export const processWorkerSpans = (
  * Create a wrapper span for the entire reg-cli operation
  */
 export const createRootSpan = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-  if (!isTracingEnabled() || !isInitialized) {
+  if (!isTracingEnabled() || !isInitialized || !otel) {
     return fn();
   }
 
   const tracer = getTracer();
+  const SpanStatusCode = otel.api.SpanStatusCode;
   return tracer.startActiveSpan(name, async (span) => {
     try {
       const result = await fn();
@@ -406,4 +453,3 @@ export const createRootSpan = async <T>(name: string, fn: () => Promise<T>): Pro
     }
   });
 };
-
