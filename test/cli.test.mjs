@@ -780,3 +780,303 @@ test('non-image files in actual/expected dirs are silently skipped', async () =>
     );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Real-world fixture edge cases — captured ahead of v0.1 publish so that a
+// regression in any of these reaches us before reg-suit / CI users do.
+//
+// All fixtures are inlined as base64 (≤300 bytes each) so the tests are
+// hermetic — no ImageMagick required on the runner.
+// ---------------------------------------------------------------------------
+
+// 2×2 solid red, 4×4 solid red, 2×2 solid white. Hand-generated via
+// ImageMagick; tiny enough to embed.
+const PNG_2x2_RED   = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQMAAABIeJ9nAAAABlBMVEX/AAD///9BHTQRAAAADElEQVQI12NgYGAAAAAEAAEnNCcKAAAAAElFTkSuQmCC';
+const PNG_4x4_RED   = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAEAQMAAACTPww9AAAABlBMVEX/AAD///9BHTQRAAAACyJREFUCNdjYIAAAAAIAAEvIN0xAAAAAElFTkSuQmCC';
+const PNG_2x2_WHITE = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACAQAAAABazTCJAAAAC0lEQVQI12NgaGAAAAMEAQGBxbqiqQAAAABJRU5ErkJggg==';
+
+const writeBin = async (path, b64) => {
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(path, Buffer.from(b64, 'base64'));
+};
+
+test('different-dimensions pair (2×2 vs 4×4) → fail without panicking', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await writeBin(join(REPO, actualRel, 'mismatch.png'), PNG_2x2_RED);
+  await writeBin(join(REPO, expectedRel, 'mismatch.png'), PNG_4x4_RED);
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code, stderr } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  // Either failedItems (treated as differing) OR a per-image error
+  // counted as failed — both are acceptable, the run must NOT crash.
+  assert.notStrictEqual(code, null, `process should exit cleanly; stderr: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(
+    report.failedItems.includes('mismatch.png'),
+    `mismatch.png should be in failedItems; got ${JSON.stringify(report)}`,
+  );
+});
+
+test('filename with spaces and Unicode is preserved end-to-end', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  // Two fixtures: one with a space, one with non-ASCII bytes.
+  // Same-bytes pair → must show up in passedItems verbatim.
+  for (const name of ['my image.png', '画像テスト.png']) {
+    await writeBin(join(REPO, actualRel, name), PNG_2x2_RED);
+    await writeBin(join(REPO, expectedRel, name), PNG_2x2_RED);
+  }
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(
+    report.passedItems.includes('my image.png'),
+    `space filename lost — got passedItems=${JSON.stringify(report.passedItems)}`,
+  );
+  assert.ok(
+    report.passedItems.includes('画像テスト.png'),
+    `Unicode filename lost — got passedItems=${JSON.stringify(report.passedItems)}`,
+  );
+});
+
+test('nested subdirectories (actual/foo/bar/baz.png) are traversed', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel, 'foo/bar'), { recursive: true });
+  await mkdir(join(REPO, expectedRel, 'foo/bar'), { recursive: true });
+  // Identical bytes → must pass.
+  await writeBin(join(REPO, actualRel, 'foo/bar/baz.png'), PNG_2x2_RED);
+  await writeBin(join(REPO, expectedRel, 'foo/bar/baz.png'), PNG_2x2_RED);
+  // Differing bytes at a different depth → must fail.
+  await mkdir(join(REPO, actualRel, 'foo'), { recursive: true });
+  await writeBin(join(REPO, actualRel, 'foo/sibling.png'), PNG_2x2_RED);
+  await writeBin(join(REPO, expectedRel, 'foo/sibling.png'), PNG_2x2_WHITE);
+
+  const jsonRel = `${d.rel}/reg.json`;
+  await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel, '-I']);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  // Path separator is `/` regardless of host OS — we run the CLI under
+  // WASI which normalises to forward slashes.
+  assert.ok(
+    report.passedItems.includes('foo/bar/baz.png'),
+    `nested baz.png missing — got passedItems=${JSON.stringify(report.passedItems)}`,
+  );
+  assert.ok(
+    report.failedItems.includes('foo/sibling.png'),
+    `nested sibling.png missing — got failedItems=${JSON.stringify(report.failedItems)}`,
+  );
+});
+
+test('non-PNG image formats (.jpg) are accepted and diffed', async () => {
+  // Tiny 8×8 JPEG (grey). Same bytes both sides → identical pair pass.
+  const JPG_8x8_GREY = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/wAALCAAIAAgBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAABf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVf/Z';
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await writeBin(join(REPO, actualRel, 'a.jpg'), JPG_8x8_GREY);
+  await writeBin(join(REPO, expectedRel, 'a.jpg'), JPG_8x8_GREY);
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code, stderr } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  assert.equal(code, 0, `JPG pair should pass; stderr: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(
+    report.passedItems.includes('a.jpg'),
+    `a.jpg should pass; got passedItems=${JSON.stringify(report.passedItems)}`,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Output / option flag coverage
+// ---------------------------------------------------------------------------
+
+test('--diffFormat png writes .png diff (and reg.json diffItems uses .png)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    `${d.rel}/reg.json`,
+    '-I',
+    '--diffFormat',
+    'png',
+  ]);
+  assert.equal(code, 0);
+  // sample0 differs → diff written. Filename keeps the basename, only ext changes.
+  await stat(join(REPO, `${d.rel}/diff/sample0.png`));
+  await assert.rejects(() =>
+    stat(join(REPO, `${d.rel}/diff/sample0.webp`)),
+  );
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  assert.ok(
+    report.diffItems.every((p) => p.endsWith('.png')),
+    `diffItems must all be .png with --diffFormat png; got ${JSON.stringify(report.diffItems)}`,
+  );
+});
+
+test('--diffFormat webp writes .webp diff (and reg.json diffItems uses .webp)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    `${d.rel}/reg.json`,
+    '-I',
+    '--diffFormat',
+    'webp',
+  ]);
+  assert.equal(code, 0);
+  await stat(join(REPO, `${d.rel}/diff/sample0.webp`));
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  assert.ok(
+    report.diffItems.every((p) => p.endsWith('.webp')),
+    `diffItems must all be .webp with --diffFormat webp; got ${JSON.stringify(report.diffItems)}`,
+  );
+});
+
+test('-P / --urlPrefix is applied to actualDir/expectedDir/diffDir in reg.json', async () => {
+  // Note: the prefix is consumed by `create_dir_for_json_report` in
+  // crates/reg_core/src/report.rs — it only kicks in when reg.json is
+  // being written, not in the HTML-embedded payload (which still uses
+  // relative paths). reg-suit + downstream notify plugins read reg.json,
+  // so the reg.json path is the one that has to honour `-P`.
+  const d = await scratch();
+  const jsonRel = `${d.rel}/reg.json`;
+  await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+    '-I',
+    '-P',
+    'https://cdn.example.com/regs/',
+  ]);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  for (const k of ['actualDir', 'expectedDir', 'diffDir']) {
+    assert.ok(
+      typeof report[k] === 'string' && report[k].startsWith('https://cdn.example.com/'),
+      `${k} should start with the URL prefix; got ${report[k]}`,
+    );
+  }
+});
+
+test('-A / --enableAntialias is accepted and produces a usable run', async () => {
+  // Constructing a fixture where antialiased pixels actually flip
+  // pass/fail is fragile (exact thresholds depend on the diff lib's
+  // YIQ heuristic). At minimum, lock in that the flag parses, the run
+  // exits cleanly, and writes a usable reg.json.
+  const d = await scratch();
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+    '-I',
+    '-A',
+  ]);
+  assert.equal(code, 0, `--enableAntialias should not abort: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(Array.isArray(report.passedItems), 'reg.json keys still present with -A');
+});
+
+test('-M / --matchingThreshold is accepted', async () => {
+  const d = await scratch();
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-I',
+    '-M',
+    '0.1',
+  ]);
+  assert.equal(code, 0, `--matchingThreshold should not abort: ${stderr}`);
+});
+
+test('-C / --concurrency accepts an explicit thread count', async () => {
+  const d = await scratch();
+  const { code, stderr } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-I',
+    '-C',
+    '2',
+  ]);
+  assert.equal(code, 0, `--concurrency 2 should not abort: ${stderr}`);
+});
+
+// ---------------------------------------------------------------------------
+// Argv / dir shape edge cases
+// ---------------------------------------------------------------------------
+
+test('trailing slash on positional dirs is accepted (`actual/` ≡ `actual`)', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual/`,   // ← trailing slash
+    `${SAMPLE_REL}/expected/`, // ← trailing slash
+    `${d.rel}/diff/`,          // ← trailing slash
+    '-I',
+    '-J',
+    `${d.rel}/reg.json`,
+  ]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, `${d.rel}/reg.json`), 'utf8'));
+  // sample1 is identical; assert that something landed in passedItems.
+  assert.ok(
+    report.passedItems.length > 0,
+    `expected at least one passed item; got ${JSON.stringify(report)}`,
+  );
+});
+
+test('both actual and expected dirs empty → all-empty report, exit 0', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code } = await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.failedItems, []);
+  assert.deepEqual(report.passedItems, []);
+  assert.deepEqual(report.newItems, []);
+  assert.deepEqual(report.deletedItems, []);
+});
