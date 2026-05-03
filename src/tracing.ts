@@ -97,9 +97,19 @@ const loadOtel = async (): Promise<OtelModules | null> => {
     otel = { api, resources, sdkBase, sdkNode, exporter, semconv };
     return otel;
   } catch (err) {
+    const pkgs = [
+      '@opentelemetry/api',
+      '@opentelemetry/exporter-trace-otlp-http',
+      '@opentelemetry/resources',
+      '@opentelemetry/sdk-trace-base',
+      '@opentelemetry/sdk-trace-node',
+      '@opentelemetry/semantic-conventions',
+    ].join(' ');
     console.warn(
-      '[Tracing] OTEL_ENABLED is set but @opentelemetry/* packages are not installed. ' +
-        'Install them as peer deps to enable tracing. Continuing without tracing.',
+      '[Tracing] OTEL_ENABLED is set but the @opentelemetry/* peer dependencies are not installed. ' +
+        'Continuing without tracing. To enable, install the peers alongside reg-cli, e.g.:\n' +
+        `  npm i -g ${pkgs}     # if reg-cli is installed globally\n` +
+        `  npm i    ${pkgs}     # if reg-cli is a project dependency`,
     );
     if (process.env.OTEL_DEBUG === 'true') {
       console.warn('[Tracing] Import error:', err);
