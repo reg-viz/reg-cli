@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*",
+]
+
+# Release optimization settings
+[profile.release]
+lto = true              # Link Time Optimization - significantly improves performance
+codegen-units = 1       # Maximize optimization (slower compile, faster runtime)
+opt-level = 3           # Maximum optimization level
+panic = "abort"         # Skip unwinding on panic (smaller binary, faster)
+strip = true            # Remove debug symbols (smaller binary)

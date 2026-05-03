@@ -1,0 +1,29 @@
+[package]
+name = "reg_core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "reg_core"
+path = "src/lib.rs"
+
+[dependencies]
+image-diff-rs = { git = "https://github.com/bokuweb/image-diff-rs.git", tag = "0.1.1" }
+rayon = "1.8"
+mustache = "0.9.0"
+serde = { version = "1.0.207", features = ["derive"] }
+serde_json = "1.0.125"
+bytes = "1.7.1"
+urlencoding = "2.1.3"
+base64 = "0.22"
+pathdiff = "0.2.1"
+thiserror = "1.0"
+url = "2.5.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+once_cell = "1.19"
+
+[dev-dependencies]
+tempfile = "3"

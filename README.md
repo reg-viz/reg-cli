@@ -108,3 +108,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ![reg-viz](https://raw.githubusercontent.com/reg-viz/artwork/master/repository/footer.png)
 
+```
+export WASI_VERSION_FULL=24.0
+export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
+CFLAGS="--sysroot ${WASI_SDK_PATH}/share/wasi-sysroot" cargo build --release --target=wasm32-wasip1-threads
+cp target/wasm32-wasip1-threads/release/reg_cli.wasm js/reg.wasm
+```
