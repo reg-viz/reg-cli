@@ -1,44 +1,43 @@
 diff --git a/dist/wasm-util.esm-bundler.js b/dist/wasm-util.esm-bundler.js
-index 0c7a3f6dd2218278a4a787deaf87e8bc427e5a62..d1f5eada1196fcdd7d7870e7d60eb71877fba873 100644
+index 0c7a3f6dd2218278a4a787deaf87e8bc427e5a62..acd422de8e2e3e63857a22efa9d1c3fcdc8a60d6 100644
 --- a/dist/wasm-util.esm-bundler.js
 +++ b/dist/wasm-util.esm-bundler.js
-@@ -1097,7 +1097,16 @@ function syscallWrap(self, name, f) {
+@@ -1,3 +1,4 @@
++import * as _nodePathPatched from 'node:path';
+ const _WebAssembly = typeof WebAssembly !== 'undefined'
+     ? WebAssembly
+     : typeof WXWebAssembly !== 'undefined'
+@@ -1097,7 +1098,13 @@ function syscallWrap(self, name, f) {
      });
  }
  function resolvePathSync(fs, fileDescriptor, path, flags) {
 -    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
 +    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
      if ((flags & 1) === 1) {
          try {
              resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1111,7 +1120,16 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+@@ -1111,7 +1118,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
      return resolvedPath;
  }
  async function resolvePathAsync(fs, fileDescriptor, path, flags) {
 -    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
 +    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
      if ((flags & 1) === 1) {
          try {
              resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2256,7 +2274,13 @@ class WASI$1 {
+@@ -2256,7 +2269,13 @@ class WASI$1 {
              const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
              const fs = getFs(this);
              const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
@@ -53,7 +52,7 @@ index 0c7a3f6dd2218278a4a787deaf87e8bc427e5a62..d1f5eada1196fcdd7d7870e7d60eb718
              const filetype = wasi.fds.getFileTypeByFd(r);
              if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
                  return 54 /* WasiErrno.ENOTDIR */;
-@@ -2290,7 +2314,13 @@ class WASI$1 {
+@@ -2290,7 +2309,13 @@ class WASI$1 {
              const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
              const fs = getFs(this);
              const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
@@ -69,46 +68,45 @@ index 0c7a3f6dd2218278a4a787deaf87e8bc427e5a62..d1f5eada1196fcdd7d7870e7d60eb718
              if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
                  return 54 /* WasiErrno.ENOTDIR */;
 diff --git a/dist/wasm-util.esm.js b/dist/wasm-util.esm.js
-index e06c07b68230ab1ec92b28d3c764d4406b9ab532..1c8de566b80154ef30a3f657e8304b173a1a1b64 100644
+index e06c07b68230ab1ec92b28d3c764d4406b9ab532..c9058a4e103a16d0aabcc8339fa7c711dcdc4c51 100644
 --- a/dist/wasm-util.esm.js
 +++ b/dist/wasm-util.esm.js
-@@ -1097,7 +1097,16 @@ function syscallWrap(self, name, f) {
+@@ -1,3 +1,4 @@
++import * as _nodePathPatched from 'node:path';
+ const _WebAssembly = typeof WebAssembly !== 'undefined'
+     ? WebAssembly
+     : typeof WXWebAssembly !== 'undefined'
+@@ -1097,7 +1098,13 @@ function syscallWrap(self, name, f) {
      });
  }
  function resolvePathSync(fs, fileDescriptor, path, flags) {
 -    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
 +    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
      if ((flags & 1) === 1) {
          try {
              resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1111,7 +1120,16 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
+@@ -1111,7 +1118,13 @@ function resolvePathSync(fs, fileDescriptor, path, flags) {
      return resolvedPath;
  }
  async function resolvePathAsync(fs, fileDescriptor, path, flags) {
 -    let resolvedPath = resolve(fileDescriptor.realPath, path);
-+    // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
 +    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
      if ((flags & 1) === 1) {
          try {
              resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2256,7 +2274,13 @@ class WASI$1 {
+@@ -2256,7 +2269,13 @@ class WASI$1 {
              const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
              const fs = getFs(this);
              const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
@@ -123,7 +121,7 @@ index e06c07b68230ab1ec92b28d3c764d4406b9ab532..1c8de566b80154ef30a3f657e8304b17
              const filetype = wasi.fds.getFileTypeByFd(r);
              if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
                  return 54 /* WasiErrno.ENOTDIR */;
-@@ -2290,7 +2314,13 @@ class WASI$1 {
+@@ -2290,7 +2309,13 @@ class WASI$1 {
              const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
              const fs = getFs(this);
              const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
@@ -139,46 +137,45 @@ index e06c07b68230ab1ec92b28d3c764d4406b9ab532..1c8de566b80154ef30a3f657e8304b17
              if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
                  return 54 /* WasiErrno.ENOTDIR */;
 diff --git a/dist/wasm-util.js b/dist/wasm-util.js
-index 6d29fd7697362150c5128bd665ff6a388aafab85..772267204e03767f636f693232a1cf1ba692ce6b 100644
+index 6d29fd7697362150c5128bd665ff6a388aafab85..3a078bfc417e36af02c0f9bb722f4caf28e242bb 100644
 --- a/dist/wasm-util.js
 +++ b/dist/wasm-util.js
-@@ -1103,7 +1103,16 @@
+@@ -1,3 +1,4 @@
++var _nodePathPatched = (typeof require !== 'undefined') ? require('node:path') : null;
+ (function (global, factory) {
+     typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+     typeof define === 'function' && define.amd ? define(['exports'], factory) :
+@@ -1103,7 +1104,13 @@
          });
      }
      function resolvePathSync(fs, fileDescriptor, path, flags) {
 -        let resolvedPath = resolve(fileDescriptor.realPath, path);
-+        // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++        let resolvedPath;
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
          if ((flags & 1) === 1) {
              try {
                  resolvedPath = fs.readlinkSync(resolvedPath);
-@@ -1117,7 +1126,16 @@
+@@ -1117,7 +1124,13 @@
          return resolvedPath;
      }
      async function resolvePathAsync(fs, fileDescriptor, path, flags) {
 -        let resolvedPath = resolve(fileDescriptor.realPath, path);
-+        // Patched: on Windows fileDescriptor.realPath is host-form (D:\...) but
-+    // bundled resolve() is POSIX-only -> garbage path -> fs.openSync EINVAL.
-+    let resolvedPath;
-+    if (typeof process !== 'undefined' && process.platform === 'win32') {
-+        const _np = require('node:path');
-+        resolvedPath = _np.resolve(fileDescriptor.realPath, path);
-+        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch(_e) {}
++        let resolvedPath;
++    if (typeof process !== 'undefined' && process.platform === 'win32' && _nodePathPatched) {
++        resolvedPath = _nodePathPatched.resolve(fileDescriptor.realPath, path);
++        try { console.error('[WASI-DIAG] resolve realPath=' + JSON.stringify(fileDescriptor.realPath) + ' path=' + JSON.stringify(path) + ' -> ' + JSON.stringify(resolvedPath)); } catch (_e) {}
 +    } else {
 +        resolvedPath = resolve(fileDescriptor.realPath, path);
 +    }
          if ((flags & 1) === 1) {
              try {
                  resolvedPath = await fs.promises.readlink(resolvedPath);
-@@ -2262,7 +2280,13 @@
+@@ -2262,7 +2275,13 @@
                  const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
                  const fs = getFs(this);
                  const resolved_path = resolvePathSync(fs, fileDescriptor, pathString, dirflags);
@@ -193,7 +190,7 @@ index 6d29fd7697362150c5128bd665ff6a388aafab85..772267204e03767f636f693232a1cf1b
                  const filetype = wasi.fds.getFileTypeByFd(r);
                  if ((o_flags & 2 /* WasiFileControlFlag.O_DIRECTORY */) !== 0 && filetype !== 3 /* WasiFileType.DIRECTORY */) {
                      return 54 /* WasiErrno.ENOTDIR */;
-@@ -2296,7 +2320,13 @@
+@@ -2296,7 +2315,13 @@
                  const pathString = decoder.decode(unsharedSlice(HEAPU8, path, path + path_len));
                  const fs = getFs(this);
                  const resolved_path = await resolvePathAsync(fs, fileDescriptor, pathString, dirflags);
