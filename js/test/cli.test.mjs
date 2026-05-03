@@ -572,3 +572,211 @@ test('-U prunes deleted baselines and keeps passed files untouched', async () =>
     'passed file should not be rewritten by -U',
   );
 });
+
+// ---------------------------------------------------------------------------
+// Threshold-rate / threshold-pixel boundary parity with classic reg-cli
+// (mirrors `test/cli.test.mjs` "fail with -T 0.00", "pass with -T 1.00",
+//  "fail with -S 0", "pass with -S 10000000" on the JS branch).
+// ---------------------------------------------------------------------------
+
+test('-T 0.00 (strict thresholdRate) fails on any pixel difference', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-T',
+    '0.00',
+  ]);
+  assert.equal(code, 1);
+});
+
+test('-T 1.00 (lax thresholdRate) accepts everything', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-T',
+    '1.00',
+  ]);
+  assert.equal(code, 0);
+});
+
+test('-S 0 (strict thresholdPixel) fails on any pixel difference', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-S',
+    '0',
+  ]);
+  assert.equal(code, 1);
+});
+
+test('-S 10000000 (lax thresholdPixel) accepts everything', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    '-S',
+    '10000000',
+  ]);
+  assert.equal(code, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Identical / disjoint directory shapes (parity gaps from the JS branch's
+// "success report", "new item report", "deleted item report" tests).
+// ---------------------------------------------------------------------------
+
+test('identical dirs → passedItems populated, failedItems empty, exit 0', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  // Same bytes on both sides → guaranteed pass.
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'sample0.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'sample0.png'),
+  );
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.failedItems, []);
+  assert.deepEqual(report.newItems, []);
+  assert.deepEqual(report.deletedItems, []);
+  assert.deepEqual(report.passedItems, ['sample0.png']);
+});
+
+test('actual empty → all expected items appear in deletedItems', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'sample0.png'),
+  );
+
+  const jsonRel = `${d.rel}/reg.json`;
+  await runCli([actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel, '-I']);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.deletedItems, ['sample0.png']);
+  assert.deepEqual(report.newItems, []);
+});
+
+// ---------------------------------------------------------------------------
+// Edge cases the JS branch never had: corrupt / non-image inputs.
+// Backed by reg_core's per-image failure tolerance (see
+// `crates/reg_core/src/lib.rs::per_image_failure_tests`).
+// ---------------------------------------------------------------------------
+
+test('corrupt PNG → failedItems entry, run continues for siblings, exit 1', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+
+  // One valid pair (will pass)…
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'good.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'good.png'),
+  );
+  // …plus a corrupt pair the decoder will reject.
+  await import('node:fs/promises').then(({ writeFile }) =>
+    Promise.all([
+      writeFile(join(REPO, actualRel, 'bad.png'), 'not a png AAA'),
+      writeFile(join(REPO, expectedRel, 'bad.png'), 'not a png BBB'),
+    ]),
+  );
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code, stderr } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  assert.equal(code, 1, `expected exit 1 due to bad.png; stderr: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(
+    report.failedItems.includes('bad.png'),
+    `bad.png should be in failedItems; got ${JSON.stringify(report.failedItems)}`,
+  );
+  assert.ok(
+    report.passedItems.includes('good.png'),
+    `good.png should still pass; got ${JSON.stringify(report.passedItems)}`,
+  );
+  assert.match(
+    stderr,
+    /bad\.png/,
+    'stderr should name the failing file so users can find it',
+  );
+});
+
+test('non-image files in actual/expected dirs are silently skipped', async () => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, actualRel, 'sample0.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample0.png'),
+    join(REPO, expectedRel, 'sample0.png'),
+  );
+  await import('node:fs/promises').then(({ writeFile }) =>
+    Promise.all([
+      writeFile(join(REPO, actualRel, 'README.md'), '# notes\n'),
+      writeFile(join(REPO, expectedRel, 'data.json'), '{}'),
+    ]),
+  );
+
+  const jsonRel = `${d.rel}/reg.json`;
+  const { code } = await runCli([
+    actualRel,
+    expectedRel,
+    `${d.rel}/diff`,
+    '-J',
+    jsonRel,
+  ]);
+  assert.equal(code, 0);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  for (const bucket of [
+    report.passedItems,
+    report.failedItems,
+    report.newItems,
+    report.deletedItems,
+  ]) {
+    assert.ok(
+      bucket.every((n) => !n.endsWith('.md') && !n.endsWith('.json')),
+      `non-image leaked into bucket: ${JSON.stringify(bucket)}`,
+    );
+  }
+});
