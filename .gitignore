@@ -1,8 +1,7 @@
 /node_modules/*
 report/assets/cv-wasm_browser.*
 report/ui
-/test/__workspace__/*
-/js/test/__workspace__/
+/test/__workspace__/
 /.libtest-*
 /.phase-h-*
 /.phase-h-subdir/

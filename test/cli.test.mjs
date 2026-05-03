@@ -25,13 +25,13 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..');
-const CLI = join(REPO, 'js', 'dist', 'cli.mjs');
-const SAMPLE_REL = 'js/sample'; // repo-relative
+const REPO = join(HERE, '..');
+const CLI = join(REPO, 'dist', 'cli.mjs');
+const SAMPLE_REL = 'sample'; // repo-relative
 // Unique scratch dir per test, rooted under the repo so the WASI preopen
 // computed from positional dirs comfortably covers it.
-const TMP_ROOT_ABS = join(REPO, 'js', 'test', '__workspace__');
-const TMP_ROOT_REL = relative(REPO, TMP_ROOT_ABS); // 'js/test/__workspace__'
+const TMP_ROOT_ABS = join(REPO, 'test', '__workspace__');
+const TMP_ROOT_REL = relative(REPO, TMP_ROOT_ABS); // 'test/__workspace__'
 
 let runId = 0;
 // Returns { abs, rel } for a fresh scratch dir.

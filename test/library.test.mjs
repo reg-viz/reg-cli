@@ -14,9 +14,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = join(HERE, '..', '..');
-const DIST = join(REPO, 'js', 'dist', 'index.mjs');
-const SAMPLE_REL = 'js/sample';
+const REPO = join(HERE, '..');
+const DIST = join(REPO, 'dist', 'index.mjs');
+const SAMPLE_REL = 'sample';
 // Per-test scratch dirs are created directly at the repo root as
 // `.libtest-<tag>/…`. This matters because `computeWasiSandbox` collapses
 // every positional dir + report/json parent into a single common ancestor

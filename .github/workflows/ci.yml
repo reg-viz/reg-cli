@@ -32,12 +32,9 @@ jobs:
           toolchain: stable
       - name: cargo test (reg_core)
         run: cargo test -p reg_core --lib
-      - name: js install
-        working-directory: js
+      - name: install
         run: pnpm install --frozen-lockfile
-      - name: js build (dist + bundle reg.wasm)
-        working-directory: js
+      - name: build (dist + bundle reg.wasm)
         run: pnpm build
-      - name: js test (CLI + library)
-        working-directory: js
+      - name: test (CLI + library)
         run: pnpm test
