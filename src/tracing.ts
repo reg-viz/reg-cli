@@ -5,13 +5,14 @@
  * to OpenTelemetry spans that can be exported to Jaeger or other backends.
  */
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { trace, SpanStatusCode, context, ROOT_CONTEXT, type Span, type Context } from '@opentelemetry/api';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
-let sdk: NodeSDK | null = null;
+let provider: NodeTracerProvider | null = null;
 let isInitialized = false;
 
 // Store current root span context for propagation to Rust
@@ -78,16 +79,15 @@ export const initTracing = (): void => {
     url: otlpEndpoint,
   });
 
-  sdk = new NodeSDK({
+  provider = new NodeTracerProvider({
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reg-cli',
       [ATTR_SERVICE_VERSION]: '0.18.10',
     }),
-    traceExporter: otlpExporter,
-    instrumentations: [],
+    spanProcessors: [new BatchSpanProcessor(otlpExporter)],
   });
 
-  sdk.start();
+  provider.register();
   isInitialized = true;
 
   if (process.env.OTEL_DEBUG === 'true') {
@@ -100,7 +100,7 @@ export const initTracing = (): void => {
  * Shutdown OpenTelemetry SDK gracefully
  */
 export const shutdownTracing = async (): Promise<void> => {
-  if (!sdk || !isInitialized) {
+  if (!provider || !isInitialized) {
     return;
   }
 
@@ -109,17 +109,14 @@ export const shutdownTracing = async (): Promise<void> => {
   }
 
   try {
-    // Force flush before shutdown to ensure all spans are exported.
-    // (previously there was an extra 2000ms sleep here that was dominating
-    //  wall-clock for small workloads — removed after bench confirmed it was
-    //  unnecessary once sdk.shutdown() awaits export completion.)
-    await sdk.shutdown();
+    // shutdown() flushes pending spans then stops the exporter.
+    await provider.shutdown();
   } catch (err) {
     console.error('[Tracing] Error during shutdown:', err);
   }
 
   isInitialized = false;
-  sdk = null;
+  provider = null;
 
   if (process.env.OTEL_DEBUG === 'true') {
     console.log('[Tracing] OpenTelemetry SDK shut down');
