@@ -44,10 +44,10 @@ export CFLAGS="--sysroot=${WASI_SDK_PATH}/share/wasi-sysroot"
 echo "Building for wasm32-wasip1-threads..."
 cargo build --release --target=wasm32-wasip1-threads
 
-# Copy to js directory
-echo "Copying wasm to js/reg.wasm..."
-cp target/wasm32-wasip1-threads/release/reg_cli.wasm js/reg.wasm
+# Copy to repo root (where build.config.ts -> dist/shared/reg.wasm picks it up)
+echo "Copying wasm to ./reg.wasm..."
+cp target/wasm32-wasip1-threads/release/reg_cli.wasm reg.wasm
 
 echo "Build complete!"
-ls -la js/reg.wasm
+ls -la reg.wasm
 
