@@ -28,23 +28,32 @@ const recordMainSpan = (name: string, start_ms: number, attributes?: WorkerSpan[
 };
 
 export const run = (argv: string[]): EventEmitter => {
-  const run_start_ms = Date.now();
-
-  // Initialize tracing if enabled (may be ~tens of ms on first run).
-  const t_init = Date.now();
-  if (isTracingEnabled()) {
-    initTracing();
-    recordMainSpan('main.init_tracing', t_init);
-  }
-
-  // Start root span for the entire operation
-  const traceContext = isTracingEnabled() ? startRootSpan('reg-cli') : null;
-
   const emitter = new EventEmitter();
 
   // Classic reg-cli fires a 'start' event on the next tick of the run so
   // subscribers (e.g. spinners) can latch on. Mirror that behaviour.
   setImmediate(() => emitter.emit('start'));
+
+  // The body needs `await initTracing()` (OTel modules are loaded lazily via
+  // dynamic import so they aren't a forced install dep), but `run` must
+  // return the EventEmitter synchronously. Hand the work off to an async
+  // helper.
+  void runInternal(argv, emitter);
+  return emitter;
+};
+
+const runInternal = async (argv: string[], emitter: EventEmitter): Promise<void> => {
+  const run_start_ms = Date.now();
+
+  // Initialize tracing if enabled (may be ~tens of ms on first run).
+  const t_init = Date.now();
+  if (isTracingEnabled()) {
+    await initTracing();
+    recordMainSpan('main.init_tracing', t_init);
+  }
+
+  // Start root span for the entire operation
+  const traceContext = isTracingEnabled() ? startRootSpan('reg-cli') : null;
 
   const t_new_entry = Date.now();
   const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
@@ -166,8 +175,6 @@ export const run = (argv: string[]): EventEmitter => {
     workers.forEach((w) => w.terminate());
     emitter.emit('error', err);
   });
-
-  return emitter;
 };
 
 export type CompareInput = {
