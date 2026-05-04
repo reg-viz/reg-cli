@@ -1,8 +1,8 @@
 ![reg-cli](./docs/reg-cli.jpg)
 
 [![CI](https://github.com/reg-viz/reg-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reg-viz/reg-cli/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/%40bokuweb%2Freg-cli-wasm.svg)](https://www.npmjs.com/package/@bokuweb/reg-cli-wasm)
-[![npm downloads](https://img.shields.io/npm/dm/%40bokuweb%2Freg-cli-wasm.svg)](https://www.npmjs.com/package/@bokuweb/reg-cli-wasm)
+[![npm](https://img.shields.io/npm/v/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
+[![npm downloads](https://img.shields.io/npm/dm/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
 
 > Visual regression testing CLI with HTML reporter — **Wasm-backed**. Drop-in compatible with classic `reg-cli`'s flags, `reg.json` schema, JUnit XML output, and the `compare()` EventEmitter API used by [reg-suit](https://github.com/reg-viz/reg-suit).
 
