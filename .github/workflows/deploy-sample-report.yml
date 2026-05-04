@@ -35,7 +35,7 @@ jobs:
           mkdir -p public
           cp -r sample/actual sample/expected sample/diff public/
           node dist/cli.mjs ./sample/actual ./sample/expected ./sample/diff \
-            -R public/index.html -X client
+            -R public/index.html -X client -I
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: public
