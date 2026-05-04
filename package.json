@@ -29,12 +29,13 @@
   },
   "scripts": {
     "build": "tsdown && node ./scripts/stage-assets.mjs",
-    "build:report": "sh ./scripts/build-ui.sh v0.3.0",
+    "build:report": "sh ./scripts/build-ui.sh ${REPORT_UI_TAG:-v0.3.0}",
     "build:wasm": "bash ./scripts/build-wasm.sh",
+    "build:all": "npm run build:report && npm run build:wasm && npm run build",
     "release:prep": "bash ./scripts/release.sh",
     "release:pack": "bash ./scripts/release.sh --pack",
     "test": "node --test test/",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build:all"
   },
   "repository": {
     "type": "git",
