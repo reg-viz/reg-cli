@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - perf: up to ~2.86× faster than `reg-cli@0.18.16` on large images (see README "Performance")
 - chore: this release was previously published experimentally as `@bokuweb/reg-cli-wasm`; it now takes over the canonical `reg-cli` name on npm
 
+## @0.18.16 (3 May, 2026)
+
+- update dependencies
+
+## @0.18.15 (3 May, 2026)
+
+- update dependencies
+
 ## @0.18.14 (24 Dec, 2025)
 
 - update dependencies
