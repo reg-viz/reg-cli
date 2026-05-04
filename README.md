@@ -26,10 +26,8 @@ The diff engine is now **Rust → WebAssembly (WASI threads)** instead of pure J
  - Node.js v20+
 
 ```sh
-$ npm i -D @bokuweb/reg-cli-wasm
+$ npm i -D reg-cli
 ```
-
-The published bin is still called `reg-cli`, so existing scripts and `reg-suit` integrations keep working without changes.
 
 ## Usage
 
@@ -95,7 +93,7 @@ JSON format:
 ### Library
 
 ```js
-import { compare } from '@bokuweb/reg-cli-wasm';
+import { compare } from 'reg-cli';
 
 const emitter = compare({
   actualDir: './actual',
@@ -120,7 +118,7 @@ The full option set, event surface, and `CompareOutput` shape match what [`reg-s
 
 Apples-to-apples vs `reg-cli@0.18.16` (last legacy JS release), `--diffFormat png` on both sides, 5 timed runs after 1 warmup, median wall-clock on macOS (Apple Silicon) / Node v20.19.0:
 
-| Workload | JS reg-cli@0.18.16 | @bokuweb/reg-cli-wasm | Wasm speedup |
+| Workload | JS reg-cli@0.18.16 | reg-cli@0.19.0-rc0 | Wasm speedup |
 |---|---:|---:|---:|
 | 20 × 1280×720 | 0.56 s | 0.49 s | **1.14×** |
 | 100 × 1280×720 | 1.94 s | 1.44 s | **1.35×** |

@@ -301,7 +301,7 @@ pub fn get_trace_data_json() -> String {
     };
     
     let trace_data = TraceData {
-        service_name: "reg-cli-wasm".to_string(),
+        service_name: "reg-cli".to_string(),
         trace_id,
         js_parent_span_id,
         spans,

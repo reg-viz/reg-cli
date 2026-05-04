@@ -10,7 +10,22 @@
  * package therefore pay zero install or runtime cost for OTel.
  */
 
+import { createRequire } from 'node:module';
+
 import type { Span, Context } from '@opentelemetry/api';
+
+// Read once at module load so getTracer() doesn't hit the disk per call.
+// `../package.json` resolves relative to the *built* dist/ output; tsdown
+// keeps the relative path intact.
+const PKG_VERSION: string = (() => {
+  try {
+    const requireShim = createRequire(import.meta.url);
+    const pkg = requireShim('../package.json') as { version?: string };
+    return pkg.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+})();
 
 type OtelApi = typeof import('@opentelemetry/api');
 type OtelResources = typeof import('@opentelemetry/resources');
@@ -183,7 +198,7 @@ export const shutdownTracing = async (): Promise<void> => {
  * Get the tracer instance
  */
 const getTracer = () => {
-  return otel!.api.trace.getTracer('reg-cli-wasm', '0.18.10');
+  return otel!.api.trace.getTracer('reg-cli', PKG_VERSION);
 };
 
 /**

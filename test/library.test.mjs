@@ -470,3 +470,12 @@ test('compare() does NOT fire `error` when a single image fails to decode', asyn
     `expected a fail compare-event for bad.png; got ${JSON.stringify(compareEvents)}`,
   );
 });
+
+// reg-suit's `processor.ts` does `require.resolve('reg-cli')` to locate this
+// package, and its CLI is invoked as `reg-cli`. Lock the published name and
+// bin so a future rename can't silently break the drop-in story.
+test('package.json publishes as `reg-cli` with a `reg-cli` bin', async () => {
+  const pkg = JSON.parse(await readFile(join(REPO, 'package.json'), 'utf8'));
+  assert.equal(pkg.name, 'reg-cli', 'npm name must be `reg-cli`');
+  assert.ok(pkg.bin && pkg.bin['reg-cli'], 'must expose a `reg-cli` bin');
+});
