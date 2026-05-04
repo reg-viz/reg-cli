@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## @0.19.0-rc0 (4 May, 2026)
+
+- feat: Wasm-backed rewrite (Rust + Rayon) — drop-in compatible with the classic `reg-cli` flags, `reg.json`/JUnit schema, and `compare()` EventEmitter API
+- perf: up to ~2.86× faster than `reg-cli@0.18.16` on large images (see README "Performance")
+- chore: this release was previously published experimentally as `@bokuweb/reg-cli-wasm`; it now takes over the canonical `reg-cli` name on npm
+
 ## @0.18.14 (24 Dec, 2025)
 
 - update dependencies
