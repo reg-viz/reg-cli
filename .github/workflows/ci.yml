@@ -37,7 +37,7 @@ jobs:
       - name: enable corepack (yarn for report-ui build)
         run: corepack enable
       - name: build report-ui (report.js + style.css)
-        run: sh ./scripts/build-ui.sh v0.3.0
+        run: sh ./scripts/build-ui.sh v0.5.0
       - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
         if: runner.os != 'Windows'
         with:

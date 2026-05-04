@@ -15,10 +15,10 @@
 # Usage:
 #   scripts/release.sh                       # builds + dry-run pack
 #   scripts/release.sh --pack                # builds + writes the .tgz
-#   REPORT_UI_TAG=v0.5.0 scripts/release.sh  # override the UI version
+#   REPORT_UI_TAG=v0.6.0 scripts/release.sh  # override the UI version
 #
 # Env vars:
-#   REPORT_UI_TAG   default v0.3.0           (passed to build-ui.sh)
+#   REPORT_UI_TAG   default v0.5.0           (passed to build-ui.sh)
 #   SKIP_UI=1       skip the UI build (assumes report/ui/dist/ already exists)
 #   SKIP_WASM=1     skip the wasm rebuild   (assumes ./reg.wasm already exists)
 set -euo pipefail
@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
-REPORT_UI_TAG="${REPORT_UI_TAG:-v0.3.0}"
+REPORT_UI_TAG="${REPORT_UI_TAG:-v0.5.0}"
 PACK_MODE="--dry-run"
 if [ "${1:-}" = "--pack" ]; then
   PACK_MODE=""
