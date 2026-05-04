@@ -183,7 +183,7 @@ export const shutdownTracing = async (): Promise<void> => {
  * Get the tracer instance
  */
 const getTracer = () => {
-  return otel!.api.trace.getTracer('reg-cli-wasm', '0.18.10');
+  return otel!.api.trace.getTracer('reg-cli', '0.19.0-rc0');
 };
 
 /**

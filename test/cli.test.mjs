@@ -373,8 +373,7 @@ test('-D custom diff message shows up on failure', async () => {
 test('--version prints the package.json version', async () => {
   const { code, stdout } = await runCli(['--version']);
   assert.equal(code, 0);
-  // Must look like semver-ish (at least digits + dot), not the classic
-  // "reg-cli-wasm" placeholder.
+  // Must look like semver-ish (at least digits + dot), not a placeholder.
   assert.match(stdout.trim(), /^\d+\.\d+\.\d+/);
 });
 
