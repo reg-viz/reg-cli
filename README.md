@@ -1,4 +1,4 @@
-![reg-cli](./docs/reg-cli.jpg)
+![reg-cli](./.github/assets/reg-cli.jpg)
 
 [![CI](https://github.com/reg-viz/reg-cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/reg-viz/reg-cli/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/reg-cli.svg)](https://www.npmjs.com/package/reg-cli)
@@ -61,9 +61,9 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 If `-R` is set, an HTML report is written to the specified path.
 https://reg-viz.github.io/reg-cli/
 
-![open](./docs/open.png)
-![close](./docs/close.png)
-![viewer](./docs/viewer.png)
+![open](./.github/assets/open.png)
+![close](./.github/assets/close.png)
+![viewer](./.github/assets/viewer.png)
 
 ### From JSON
 
