@@ -21,9 +21,10 @@ export type CompareEvent = { type: CompareEventKind; path: string };
  * and everything else to `fallback` (defaults to `console.error`).
  *
  * `@tybys/wasm-util`'s `StandardOutput.write` already buffers until a
- * newline and invokes the callback with one stripped line per call (see
- * `node_modules/@tybys/wasm-util/dist/wasm-util.esm-bundler.js` line
- * ~749-779). So we can treat each invocation as a single complete line.
+ * newline and invokes the callback with one stripped line per call
+ * (see the `StandardOutput` class in
+ * `node_modules/@tybys/wasm-util/dist/wasm-util.esm-bundler.js`). So
+ * we can treat each invocation as a single complete line.
  */
 export const createPrintErrHook = (
   onEvent: (ev: CompareEvent) => void,
