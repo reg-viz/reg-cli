@@ -61,15 +61,57 @@ const PROGRESS_MARKER: &str = "__REG_CLI_EVT__";
 /// arbitrary characters in `path` (Unicode, backslashes on Windows, tabs,
 /// newlines) don't break the downstream parser. Flushing here would be
 /// nice-to-have but `eprintln!` already flushes to the WASI fd per-call.
+///
+/// Hand-rolled encoder: we only emit two fields and `kind` is a `&'static str`
+/// from a closed set of safe ASCII tokens (`pass`/`fail`/`new`/`delete`).
+/// Path needs JSON-string escaping for `"`, `\`, and control chars; everything
+/// else (including non-ASCII UTF-8) goes through verbatim. This is a single
+/// allocation rather than the two `serde_json::json!` would do, and avoids
+/// the macro's BTreeMap setup per-call.
 fn emit_progress(kind: &'static str, path: &str) {
-    let payload = serde_json::json!({ "type": kind, "path": path });
-    eprintln!("{}\t{}", PROGRESS_MARKER, payload);
+    // Key order matches the previous `serde_json::json!` output, which
+    // sorts object keys alphabetically (`path` before `type`). The JS host
+    // parses with `JSON.parse` so order is semantically irrelevant, but
+    // keeping it byte-identical means downstream regex/string-matching
+    // tooling (if any) keeps working.
+    let mut buf = String::with_capacity(PROGRESS_MARKER.len() + path.len() + 32);
+    buf.push_str(PROGRESS_MARKER);
+    buf.push_str("\t{\"path\":\"");
+    encode_json_string(&mut buf, path);
+    buf.push_str("\",\"type\":\"");
+    buf.push_str(kind);
+    buf.push_str("\"}");
+    eprintln!("{}", buf);
+}
+
+fn encode_json_string(out: &mut String, s: &str) {
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\x08' => out.push_str("\\b"),
+            '\x0c' => out.push_str("\\f"),
+            c if (c as u32) < 0x20 => {
+                use std::fmt::Write;
+                let _ = write!(out, "\\u{:04x}", c as u32);
+            }
+            c => out.push(c),
+        }
+    }
 }
 
 fn is_supported_extension(path: &Path) -> bool {
     if let Some(extension) = path.extension() {
         if let Some(ext_str) = extension.to_str() {
-            return SUPPORTED_EXTENTIONS.contains(&ext_str.to_lowercase().as_str());
+            // Avoid `to_lowercase()` allocation: ASCII case-insensitive
+            // compare is enough — every entry in SUPPORTED_EXTENTIONS is
+            // lowercase ASCII.
+            return SUPPORTED_EXTENTIONS
+                .iter()
+                .any(|e| ext_str.eq_ignore_ascii_case(e));
         }
     }
     false
@@ -586,12 +628,15 @@ pub fn run_from_json(
 // walker starting at `root` sidesteps the trap without needing any
 // sandbox widening.
 fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
-    let mut out = BTreeSet::new();
+    // Collect into Vec then bulk-build the BTreeSet. `BTreeSet::from_iter`
+    // sorts once instead of paying O(log n) per insert with PathBuf
+    // comparisons. For the 500-image benchmark this is the bulk of the win.
+    let mut out: Vec<PathBuf> = Vec::new();
     // `root` itself might not exist (e.g. a brand-new actual/ dir that a
     // user forgot to populate). Classic reg-cli treats that as "no images
     // here" rather than erroring out, so we do too.
     let Ok(entries) = std::fs::read_dir(root) else {
-        return out;
+        return BTreeSet::new();
     };
     let mut stack: Vec<std::fs::ReadDir> = vec![entries];
     while let Some(dir) = stack.last_mut() {
@@ -608,7 +653,7 @@ fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
                     // `sample.png` or `sub/sample.png`, matching what
                     // glob used to produce after `.strip_prefix(root)`.
                     if let Ok(rel) = p.strip_prefix(root) {
-                        out.insert(rel.to_path_buf());
+                        out.push(rel.to_path_buf());
                     }
                 }
             }
@@ -617,7 +662,7 @@ fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
             }
         }
     }
-    out
+    BTreeSet::from_iter(out)
 }
 
 #[instrument(fields(expected_dir = %expected_dir.as_ref().display(), actual_dir = %actual_dir.as_ref().display()))]
@@ -628,8 +673,12 @@ pub(crate) fn find_images(
     let expected_dir = expected_dir.as_ref();
     let actual_dir = actual_dir.as_ref();
 
-    let expected: BTreeSet<PathBuf> = walk_images(expected_dir);
-    let actual: BTreeSet<PathBuf> = walk_images(actual_dir);
+    // The two walks are independent IO; do them concurrently. `rayon::join`
+    // uses the global pool — if reg-cli's per-run pool isn't installed yet
+    // (we're outside `pool.install`), this falls back to the global pool's
+    // workers, which is fine for two tasks.
+    let (expected, actual): (BTreeSet<PathBuf>, BTreeSet<PathBuf>) =
+        rayon::join(|| walk_images(expected_dir), || walk_images(actual_dir));
 
     let deleted: BTreeSet<PathBuf> = expected.difference(&actual).cloned().collect();
     let new: BTreeSet<PathBuf> = actual.difference(&expected).cloned().collect();
@@ -665,6 +714,45 @@ fn is_passed(
         ratio <= t
     } else {
         diff_count == 0
+    }
+}
+
+#[cfg(test)]
+mod emit_progress_tests {
+    use super::*;
+
+    fn hand_rolled(kind: &'static str, path: &str) -> String {
+        let mut buf = String::new();
+        buf.push_str("{\"path\":\"");
+        encode_json_string(&mut buf, path);
+        buf.push_str("\",\"type\":\"");
+        buf.push_str(kind);
+        buf.push_str("\"}");
+        buf
+    }
+
+    fn via_serde(kind: &'static str, path: &str) -> String {
+        // Match key order of the hand-rolled encoder so byte-equality holds.
+        // `serde_json::json!` with object literal preserves insertion order.
+        serde_json::to_string(&serde_json::json!({"type": kind, "path": path})).unwrap()
+    }
+
+    #[test]
+    fn parity_with_serde_json_for_tricky_paths() {
+        let cases = [
+            "simple.png",
+            "with space.png",
+            "sub/dir/img.png",
+            r"C:\windows\path.png",
+            "クォート\"in\\path.png",
+            "tab\tnewline\nreturn\rbell\u{0007}.png",
+            "🦀-emoji.png",
+            "control\u{0001}\u{001f}.png",
+        ];
+        for p in cases {
+            assert_eq!(hand_rolled("pass", p), via_serde("pass", p), "path={}", p);
+            assert_eq!(hand_rolled("fail", p), via_serde("fail", p), "path={}", p);
+        }
     }
 }
 
