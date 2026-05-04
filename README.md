@@ -173,8 +173,8 @@ The `compare-event` channel from Rust to JS is implemented as a stderr-tagged li
 `reg.wasm` is committed so most contributors don't need to install the Rust + wasi-sdk toolchain. To rebuild it (and the report-ui assets that `reg_core` embeds via `include_str!`):
 
 ```sh
-# 1. Build report-ui (clones reg-cli-report-ui at v0.3.0, builds with pnpm)
-sh ./scripts/build-ui.sh v0.3.0
+# 1. Build report-ui (clones reg-cli-report-ui at v0.5.0, builds with pnpm)
+sh ./scripts/build-ui.sh v0.5.0
 
 # 2. Build reg.wasm (downloads wasi-sdk on first run, then cargo build --release)
 bash ./scripts/build-wasm.sh
