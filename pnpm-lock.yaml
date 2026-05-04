@@ -14,8 +14,8 @@ importers:
   .:
     dependencies:
       '@tybys/wasm-util':
-        specifier: ^0.9.0
-        version: 0.9.0(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)
+        specifier: ^0.10.0
+        version: 0.10.1(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)
       x-img-diff-js:
         specifier: ^0.3.5
         version: 0.3.5
@@ -304,9 +304,6 @@ packages:
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
-
-  '@tybys/wasm-util@0.9.0':
-    resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
 
   '@types/estree@1.0.6':
     resolution: {integrity: sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==}
@@ -713,11 +710,6 @@ snapshots:
   '@rolldown/pluginutils@1.0.0-rc.17': {}
 
   '@tybys/wasm-util@0.10.1(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)':
-    dependencies:
-      tslib: 2.7.0
-    optional: true
-
-  '@tybys/wasm-util@0.9.0(patch_hash=20ebdaec6e1aeb3affd4cb0312df48e2687eac41c9ada11917cff72469fc7210)':
     dependencies:
       tslib: 2.7.0
 
