@@ -35,8 +35,9 @@ jobs:
           mkdir -p public/diff
           cp -r sample/actual public/actual
           cp -r sample/expected public/expected
-          node dist/cli.mjs ./public/actual ./public/expected ./public/diff \
-            -R public/index.html -X client -I
+          CLI=$(node -e "console.log(require('path').resolve('dist/cli.mjs'))")
+          cd public && node "$CLI" ./actual ./expected ./diff \
+            -R ./index.html -X client -I
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: public
