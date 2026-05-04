@@ -3,8 +3,8 @@
 // CLI wrapper around the Wasm `run()` entry point.
 //
 // Goal: match the surface of classic reg-cli (`src/cli.js`) closely enough
-// that users migrating from `reg-cli` to `@bokuweb/reg-cli-wasm` do not have
-// to change their CI invocation. Specifically this handles:
+// that existing `reg-cli` users do not have to change their CI invocation.
+// Specifically this handles:
 //
 //   - POSIX short-flag aliases (-R, -J, -M, -T, -S, -C, -A, -I, -E, -U, -D)
 //   - Non-zero exit code on pixel diff (`process.exitCode = 1`)
