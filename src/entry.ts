@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
-import { computeWasiSandbox, readWasm } from './utils';
+import { computeWasiSandbox, filterWasiImports, readWasm } from './utils';
 import { createPrintErrHook } from './progress';
 import { type RustTraceData, type WorkerSpan } from './tracing';
 
@@ -66,7 +66,6 @@ const wasi = new WASI({
   printErr,
 });
 
-const imports = wasi.getImportObject();
 const file = readWasm();
 
 /**
@@ -99,9 +98,14 @@ const readWasmString = (
     const opts = { initial: 256, maximum: 16384, shared: true };
     const memory = new WebAssembly.Memory(opts);
 
+    const wasi_snapshot_preview1 = filterWasiImports(
+      wasm,
+      wasi.getImportObject().wasi_snapshot_preview1,
+    );
+
     let instance = await tSpan('entry.wasm_instantiate', async () =>
       WebAssembly.instantiate(wasm, {
-        ...imports,
+        wasi_snapshot_preview1,
         wasi: {
           'thread-spawn': (startArg: number) => {
             const threadIdBuffer = new SharedArrayBuffer(4);

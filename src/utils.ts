@@ -17,6 +17,32 @@ export const resolveExtention = (): string => {
 };
 
 /**
+ * Restrict the WASI namespace passed to `WebAssembly.instantiate` to only the
+ * functions the wasm module actually imports. `@tybys/wasm-util` exposes the
+ * full WASI preview1 surface (~46 fns) but `reg.wasm` declares ~20. The unused
+ * 26 include capabilities reg-cli never needs (`path_unlink_file`,
+ * `path_remove_directory`, `sock_*`, `proc_raise`, ...). Withholding them
+ * shrinks the blast radius if the bundled wasm or one of its image-decoder
+ * dependencies (libpng/libwebp/libjpeg) is ever compromised.
+ */
+export const filterWasiImports = (
+  module: WebAssembly.Module,
+  full: WebAssembly.ModuleImports,
+): WebAssembly.ModuleImports => {
+  const needed = new Set(
+    WebAssembly.Module.imports(module)
+      .filter((i) => i.module === 'wasi_snapshot_preview1')
+      .map((i) => i.name),
+  );
+  const filtered: Record<string, unknown> = {};
+  const src = full as unknown as Record<string, unknown>;
+  for (const name of needed) {
+    if (name in src) filtered[name] = src[name];
+  }
+  return filtered as WebAssembly.ModuleImports;
+};
+
+/**
  * Host environment variables intentionally forwarded into the Wasm sandbox.
  * Everything else (shell secrets, CI credentials, AWS_*, NPM_TOKEN, ...) is
  * filtered out.
