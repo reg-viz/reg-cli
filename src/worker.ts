@@ -2,7 +2,12 @@ import { parentPort, workerData } from 'node:worker_threads';
 import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { argv, env } from 'node:process';
-import { computeWasiSandbox, readWasm, resolveExtention } from './utils';
+import {
+  computeWasiSandbox,
+  filterWasiImports,
+  readWasm,
+  resolveExtention,
+} from './utils';
 // https://github.com/toyobayashi/emnapi/blob/5ab92c706c7cd4a0a30759e58f26eedfb0ded591/packages/wasi-threads/src/wasi-threads.ts#L288-L335
 import { createInstanceProxy } from './proxy';
 import { createPrintErrHook } from './progress';
@@ -34,7 +39,6 @@ const wasi = new WASI({
   printErr,
 });
 
-const imports = wasi.getImportObject();
 const file = readWasm();
 
 const handler = async ({ startArg, tid, memory }: { startArg: number, tid: number, memory: WebAssembly.Memory }) => {
@@ -65,9 +69,14 @@ const handler = async ({ startArg, tid, memory }: { startArg: number, tid: numbe
       WebAssembly.compile(await file),
     );
 
+    const wasi_snapshot_preview1 = filterWasiImports(
+      wasm,
+      wasi.getImportObject().wasi_snapshot_preview1,
+    );
+
     let instance = await tSpan('worker.wasm_instantiate', async () =>
       WebAssembly.instantiate(wasm, {
-        ...imports,
+        wasi_snapshot_preview1,
         wasi: {
           'thread-spawn': (startArg: number) => {
             const threadIdBuffer = new SharedArrayBuffer(4);
