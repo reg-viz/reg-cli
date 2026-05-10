@@ -64,7 +64,7 @@ jobs:
         if: runner.os != 'macOS'
         with:
           policy: .github/coronarium.yml
-          mode: audit
+          mode: block
 
       - name: test (CLI + library) — macOS, unsupervised
         if: runner.os == 'macOS'

@@ -1,5 +1,57 @@
-mode: audit
+mode: block
+
+# Tightened from the initial audit run. The supervised step is just
+# `pnpm test` against the local wasm CLI + fixture images — no
+# network, no privileged file access, no exec of anything outside
+# the node/pnpm/corepack stack.
+
 network:
-  default: allow
+  # Audit captured 0 connect events: pnpm install runs in an earlier
+  # (unsupervised) step, and the test harness operates entirely on
+  # local fixtures. Anything that *does* try to connect during tests
+  # is by definition new behaviour worth failing CI on.
+  default: deny
+
 file:
+  # Whitelisting everything node + pnpm + corepack touch on disk
+  # (/lib, /etc, /opt/hostedtoolcache, /home/runner/.cache, /proc,
+  # /sys, /tmp, /usr, /var/lib/waagent, …) would be both noisy and
+  # brittle, so we keep the default permissive and instead deny
+  # well-known sensitive paths.
   default: allow
+  deny:
+    - /etc/shadow
+    - /etc/gshadow
+    - /etc/sudoers
+    - /etc/sudoers.d
+    - /etc/ssh/ssh_host
+    - /root/.ssh
+    - /home/runner/.ssh
+    - /home/runner/.aws
+    - /home/runner/.gnupg
+    - /home/runner/.netrc
+    - /home/runner/.docker/config.json
+    - /var/run/docker.sock
+    - /var/run/secrets
+    # Windows counterparts (harmless no-ops on Linux runners):
+    - C:\Users\runneradmin\.ssh
+    - C:\Users\runneradmin\.aws
+    - C:\Users\runneradmin\.gnupg
+    - C:\Users\runneradmin\.docker\config.json
+
+process:
+  # Basename match (no path separator) covers any install location.
+  # The supervised step only needs node + pnpm + sh; nothing on this
+  # list should ever appear in a clean run.
+  deny_exec:
+    - curl
+    - wget
+    - nc
+    - ncat
+    - socat
+    - ssh
+    - scp
+    - sftp
+    - rsync
+    - telnet
+    - ftp
