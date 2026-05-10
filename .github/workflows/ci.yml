@@ -88,12 +88,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # `pnpm` on Windows is a `.cmd` shim; Rust's
+          # `Command::new("pnpm")` doesn't honour PATHEXT, so we wrap
+          # with `cmd /c` to get the shim resolved.
           & $env:CORONARIUM_BIN `
             --policy $env:CORONARIUM_POLICY `
             --mode   $env:CORONARIUM_MODE `
             --log    coronarium.log.json `
             --html   coronarium-report.html `
-            -- pnpm test
+            -- cmd /c "pnpm test"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
