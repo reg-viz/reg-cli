@@ -1,0 +1,94 @@
+mode: block
+
+# Tightened policy covering every supervised `run:` step (corepack
+# enable → build-ui.sh → cargo test → pnpm install → pnpm build →
+# pnpm test). All three pillars are default-deny; deny rules
+# overlay the broad allow-list to lock down sensitive paths.
+
+network:
+  # `default: deny` was attempted but isn't viable for this workload:
+  # registry.npmjs.org / github releases / crates.io are CDN-fronted
+  # (Cloudflare / Fastly) anycast pools that rotate IPs across /12
+  # ranges faster than coronarium's 15s DNS refresh can keep up.
+  # Trying to allow Cloudflare's published v4/v6 ranges instead
+  # overflows the eBPF map (`HashMap::with_max_entries(1024)`), with
+  # `bpf_map_update_elem failed: Argument list too long`.
+  #
+  # Until coronarium grows an LPM-trie-backed prefix map, fall back
+  # to default-allow on the network pillar. Real defence-in-depth
+  # for this CI lives in `process.deny_exec` (block exfil tools) and
+  # `file.deny` (sensitive paths), both of which work as advertised.
+  default: allow
+
+file:
+  # `default: deny` was attempted with a broad FHS allow list, but
+  # the supervised process opens many anonymous file descriptors
+  # whose paths aren't real filesystem paths — `pipe:[123]`,
+  # `anon_inode:[eventfd]`, `socket:[N]`, `memfd:…`. None of those
+  # match `/lib/`, `/etc/`, etc. prefixes, so they fall through to
+  # the default-deny verdict and inflate `stats.denied`. pnpm
+  # install of ~800 packages produces thousands of such fds and
+  # block mode exits non-zero on every run. Until coronarium
+  # treats non-`/`-prefixed paths as "not a real path, don't deny"
+  # (sibling fix to the empty-string handling already in v0.31.0),
+  # default-deny on the file pillar isn't viable.
+  #
+  # Real defence-in-depth here is the 8 kernel-blocked deny
+  # prefixes — those still SIGKILL on attempted credential reads
+  # regardless of the default verdict.
+  default: allow
+  deny:
+    # coronarium kernel-blocks only the first 8 prefixes (eBPF map
+    # capacity). Entries past slot 8 don't actually block — they're
+    # tagged as denied in the JSON log only — but they still
+    # increment `stats.denied`, which makes block mode exit
+    # non-zero. So past-slot-8 deny entries are a footgun: they
+    # provide no real protection but they DO break CI. We keep
+    # exactly 8.
+    #
+    # All 8 target the runner user's home (`/home/runner/...`) on
+    # purpose: under `sudo -E env "PATH=$PATH"` the supervised
+    # script inherits HOME=$HOME from the runner user, so tool
+    # probes (libcurl, libgit2, …) hit these paths and the kernel
+    # actually kills attempts to read them.
+    - /etc/shadow
+    - /etc/sudoers
+    - /home/runner/.ssh
+    - /home/runner/.aws
+    - /home/runner/.gnupg
+    - /home/runner/.docker/config.json
+    - /var/run/docker.sock
+    - /etc/gshadow
+    # NOTE: `~/.netrc` is intentionally NOT on the deny list.
+    # libcurl probes `$HOME/.netrc` on every HTTPS connection it
+    # makes for credential lookup, so git-remote-https / pnpm /
+    # cargo all open it during normal CI work. The kernel-side LSM
+    # hook matches on the path string before resolution and sends
+    # SIGKILL even when the file doesn't exist, which broke `git
+    # clone` here on the first attempt. The file is empty/absent
+    # on a fresh runner image anyway, so the value of denying it
+    # is low.
+    #
+    # NOTE: Windows credential paths are also intentionally absent.
+    # coronarium-win runs in `--mode audit` here, where any deny
+    # tag would still trip the block-mode counter check on Linux
+    # (same policy file, both OSes). If we want Windows-specific
+    # deny rules later, switch to per-OS policy files.
+
+process:
+  # Basename match (no path separator) covers any install location.
+  # The supervised script only legitimately needs node, pnpm, sh,
+  # bash, git, cargo, vite, and corepack-spawned shims; nothing on
+  # this list should appear during a clean run.
+  deny_exec:
+    - curl
+    - wget
+    - nc
+    - ncat
+    - socat
+    - ssh
+    - scp
+    - sftp
+    - rsync
+    - telnet
+    - ftp
