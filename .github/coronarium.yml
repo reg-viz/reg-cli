@@ -21,30 +21,22 @@ network:
   default: allow
 
 file:
-  # True default-deny over the filesystem. The allow list is the
-  # FHS dirs the toolchain actually reaches; the deny list overlays
-  # sensitive paths so they stay blocked even though the parent
-  # prefix is allowed.
-  default: deny
-  allow:
-    # Linux FHS — the audit run only opened paths under these prefixes:
-    - /bin/
-    - /sbin/
-    - /lib/
-    - /lib64/
-    - /usr/
-    - /etc/
-    - /proc/
-    - /sys/
-    - /dev/
-    - /tmp/
-    - /run/
-    - /var/
-    - /opt/
-    - /snap/
-    - /home/
-    # Windows — coarse but matches what the runner actually uses.
-    - C:\
+  # `default: deny` was attempted with a broad FHS allow list, but
+  # the supervised process opens many anonymous file descriptors
+  # whose paths aren't real filesystem paths — `pipe:[123]`,
+  # `anon_inode:[eventfd]`, `socket:[N]`, `memfd:…`. None of those
+  # match `/lib/`, `/etc/`, etc. prefixes, so they fall through to
+  # the default-deny verdict and inflate `stats.denied`. pnpm
+  # install of ~800 packages produces thousands of such fds and
+  # block mode exits non-zero on every run. Until coronarium
+  # treats non-`/`-prefixed paths as "not a real path, don't deny"
+  # (sibling fix to the empty-string handling already in v0.31.0),
+  # default-deny on the file pillar isn't viable.
+  #
+  # Real defence-in-depth here is the 8 kernel-blocked deny
+  # prefixes — those still SIGKILL on attempted credential reads
+  # regardless of the default verdict.
+  default: allow
   deny:
     # coronarium kernel-blocks only the first 8 prefixes (eBPF map
     # capacity). Entries past slot 8 don't actually block — they're
