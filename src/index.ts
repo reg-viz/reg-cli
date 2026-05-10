@@ -56,124 +56,92 @@ const runInternal = async (argv: string[], emitter: EventEmitter): Promise<void>
   const traceContext = isTracingEnabled() ? startRootSpan('reg-cli') : null;
 
   const t_new_entry = Date.now();
-  const worker = new Worker(join(dir(), `./entry.${resolveExtention()}`), { workerData: { argv } });
+  const worker = new Worker(join(dir(), `./runner.${resolveExtention()}`), { workerData: { argv, mode: 'entry' } });
   recordMainSpan('main.new_entry_worker', t_new_entry);
 
   let nextTid = 1;
   const workers = [worker];
   const threadWorkerSpans: WorkerSpan[] = [];
 
+  // Common handlers shared by the entry worker and rayon thread workers.
+  // 'compare-event' / 'thread-spawn' / 'loaded' / 'worker-spans' all flow
+  // through here; mode-specific events ('complete') are layered on top.
+  const attachCommonHandlers = (w: Worker) => {
+    w.on('message', (msg) => {
+      switch (msg.cmd) {
+        case 'compare-event':
+          if (msg.event) emitter.emit('compare', msg.event);
+          return;
+        case 'thread-spawn':
+          spawn(msg.startArg, msg.threadId, msg.memory);
+          return;
+        case 'worker-spans':
+          if (Array.isArray(msg.workerSpans)) {
+            threadWorkerSpans.push(...msg.workerSpans);
+          }
+          return;
+        case 'loaded':
+          if (typeof w.unref === 'function') w.unref();
+          return;
+      }
+    });
+    w.on('error', (e: Error) => {
+      if (traceContext) endRootSpan(false);
+      workers.forEach((x) => x.terminate());
+      emitter.emit('error', e);
+    });
+  };
+
   const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
     const t_new_worker = Date.now();
-    const worker = new Worker(join(dir(), `./worker.${resolveExtention()}`), { workerData: { argv } });
+    const w = new Worker(join(dir(), `./runner.${resolveExtention()}`), { workerData: { argv, mode: 'thread' } });
     const tid = nextTid++;
     recordMainSpan('main.new_thread_worker', t_new_worker, { tid });
 
-    workers.push(worker);
-
-    worker.on('message', (msg) => {
-      const { cmd } = msg;
-      if (cmd === 'loaded') {
-        if (typeof worker.unref === 'function') {
-          worker.unref();
-        }
-      } else if (cmd === 'thread-spawn') {
-        spawn(msg.startArg, msg.threadId, msg.memory);
-      } else if (cmd === 'worker-spans') {
-        if (Array.isArray(msg.workerSpans)) {
-          threadWorkerSpans.push(...msg.workerSpans);
-        }
-      } else if (cmd === 'compare-event') {
-        // Rayon thread workers forward tagged progress lines here.
-        if (msg.event) emitter.emit('compare', msg.event);
-      }
-    });
-
-    worker.on('error', (e: Error) => {
-      workers.forEach((w) => w.terminate());
-      // Forward as an `error` event on the parent emitter so callers can
-      // `emitter.on('error', ...)` instead of wrapping in a global handler.
-      // (Parity with classic reg-cli's EventEmitter surface.)
-      emitter.emit('error', e);
-    });
+    workers.push(w);
+    attachCommonHandlers(w);
 
     if (threadId) {
       Atomics.store(threadId, 0, tid);
       Atomics.notify(threadId, 0);
     }
-    worker.postMessage({ startArg, tid, memory });
+    w.postMessage({ startArg, tid, memory });
     return tid;
   };
 
-  worker.on('message', async ({ cmd, startArg, threadId, memory, data, traceData, workerSpans, event }) => {
-    if (cmd === 'compare-event') {
-      // The main entry worker (`entry.ts`) forwards events from any
-      // non-threaded progress (e.g. `find_images` emitting new/delete
-      // up front). Rayon thread workers' events are handled in `spawn()`.
-      if (event) emitter.emit('compare', event);
-      return;
-    }
-    if (cmd === 'complete') {
-      const t_post_complete = Date.now();
+  attachCommonHandlers(worker);
 
-      // Process JS worker spans (entry.ts + thread workers)
-      if (isTracingEnabled()) {
-        if (Array.isArray(workerSpans)) {
-          processWorkerSpans(workerSpans as WorkerSpan[], 'entry');
-        }
-        if (threadWorkerSpans.length) {
-          processWorkerSpans(threadWorkerSpans, 'thread');
-        }
-        // Process trace data from Rust/WASM if available
-        if (traceData) {
-          processRustTraceData(traceData as RustTraceData);
-        }
-        // Record wall-clock around processing
-        recordMainSpan('main.process_trace_and_spans', t_post_complete);
-        // Also record total time
-        mainSpans.push({
-          name: 'main.run_total',
-          start_ms: run_start_ms,
-          end_ms: Date.now(),
-          worker_label: 'main',
-        });
-        processWorkerSpans(mainSpans, 'main');
-        // End root span after processing spans
-        endRootSpan(true);
-        // Wait for traces to be exported before shutting down
-        await shutdownTracing();
+  // Only the entry worker emits 'complete' (with the report payload + its
+  // own worker spans + Rust trace data piggy-backed).
+  worker.on('message', async (msg) => {
+    if (msg.cmd !== 'complete') return;
+    const { data, traceData, workerSpans } = msg;
+    const t_post_complete = Date.now();
+
+    if (isTracingEnabled()) {
+      if (Array.isArray(workerSpans)) {
+        processWorkerSpans(workerSpans as WorkerSpan[], 'entry');
       }
-
-      workers.forEach((w) => w.terminate());
-
-      // Per-file `compare` events now fire live from Rust's diff loop via
-      // the `progress.ts` stderr event channel (see `createPrintErrHook`),
-      // matching classic reg-cli's `ProcessAdaptor` behaviour. No need to
-      // replay them here.
-
-      // Emit complete and ensure we don't exit before traces are sent
-      emitter.emit('complete', data);
-      return; // Prevent further processing
-    }
-
-    if (cmd === 'loaded') {
-      if (typeof worker.unref === 'function') {
-        worker.unref();
+      if (threadWorkerSpans.length) {
+        processWorkerSpans(threadWorkerSpans, 'thread');
       }
-      return;
+      if (traceData) {
+        processRustTraceData(traceData as RustTraceData);
+      }
+      recordMainSpan('main.process_trace_and_spans', t_post_complete);
+      mainSpans.push({
+        name: 'main.run_total',
+        start_ms: run_start_ms,
+        end_ms: Date.now(),
+        worker_label: 'main',
+      });
+      processWorkerSpans(mainSpans, 'main');
+      endRootSpan(true);
+      await shutdownTracing();
     }
 
-    if (cmd === 'thread-spawn') {
-      spawn(startArg, threadId, memory);
-    }
-  });
-
-  worker.on('error', (err: Error) => {
-    if (traceContext) {
-      endRootSpan(false);
-    }
     workers.forEach((w) => w.terminate());
-    emitter.emit('error', err);
+    emitter.emit('complete', data);
   });
 };
 
