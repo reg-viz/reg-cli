@@ -71,20 +71,18 @@ jobs:
         run: |
           # `sudo -E` preserves env *except* PATH; `env "PATH=$PATH"`
           # re-injects the runner user's PATH so the supervised
-          # child can find pnpm/cargo/git.
-          # `--dns-refresh-interval 30` re-resolves hostname allow
-          # rules every 30s and additively adds any new IPs to the
-          # BPF map. Needed because github.com / registry.npmjs.org
-          # use GeoDNS round-robin: the IP the supervised child
-          # gets back from a fresh DNS lookup mid-run can differ
-          # from the one captured at coronarium startup.
+          # child can find pnpm/cargo/git. Hostname allow rules
+          # (github.com, registry.npmjs.org, …) are re-resolved
+          # every 15s by coronarium's default — needed because
+          # those hostnames use GeoDNS round-robin and the IP the
+          # supervised child gets mid-run can differ from the one
+          # captured at startup.
           sudo -E env "PATH=$PATH" "$CORONARIUM_BIN" run \
             --policy  "$CORONARIUM_POLICY" \
             --mode    "$CORONARIUM_MODE" \
             --log     coronarium.log.json \
             --html    coronarium-report.html \
             --summary "$GITHUB_STEP_SUMMARY" \
-            --dns-refresh-interval 30 \
             -- bash -euxo pipefail -c '
               corepack enable
               sh ./scripts/build-ui.sh v0.5.0
@@ -105,7 +103,6 @@ jobs:
             --mode   $env:CORONARIUM_MODE `
             --log    coronarium.log.json `
             --html   coronarium-report.html `
-            --dns-refresh-interval 30 `
             -- bash -euxo pipefail -c "corepack enable && sh ./scripts/build-ui.sh v0.5.0 && pnpm install --frozen-lockfile && pnpm build && pnpm test"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
