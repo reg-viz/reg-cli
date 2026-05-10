@@ -2,6 +2,7 @@ name: CI
 on: [push, pull_request]
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   # Wasm pipeline (the only pipeline now that the legacy JS impl is gone):
@@ -53,5 +54,57 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: build (dist + bundle reg.wasm)
         run: pnpm build
-      - name: test (CLI + library)
+
+      # Audit-only supervision of the test step via bokuweb/coronarium.
+      # eBPF on Linux / ETW on Windows captures every exec/open/connect
+      # made during `pnpm test`; macOS is skipped (coronarium's
+      # supervised mode is Linux/Windows only — see its runner-support
+      # matrix). Nothing is blocked — `mode: audit` just records.
+      - uses: bokuweb/coronarium@v0
+        if: runner.os != 'macOS'
+        with:
+          policy: .github/coronarium.yml
+          mode: audit
+
+      - name: test (CLI + library) — macOS, unsupervised
+        if: runner.os == 'macOS'
         run: pnpm test
+
+      - name: test (CLI + library) — Linux, coronarium audit
+        if: runner.os == 'Linux'
+        run: |
+          sudo -E "$CORONARIUM_BIN" run \
+            --policy  "$CORONARIUM_POLICY" \
+            --mode    "$CORONARIUM_MODE" \
+            --log     coronarium.log.json \
+            --html    coronarium-report.html \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            -- pnpm test
+
+      - name: test (CLI + library) — Windows, coronarium audit
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:CORONARIUM_BIN `
+            --policy $env:CORONARIUM_POLICY `
+            --mode   $env:CORONARIUM_MODE `
+            --log    coronarium.log.json `
+            --html   coronarium-report.html `
+            -- pnpm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always() && runner.os != 'macOS'
+        with:
+          name: coronarium-report-${{ matrix.os }}
+          path: |
+            coronarium-report.html
+            coronarium.log.json
+          if-no-files-found: ignore
+
+      - uses: bokuweb/coronarium/comment@v0
+        if: runner.os == 'Linux' && github.event_name == 'pull_request'
+        with:
+          log: coronarium.log.json
+          artifact-name: coronarium-report-${{ matrix.os }}
+          html-filename: coronarium-report.html

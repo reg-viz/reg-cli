@@ -1,0 +1,5 @@
+mode: audit
+network:
+  default: allow
+file:
+  default: allow
