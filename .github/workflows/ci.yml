@@ -92,15 +92,25 @@ jobs:
               pnpm test
             '
 
-      - name: full CI script — Windows, coronarium block
+      - name: full CI script — Windows, coronarium audit
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           # No cargo on Windows (libwebp SSE4.1 intrinsics issue —
           # see comment on setup-rust-toolchain above).
+          #
+          # Force `--mode audit` on Windows. coronarium-win itself
+          # warns that `network.default=deny` is audit-only — Windows
+          # Defender Firewall has no clean default-outbound-deny
+          # primitive, so coronarium-win tags every TLS connect as
+          # `denied` in the log without actually blocking it. In
+          # `--mode block` the resulting `denied > 0` makes the run
+          # exit non-zero on tests that were never blocked, so we
+          # downgrade Windows to audit-only and rely on Linux for
+          # real enforcement.
           & $env:CORONARIUM_BIN `
             --policy $env:CORONARIUM_POLICY `
-            --mode   $env:CORONARIUM_MODE `
+            --mode   audit `
             --log    coronarium.log.json `
             --html   coronarium-report.html `
             -- bash -euxo pipefail -c "corepack enable && sh ./scripts/build-ui.sh v0.5.0 && pnpm install --frozen-lockfile && pnpm build && pnpm test"

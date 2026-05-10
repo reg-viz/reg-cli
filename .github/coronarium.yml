@@ -59,25 +59,33 @@ file:
     # Credentials / keys / sockets — these always stay denied even
     # though their parent dirs are on the allow list. Order matters:
     # coronarium kernel-blocks only the first 8 prefixes; entries
-    # past slot 8 fall back to audit-only tagging in the JSON log.
-    # Keep the most catastrophic-on-leak paths up top.
+    # past slot 8 still tag the JSON log (and so still fail the run
+    # in block mode) but aren't enforced kernel-side. Keep the most
+    # catastrophic-on-leak paths up top.
     - /etc/shadow
     - /etc/sudoers
     - /home/runner/.ssh
     - /home/runner/.aws
     - /home/runner/.gnupg
-    - /home/runner/.netrc
     - /home/runner/.docker/config.json
     - /var/run/docker.sock
+    - /etc/gshadow
     # ↑↑↑ kernel-blocked (slots 1–8) ↑↑↑
     # ↓↓↓ audit-only below this line ↓↓↓
-    - /etc/gshadow
     - /etc/sudoers.d
     - /etc/ssh/ssh_host
     - /root/.ssh
     - /root/.aws
     - /root/.gnupg
     - /var/run/secrets
+    # NOTE: `~/.netrc` is *not* on the deny list. libcurl probes
+    # `$HOME/.netrc` on every HTTPS connection it makes for
+    # credential lookup, so git-remote-https / pnpm / cargo all
+    # open it during normal CI work. The kernel-side LSM hook
+    # matches on the path string before resolution and sends
+    # SIGKILL even when the file doesn't exist, which immediately
+    # broke `git clone` here. The file is empty / absent on a
+    # fresh runner image anyway, so the value of denying it is low.
     # Windows counterparts (harmless no-ops on Linux runners):
     - C:\Users\runneradmin\.ssh
     - C:\Users\runneradmin\.aws
