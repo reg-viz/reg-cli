@@ -46,12 +46,19 @@ file:
     # Windows — coarse but matches what the runner actually uses.
     - C:\
   deny:
-    # Credentials / keys / sockets — these always stay denied even
-    # though their parent dirs are on the allow list. Order matters:
-    # coronarium kernel-blocks only the first 8 prefixes; entries
-    # past slot 8 still tag the JSON log (and so still fail the run
-    # in block mode) but aren't enforced kernel-side. Keep the most
-    # catastrophic-on-leak paths up top.
+    # coronarium kernel-blocks only the first 8 prefixes (eBPF map
+    # capacity). Entries past slot 8 don't actually block — they're
+    # tagged as denied in the JSON log only — but they still
+    # increment `stats.denied`, which makes block mode exit
+    # non-zero. So past-slot-8 deny entries are a footgun: they
+    # provide no real protection but they DO break CI. We keep
+    # exactly 8.
+    #
+    # All 8 target the runner user's home (`/home/runner/...`) on
+    # purpose: under `sudo -E env "PATH=$PATH"` the supervised
+    # script inherits HOME=$HOME from the runner user, so tool
+    # probes (libcurl, libgit2, …) hit these paths and the kernel
+    # actually kills attempts to read them.
     - /etc/shadow
     - /etc/sudoers
     - /home/runner/.ssh
@@ -60,27 +67,21 @@ file:
     - /home/runner/.docker/config.json
     - /var/run/docker.sock
     - /etc/gshadow
-    # ↑↑↑ kernel-blocked (slots 1–8) ↑↑↑
-    # ↓↓↓ audit-only below this line ↓↓↓
-    - /etc/sudoers.d
-    - /etc/ssh/ssh_host
-    - /root/.ssh
-    - /root/.aws
-    - /root/.gnupg
-    - /var/run/secrets
-    # NOTE: `~/.netrc` is *not* on the deny list. libcurl probes
-    # `$HOME/.netrc` on every HTTPS connection it makes for
-    # credential lookup, so git-remote-https / pnpm / cargo all
-    # open it during normal CI work. The kernel-side LSM hook
-    # matches on the path string before resolution and sends
-    # SIGKILL even when the file doesn't exist, which immediately
-    # broke `git clone` here. The file is empty / absent on a
-    # fresh runner image anyway, so the value of denying it is low.
-    # Windows counterparts (harmless no-ops on Linux runners):
-    - C:\Users\runneradmin\.ssh
-    - C:\Users\runneradmin\.aws
-    - C:\Users\runneradmin\.gnupg
-    - C:\Users\runneradmin\.docker\config.json
+    # NOTE: `~/.netrc` is intentionally NOT on the deny list.
+    # libcurl probes `$HOME/.netrc` on every HTTPS connection it
+    # makes for credential lookup, so git-remote-https / pnpm /
+    # cargo all open it during normal CI work. The kernel-side LSM
+    # hook matches on the path string before resolution and sends
+    # SIGKILL even when the file doesn't exist, which broke `git
+    # clone` here on the first attempt. The file is empty/absent
+    # on a fresh runner image anyway, so the value of denying it
+    # is low.
+    #
+    # NOTE: Windows credential paths are also intentionally absent.
+    # coronarium-win runs in `--mode audit` here, where any deny
+    # tag would still trip the block-mode counter check on Linux
+    # (same policy file, both OSes). If we want Windows-specific
+    # deny rules later, switch to per-OS policy files.
 
 process:
   # Basename match (no path separator) covers any install location.
