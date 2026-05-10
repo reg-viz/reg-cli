@@ -30,73 +30,75 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
-      # `reg_core` embeds `report/ui/dist/{report.js,style.css}` via
-      # `include_str!`, so `cargo test` fails before we even compile unless
-      # we materialise them first. The `build-ui.sh` script clones
-      # `reg-viz/reg-cli-report-ui` at a pinned tag and builds it with
-      # yarn (enabled via corepack in setup-node).
-      - name: enable corepack (yarn for report-ui build)
-        run: corepack enable
-      - name: build report-ui (report.js + style.css)
-        run: sh ./scripts/build-ui.sh v0.5.0
-      - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
-        if: runner.os != 'Windows'
-        with:
-          toolchain: stable
       # Skip on Windows: image-diff-rs's host-native build pulls in
       # libwebp's SSE4.1 intrinsics (`VP8LDspInitSSE41`), which the MSVC
       # linker can't resolve. The published artefact (reg.wasm) is
       # built with wasi-sdk's clang and is OS-independent.
-      - name: cargo test (reg_core)
+      - uses: actions-rust-lang/setup-rust-toolchain@2b1f5e9b395427c92ee4e3331786ca3c37afe2d7 # v1.16.0
         if: runner.os != 'Windows'
-        run: cargo test -p reg_core --lib
-      - name: install
-        run: pnpm install --frozen-lockfile
-      - name: build (dist + bundle reg.wasm)
-        run: pnpm build
+        with:
+          toolchain: stable
 
-      # Audit-only supervision of the test step via bokuweb/coronarium.
-      # eBPF on Linux / ETW on Windows captures every exec/open/connect
-      # made during `pnpm test`; macOS is skipped (coronarium's
-      # supervised mode is Linux/Windows only — see its runner-support
-      # matrix). Nothing is blocked — `mode: audit` just records.
+      # Install the coronarium binary on Linux + Windows. macOS is
+      # left unsupervised (coronarium's supervised mode is Linux /
+      # Windows only — see the upstream runner-support matrix).
       - uses: bokuweb/coronarium@v0
         if: runner.os != 'macOS'
         with:
           policy: .github/coronarium.yml
           mode: block
 
-      - name: test (CLI + library) — macOS, unsupervised
+      # Single supervised script that runs every `run:` step under
+      # the coronarium policy: corepack enable → report-ui build
+      # (clones reg-cli-report-ui from GitHub) → cargo test (fetches
+      # crates.io deps; Linux only) → pnpm install (fetches from
+      # registry.npmjs.org) → pnpm build → pnpm test. Anything that
+      # tries to connect outside the policy's allow-list, open a
+      # sensitive path, or exec a banned tool fails the run.
+      - name: full CI script — macOS, unsupervised
         if: runner.os == 'macOS'
-        run: pnpm test
+        run: |
+          set -euxo pipefail
+          corepack enable
+          sh ./scripts/build-ui.sh v0.5.0
+          cargo test -p reg_core --lib
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm test
 
-      - name: test (CLI + library) — Linux, coronarium audit
+      - name: full CI script — Linux, coronarium block
         if: runner.os == 'Linux'
         run: |
-          # `sudo -E` preserves env *except* PATH (sudo always replaces
-          # it with secure_path), so the supervised child can't find
-          # pnpm. `env "PATH=$PATH"` re-injects the runner user's PATH.
+          # `sudo -E` preserves env *except* PATH; `env "PATH=$PATH"`
+          # re-injects the runner user's PATH so the supervised
+          # child can find pnpm/cargo/git.
           sudo -E env "PATH=$PATH" "$CORONARIUM_BIN" run \
             --policy  "$CORONARIUM_POLICY" \
             --mode    "$CORONARIUM_MODE" \
             --log     coronarium.log.json \
             --html    coronarium-report.html \
             --summary "$GITHUB_STEP_SUMMARY" \
-            -- pnpm test
+            -- bash -euxo pipefail -c '
+              corepack enable
+              sh ./scripts/build-ui.sh v0.5.0
+              cargo test -p reg_core --lib
+              pnpm install --frozen-lockfile
+              pnpm build
+              pnpm test
+            '
 
-      - name: test (CLI + library) — Windows, coronarium audit
+      - name: full CI script — Windows, coronarium block
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # `pnpm` on Windows is a `.cmd` shim; Rust's
-          # `Command::new("pnpm")` doesn't honour PATHEXT, so we wrap
-          # with `cmd /c` to get the shim resolved.
+          # No cargo on Windows (libwebp SSE4.1 intrinsics issue —
+          # see comment on setup-rust-toolchain above).
           & $env:CORONARIUM_BIN `
             --policy $env:CORONARIUM_POLICY `
             --mode   $env:CORONARIUM_MODE `
             --log    coronarium.log.json `
             --html   coronarium-report.html `
-            -- cmd /c "pnpm test"
+            -- bash -euxo pipefail -c "corepack enable && sh ./scripts/build-ui.sh v0.5.0 && pnpm install --frozen-lockfile && pnpm build && pnpm test"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

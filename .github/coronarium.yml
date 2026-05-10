@@ -1,31 +1,71 @@
 mode: block
 
-# Tightened from the initial audit run. The supervised step is just
-# `pnpm test` against the local wasm CLI + fixture images — no
-# network, no privileged file access, no exec of anything outside
-# the node/pnpm/corepack stack.
+# Tightened policy covering every supervised `run:` step (corepack
+# enable → build-ui.sh → cargo test → pnpm install → pnpm build →
+# pnpm test). All three pillars are default-deny; deny rules
+# overlay the broad allow-list to lock down sensitive paths.
 
 network:
-  # Audit captured 0 connect events: pnpm install runs in an earlier
-  # (unsupervised) step, and the test harness operates entirely on
-  # local fixtures. Anything that *does* try to connect during tests
-  # is by definition new behaviour worth failing CI on.
   default: deny
+  allow:
+    # systemd-resolved stub on Ubuntu 22.04+ runners. The stub
+    # forwards to the real upstream itself, so only the local
+    # 127.0.0.53:53 socket is visible to the supervised child.
+    - target: 127.0.0.53
+      ports: [53]
+
+    # Sources/dependencies the supervised steps fetch from.
+    - target: github.com                # build-ui.sh: git clone reg-cli-report-ui
+      ports: [443]
+    - target: codeload.github.com       # GitHub git-over-HTTPS tarball CDN
+      ports: [443]
+    - target: objects.githubusercontent.com
+      ports: [443]
+    - target: registry.npmjs.org        # pnpm install
+      ports: [443]
+    - target: index.crates.io           # cargo (Linux job only)
+      ports: [443]
+    - target: static.crates.io
+      ports: [443]
+    - target: crates.io
+      ports: [443]
 
 file:
-  # Whitelisting everything node + pnpm + corepack touch on disk
-  # (/lib, /etc, /opt/hostedtoolcache, /home/runner/.cache, /proc,
-  # /sys, /tmp, /usr, /var/lib/waagent, …) would be both noisy and
-  # brittle, so we keep the default permissive and instead deny
-  # well-known sensitive paths.
-  default: allow
+  # True default-deny over the filesystem. The allow list is the
+  # FHS dirs the toolchain actually reaches; the deny list overlays
+  # sensitive paths so they stay blocked even though the parent
+  # prefix is allowed.
+  default: deny
+  allow:
+    # Linux FHS — the audit run only opened paths under these prefixes:
+    - /bin/
+    - /sbin/
+    - /lib/
+    - /lib64/
+    - /usr/
+    - /etc/
+    - /proc/
+    - /sys/
+    - /dev/
+    - /tmp/
+    - /run/
+    - /var/
+    - /opt/
+    - /snap/
+    - /home/
+    # Windows — coarse but matches what the runner actually uses.
+    - C:\
   deny:
+    # Credentials / keys / sockets — these always stay denied even
+    # though their parent dirs are on the allow list.
     - /etc/shadow
     - /etc/gshadow
     - /etc/sudoers
     - /etc/sudoers.d
     - /etc/ssh/ssh_host
     - /root/.ssh
+    - /root/.aws
+    - /root/.gnupg
     - /home/runner/.ssh
     - /home/runner/.aws
     - /home/runner/.gnupg
@@ -41,8 +81,9 @@ file:
 
 process:
   # Basename match (no path separator) covers any install location.
-  # The supervised step only needs node + pnpm + sh; nothing on this
-  # list should ever appear in a clean run.
+  # The supervised script only legitimately needs node, pnpm, sh,
+  # bash, git, cargo, vite, and corepack-spawned shims; nothing on
+  # this list should appear during a clean run.
   deny_exec:
     - curl
     - wget
