@@ -73,7 +73,10 @@ jobs:
       - name: test (CLI + library) — Linux, coronarium audit
         if: runner.os == 'Linux'
         run: |
-          sudo -E "$CORONARIUM_BIN" run \
+          # `sudo -E` preserves env *except* PATH (sudo always replaces
+          # it with secure_path), so the supervised child can't find
+          # pnpm. `env "PATH=$PATH"` re-injects the runner user's PATH.
+          sudo -E env "PATH=$PATH" "$CORONARIUM_BIN" run \
             --policy  "$CORONARIUM_POLICY" \
             --mode    "$CORONARIUM_MODE" \
             --log     coronarium.log.json \
