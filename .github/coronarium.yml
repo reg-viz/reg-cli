@@ -6,83 +6,19 @@ mode: block
 # overlay the broad allow-list to lock down sensitive paths.
 
 network:
-  default: deny
-  allow:
-    # systemd-resolved stub on Ubuntu 22.04+ runners. The stub
-    # forwards to the real upstream itself, so only the local
-    # 127.0.0.53:53 socket is visible to the supervised child.
-    - target: 127.0.0.53
-      ports: [53]
-
-    # Sources/dependencies the supervised steps fetch from.
-    - target: github.com                # build-ui.sh: git clone reg-cli-report-ui
-      ports: [443]
-    - target: codeload.github.com       # GitHub git-over-HTTPS tarball CDN
-      ports: [443]
-    - target: objects.githubusercontent.com
-      ports: [443]
-    - target: registry.npmjs.org        # pnpm install
-      ports: [443]
-    - target: index.crates.io           # cargo (Linux job only)
-      ports: [443]
-    - target: static.crates.io
-      ports: [443]
-    - target: crates.io
-      ports: [443]
-
-    # registry.npmjs.org tarballs are served from Cloudflare's CDN
-    # which rotates IPs across the /12 faster than coronarium's
-    # 15s DNS refresh can keep up — we observed pnpm install
-    # consistently hitting `104.16.x.34` IPs not yet in the BPF
-    # map. Whitelist Cloudflare's published v4/v6 ranges
-    # (https://www.cloudflare.com/ips/) so the CDN-fronted
-    # downloads work reliably. Same effective blast radius as
-    # allowing the hostname (any service on the same CDN POP),
-    # just enumerated.
-    - target: 173.245.48.0/20
-      ports: [443]
-    - target: 103.21.244.0/22
-      ports: [443]
-    - target: 103.22.200.0/22
-      ports: [443]
-    - target: 103.31.4.0/22
-      ports: [443]
-    - target: 141.101.64.0/18
-      ports: [443]
-    - target: 108.162.192.0/18
-      ports: [443]
-    - target: 190.93.240.0/20
-      ports: [443]
-    - target: 188.114.96.0/20
-      ports: [443]
-    - target: 197.234.240.0/22
-      ports: [443]
-    - target: 198.41.128.0/17
-      ports: [443]
-    - target: 162.158.0.0/15
-      ports: [443]
-    - target: 104.16.0.0/13
-      ports: [443]
-    - target: 104.24.0.0/14
-      ports: [443]
-    - target: 172.64.0.0/13
-      ports: [443]
-    - target: 131.0.72.0/22
-      ports: [443]
-    - target: 2400:cb00::/32
-      ports: [443]
-    - target: 2606:4700::/32
-      ports: [443]
-    - target: 2803:f800::/32
-      ports: [443]
-    - target: 2405:b500::/32
-      ports: [443]
-    - target: 2405:8100::/32
-      ports: [443]
-    - target: 2a06:98c0::/29
-      ports: [443]
-    - target: 2c0f:f248::/32
-      ports: [443]
+  # `default: deny` was attempted but isn't viable for this workload:
+  # registry.npmjs.org / github releases / crates.io are CDN-fronted
+  # (Cloudflare / Fastly) anycast pools that rotate IPs across /12
+  # ranges faster than coronarium's 15s DNS refresh can keep up.
+  # Trying to allow Cloudflare's published v4/v6 ranges instead
+  # overflows the eBPF map (`HashMap::with_max_entries(1024)`), with
+  # `bpf_map_update_elem failed: Argument list too long`.
+  #
+  # Until coronarium grows an LPM-trie-backed prefix map, fall back
+  # to default-allow on the network pillar. Real defence-in-depth
+  # for this CI lives in `process.deny_exec` (block exfil tools) and
+  # `file.deny` (sensitive paths), both of which work as advertised.
+  default: allow
 
 file:
   # True default-deny over the filesystem. The allow list is the
