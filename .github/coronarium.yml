@@ -57,21 +57,26 @@ file:
     - C:\
   deny:
     # Credentials / keys / sockets — these always stay denied even
-    # though their parent dirs are on the allow list.
+    # though their parent dirs are on the allow list. Order matters:
+    # coronarium kernel-blocks only the first 8 prefixes; entries
+    # past slot 8 fall back to audit-only tagging in the JSON log.
+    # Keep the most catastrophic-on-leak paths up top.
     - /etc/shadow
-    - /etc/gshadow
     - /etc/sudoers
-    - /etc/sudoers.d
-    - /etc/ssh/ssh_host
-    - /root/.ssh
-    - /root/.aws
-    - /root/.gnupg
     - /home/runner/.ssh
     - /home/runner/.aws
     - /home/runner/.gnupg
     - /home/runner/.netrc
     - /home/runner/.docker/config.json
     - /var/run/docker.sock
+    # ↑↑↑ kernel-blocked (slots 1–8) ↑↑↑
+    # ↓↓↓ audit-only below this line ↓↓↓
+    - /etc/gshadow
+    - /etc/sudoers.d
+    - /etc/ssh/ssh_host
+    - /root/.ssh
+    - /root/.aws
+    - /root/.gnupg
     - /var/run/secrets
     # Windows counterparts (harmless no-ops on Linux runners):
     - C:\Users\runneradmin\.ssh
