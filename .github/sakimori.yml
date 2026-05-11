@@ -9,12 +9,12 @@ network:
   # `default: deny` was attempted but isn't viable for this workload:
   # registry.npmjs.org / github releases / crates.io are CDN-fronted
   # (Cloudflare / Fastly) anycast pools that rotate IPs across /12
-  # ranges faster than coronarium's 15s DNS refresh can keep up.
+  # ranges faster than sakimori's 15s DNS refresh can keep up.
   # Trying to allow Cloudflare's published v4/v6 ranges instead
   # overflows the eBPF map (`HashMap::with_max_entries(1024)`), with
   # `bpf_map_update_elem failed: Argument list too long`.
   #
-  # Until coronarium grows an LPM-trie-backed prefix map, fall back
+  # Until sakimori grows an LPM-trie-backed prefix map, fall back
   # to default-allow on the network pillar. Real defence-in-depth
   # for this CI lives in `process.deny_exec` (block exfil tools) and
   # `file.deny` (sensitive paths), both of which work as advertised.
@@ -28,7 +28,7 @@ file:
   # match `/lib/`, `/etc/`, etc. prefixes, so they fall through to
   # the default-deny verdict and inflate `stats.denied`. pnpm
   # install of ~800 packages produces thousands of such fds and
-  # block mode exits non-zero on every run. Until coronarium
+  # block mode exits non-zero on every run. Until sakimori
   # treats non-`/`-prefixed paths as "not a real path, don't deny"
   # (sibling fix to the empty-string handling already in v0.31.0),
   # default-deny on the file pillar isn't viable.
@@ -38,7 +38,7 @@ file:
   # regardless of the default verdict.
   default: allow
   deny:
-    # coronarium kernel-blocks only the first 8 prefixes (eBPF map
+    # sakimori kernel-blocks only the first 8 prefixes (eBPF map
     # capacity). Entries past slot 8 don't actually block — they're
     # tagged as denied in the JSON log only — but they still
     # increment `stats.denied`, which makes block mode exit
@@ -70,7 +70,7 @@ file:
     # is low.
     #
     # NOTE: Windows credential paths are also intentionally absent.
-    # coronarium-win runs in `--mode audit` here, where any deny
+    # sakimori-win runs in `--mode audit` here, where any deny
     # tag would still trip the block-mode counter check on Linux
     # (same policy file, both OSes). If we want Windows-specific
     # deny rules later, switch to per-OS policy files.
