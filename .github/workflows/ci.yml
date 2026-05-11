@@ -25,6 +25,23 @@ jobs:
       run:
         shell: bash
     steps:
+      # Linux: job-scoped sakimori (v0.34+). Starts an eBPF daemon
+      # attached to the runner worker's cgroup BEFORE checkout, so
+      # every subsequent step in this matrix entry (checkout,
+      # setup-{node,rust}, the build/test script, the comment
+      # sub-action) is observed by a single supervisor. Replaces the
+      # earlier one-step form `bokuweb/sakimori@v0` with `run:`,
+      # which only supervised the wrapped command. macOS/Windows
+      # skip this — the wrapper is Linux-only; Windows still uses
+      # the single-step composite below.
+      - if: runner.os == 'Linux'
+        uses: bokuweb/sakimori/job@v0
+        with:
+          policy: .github/sakimori.yml
+          mode: block
+          log: sakimori.log.json
+          html: sakimori-report.html
+
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -39,10 +56,11 @@ jobs:
         with:
           toolchain: stable
 
-      # macOS is left unsupervised — sakimori's supervised mode is
-      # Linux / Windows only (see the upstream runner-support matrix).
-      - name: full CI script — macOS, unsupervised
-        if: runner.os == 'macOS'
+      # macOS unsupervised + Linux supervised by the job-scoped
+      # daemon above. Same script body; the supervision is
+      # transparent (no wrapping needed on Linux now).
+      - name: full CI script
+        if: runner.os != 'Windows'
         run: |
           set -euxo pipefail
           corepack enable
@@ -52,41 +70,15 @@ jobs:
           pnpm build
           pnpm test
 
-      # Linux: one-step form — the action installs sakimori AND
-      # executes the supervised script under `sakimori run` for us.
-      # No separate `sudo -E env "PATH=$PATH" "$SAKIMORI_BIN" run …`
-      # step needed. Hostname allow rules (github.com,
-      # registry.npmjs.org, …) are re-resolved every 15s by
-      # sakimori's default — needed because those hostnames use
-      # GeoDNS round-robin and the IP the supervised child gets
-      # mid-run can differ from the one captured at startup.
-      - name: full CI script — Linux, sakimori block
-        if: runner.os == 'Linux'
-        uses: bokuweb/sakimori@v0
-        with:
-          policy: .github/sakimori.yml
-          mode: block
-          log: sakimori.log.json
-          html: sakimori-report.html
-          run: |
-            corepack enable
-            sh ./scripts/build-ui.sh v0.5.0
-            cargo test -p reg_core --lib
-            pnpm install --frozen-lockfile
-            pnpm build
-            pnpm test
-
-      # Windows: the action's bundled `run:` wrapper is pwsh-only,
-      # and this script needs bash (build-ui.sh + && chains) plus a
-      # per-OS `--mode audit` override (sakimori-win itself warns
-      # that `network.default=deny` is audit-only — Windows Defender
-      # Firewall has no clean default-outbound-deny primitive, so
-      # sakimori-win tags every TLS connect as `denied` in the log
-      # without actually blocking it; in `--mode block` the
-      # resulting `denied > 0` makes the run exit non-zero on tests
-      # that were never blocked). So we keep the explicit form here.
-      # No cargo on Windows either (libwebp SSE4.1 intrinsics issue
-      # on the host-native build — see setup-rust-toolchain above).
+      # Windows: keep the explicit one-step form. The job-scoped
+      # wrapper is Linux only (cgroup v2 is the attach surface).
+      # `--mode audit` override stays because sakimori-win itself
+      # warns that `network.default=deny` is audit-only — Windows
+      # Defender Firewall has no clean default-outbound-deny
+      # primitive, so sakimori-win tags every TLS connect as
+      # `denied` in the log without actually blocking it; in
+      # `--mode block` the resulting `denied > 0` makes the run
+      # exit non-zero on tests that were never blocked.
       - uses: bokuweb/sakimori@v0
         if: runner.os == 'Windows'
         with:
@@ -103,6 +95,18 @@ jobs:
             --html   sakimori-report.html `
             -- bash -euxo pipefail -c "corepack enable && sh ./scripts/build-ui.sh v0.5.0 && pnpm install --frozen-lockfile && pnpm build && pnpm test"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Force the Linux daemon to flush its log + HTML mid-job so the
+      # upload-artifact / comment steps below can see them. The
+      # action's post-hook also calls `daemon stop`, but it runs at
+      # the very end of the job — long after upload-artifact has
+      # already executed. `daemon stop` is idempotent on a missing
+      # pid-file, so the post-hook becomes a no-op.
+      - if: always() && runner.os == 'Linux'
+        name: Flush sakimori daemon
+        run: |
+          sudo -n -E "$SAKIMORI_BIN" daemon stop \
+            --pid-file "$SAKIMORI_JOB_PIDFILE"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always() && runner.os != 'macOS'
