@@ -96,17 +96,13 @@ jobs:
             -- bash -euxo pipefail -c "corepack enable && sh ./scripts/build-ui.sh v0.5.0 && pnpm install --frozen-lockfile && pnpm build && pnpm test"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Force the Linux daemon to flush its log + HTML mid-job so the
-      # upload-artifact / comment steps below can see them. The
-      # action's post-hook also calls `daemon stop`, but it runs at
-      # the very end of the job — long after upload-artifact has
-      # already executed. `daemon stop` is idempotent on a missing
-      # pid-file, so the post-hook becomes a no-op.
-      - if: always() && runner.os == 'Linux'
-        name: Flush sakimori daemon
-        run: |
-          sudo -n -E "$SAKIMORI_BIN" daemon stop \
-            --pid-file "$SAKIMORI_JOB_PIDFILE"
+      # Flush the Linux daemon so upload-artifact + the comment
+      # sub-action below see the freshly-written log + HTML. The
+      # daemon's own post-hook would otherwise write them at
+      # end-of-job, too late for an in-job upload. Sub-action is
+      # idempotent and a no-op on non-Linux entries.
+      - if: always()
+        uses: bokuweb/sakimori/job/stop@v0
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always() && runner.os != 'macOS'
