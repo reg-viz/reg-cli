@@ -1,0 +1,13 @@
+# wasm32 linear memory has a 4 GiB (1 << 32 bytes) architectural ceiling.
+# With wasm-ld's default --max-memory (= 1 GiB), comparing large PNGs makes
+# the in-wasm dlmalloc inside reg.wasm fail memory.grow and abort with
+# `memory allocation of ... bytes failed`, which wasmtime then surfaces as
+# a `wasm trap: unreachable`.
+#
+# Declare the maximum as `(memory ... max=65536 pages)` = 4 GiB by passing
+# the flag through to wasm-ld at link time. memory.grow still only commits
+# pages on demand, so idle RSS is unchanged — this only lifts the ceiling.
+[target.wasm32-wasip1-threads]
+rustflags = [
+  "-C", "link-arg=--max-memory=4294967296",
+]
