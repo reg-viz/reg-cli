@@ -327,32 +327,23 @@ pub fn run(
                         }
                     };
 
-                    let res = {
-                        let _calc_span = info_span!(parent: image_span.clone(), "calculate_diff",
-                            actual_size = img1.len(),
-                            expected_size = img2.len()
-                        ).entered();
-                        match image_diff_rs::diff(
-                            img1,
-                            img2,
-                            &DiffOption {
-                                threshold: options.matching_threshold,
-                                include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
-                                encode_format: options
-                                    .diff_image_format
-                                    .map(EncodeFormat::from),
-                            },
-                        ) {
-                            Ok(r) => r,
-                            Err(e) => {
-                                eprintln!(
-                                    "[reg-cli] failed to diff {}: {}",
-                                    path.display(),
-                                    e
-                                );
-                                emit_progress("fail", &path.display().to_string());
-                                return (path.clone(), ImageOutcome::Failed);
-                            }
+                    let res = match image_diff_rs::diff(
+                        img1,
+                        img2,
+                        &DiffOption {
+                            threshold: options.matching_threshold,
+                            include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                            encode_format: options
+                                .diff_image_format
+                                .map(EncodeFormat::from),
+                        },
+                    ) {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let path_str = path.display().to_string();
+                            eprintln!("[reg-cli] failed to diff {}: {}", path_str, e);
+                            emit_progress("fail", &path_str);
+                            return (path.clone(), ImageOutcome::Failed);
                         }
                     };
 
@@ -383,7 +374,9 @@ pub fn run(
                             }
                         }
                     };
-                    emit_progress(kind, &path.display().to_string());
+                    // Avoid the second `path.display().to_string()` allocation
+                    // by using `to_string_lossy()` which borrows on UTF-8 paths.
+                    emit_progress(kind, &path.to_string_lossy());
 
                     (path.clone(), ImageOutcome::Ok(res))
                 })
@@ -395,15 +388,15 @@ pub fn run(
     let mut passed = BTreeSet::new();
     let mut failed = BTreeSet::new();
 
-    for (image_name, item) in result.iter() {
+    for (image_name, item) in result {
         match item {
             ImageOutcome::Failed => {
                 // Per-file read/decode failure: count as failed but
                 // don't try to write a diff image (we have no pixels).
-                failed.insert(image_name.clone());
+                failed.insert(image_name);
             }
             ImageOutcome::Ok(DiffOutput::Eq) => {
-                passed.insert(image_name.clone());
+                passed.insert(image_name);
             }
             ImageOutcome::Ok(DiffOutput::NotEq {
                 diff_count,
@@ -412,24 +405,21 @@ pub fn run(
                 height,
             }) => {
                 if is_passed(
-                    width.clone(),
-                    height.clone(),
-                    diff_count.clone() as u64,
+                    width,
+                    height,
+                    diff_count as u64,
                     options.threshold_pixel,
                     options.threshold_rate,
                 ) {
-                    passed.insert(image_name.clone());
+                    passed.insert(image_name);
                 } else {
                     let mut diff_image_name = image_name.clone();
-                    failed.insert(image_name.clone());
                     diff_image_name.set_extension(
                         options
                             .diff_image_format
                             .unwrap_or_default()
                             .extension(),
                     );
-                    differences.insert(diff_image_name.clone());
-                    
                     let diff_path = diff_dir.join(&diff_image_name);
                     if let Some(parent) = diff_path.parent() {
                         std::fs::create_dir_all(parent).map_err(|e| {
@@ -441,6 +431,8 @@ pub fn run(
                         eprintln!("Failed to write diff file: {:?}, error: {:?}", diff_path, e);
                         e
                     })?;
+                    failed.insert(image_name);
+                    differences.insert(diff_image_name);
                 }
             }
         }
@@ -628,9 +620,6 @@ pub fn run_from_json(
 // walker starting at `root` sidesteps the trap without needing any
 // sandbox widening.
 fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
-    // Collect into Vec then bulk-build the BTreeSet. `BTreeSet::from_iter`
-    // sorts once instead of paying O(log n) per insert with PathBuf
-    // comparisons. For the 500-image benchmark this is the bulk of the win.
     let mut out: Vec<PathBuf> = Vec::new();
     // `root` itself might not exist (e.g. a brand-new actual/ dir that a
     // user forgot to populate). Classic reg-cli treats that as "no images
@@ -638,23 +627,30 @@ fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
     let Ok(entries) = std::fs::read_dir(root) else {
         return BTreeSet::new();
     };
-    let mut stack: Vec<std::fs::ReadDir> = vec![entries];
-    while let Some(dir) = stack.last_mut() {
+    // Stack holds (open ReadDir, prefix-relative-to-root). The prefix lets us
+    // emit repo-relative paths without ever allocating an absolute PathBuf for
+    // each file or paying `strip_prefix` per match.
+    let mut stack: Vec<(std::fs::ReadDir, PathBuf)> = vec![(entries, PathBuf::new())];
+    while let Some((dir, prefix)) = stack.last_mut() {
         match dir.next() {
             Some(Ok(entry)) => {
-                let p = entry.path();
                 let Ok(ft) = entry.file_type() else { continue };
+                let name = entry.file_name();
                 if ft.is_dir() {
-                    if let Ok(sub) = std::fs::read_dir(&p) {
-                        stack.push(sub);
+                    let sub_path = if prefix.as_os_str().is_empty() {
+                        root.join(&name)
+                    } else {
+                        root.join(&*prefix).join(&name)
+                    };
+                    if let Ok(sub) = std::fs::read_dir(&sub_path) {
+                        let mut sub_prefix = prefix.clone();
+                        sub_prefix.push(&name);
+                        stack.push((sub, sub_prefix));
                     }
-                } else if is_supported_extension(&p) {
-                    // Strip `root` so callers get repo-relative paths like
-                    // `sample.png` or `sub/sample.png`, matching what
-                    // glob used to produce after `.strip_prefix(root)`.
-                    if let Ok(rel) = p.strip_prefix(root) {
-                        out.push(rel.to_path_buf());
-                    }
+                } else if is_supported_extension(Path::new(&name)) {
+                    let mut rel = prefix.clone();
+                    rel.push(&name);
+                    out.push(rel);
                 }
             }
             Some(Err(_)) | None => {
