@@ -63,6 +63,14 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           set -euxo pipefail
+          # macOS-15 runners ship a `/opt/homebrew/bin/cargo` that is actually
+          # a `rustup-init` shim, and brew's bin dir precedes `~/.cargo/bin`
+          # in PATH. `actions-rust-lang/setup-rust-toolchain` installs the
+          # real cargo under `~/.cargo/bin` but only appends to PATH, so by
+          # the time `cargo test` runs the shim wins and exits with
+          # `unexpected argument 'test'`. Prepend so the rustup-managed
+          # cargo is found first.
+          export PATH="$HOME/.cargo/bin:$PATH"
           corepack enable
           sh ./scripts/build-ui.sh v0.5.0
           cargo test -p reg_core --lib
