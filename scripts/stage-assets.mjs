@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Stage runtime assets next to the tsdown output:
-//   - reg.wasm        (rust-side image diff core, loaded by readWasm())
-//   - shared/worker_pre.js + shared/report-worker.js
-//     (browser-side worker fragments concatenated by ximgdiff.ts when -X client is used)
+//   - reg.wasm                  (rust-side image diff core, loaded by readWasm())
+//   - shared/report-worker.js   (browser-side -X client worker bundle —
+//                                self-contained ESM with the
+//                                img-block-match wasm inlined; emitted
+//                                next to the HTML report by ximgdiff.ts)
 //
 // Lives outside tsdown.config.ts because tsdown runs the ESM and CJS builds in
 // parallel and both fire `build:done`, which races on Windows (EBUSY).
@@ -19,8 +21,4 @@ await cp(join(repoRoot, 'reg.wasm'), join(distDir, 'reg.wasm'));
 await cp(
   join(repoRoot, 'report/ui/dist/worker.js'),
   join(sharedOut, 'report-worker.js'),
-);
-await cp(
-  join(repoRoot, 'template/worker_pre.js'),
-  join(sharedOut, 'worker_pre.js'),
 );

@@ -14,9 +14,6 @@ importers:
       '@tybys/wasm-util':
         specifier: ^0.10.2
         version: 0.10.2
-      x-img-diff-js:
-        specifier: ^0.3.5
-        version: 0.3.5
     devDependencies:
       '@opentelemetry/api':
         specifier: ^1.9.1
@@ -456,9 +453,6 @@ packages:
       synckit:
         optional: true
 
-  x-img-diff-js@0.3.5:
-    resolution: {integrity: sha512-B97ztoc2JeM+62HH1zFhmTyilsVqL486WMm8X3oQz16lTCGITY1cz+H57mTsNG0QuyVxv1yGq06qC8wy6UPCmQ==}
-
 snapshots:
 
   '@babel/generator@8.0.0-rc.3':
@@ -810,5 +804,3 @@ snapshots:
   unrun@0.2.37:
     dependencies:
       rolldown: 1.0.0-rc.17
-
-  x-img-diff-js@0.3.5: {}

@@ -279,9 +279,9 @@ export const compare = (input: CompareInput): EventEmitter => {
   inner.on('complete', async (data: CompareOutput) => {
     try {
       if (restAny.additionalDetection === 'client' && typeof input.report === 'string') {
-        // Lazy-load so the ximgdiff helper (pulls in x-img-diff-js + fs
-        // reads of the worker_pre.js/report-worker.js shared assets) isn't
-        // in `compare()`'s hot path for users who never enable `-X client`.
+        // Lazy-load so the ximgdiff helper (fs read of the
+        // shared/report-worker.js bundle) isn't in `compare()`'s hot path
+        // for users who never enable `-X client`.
         const { writeXimgdiffAssets } = await import('./ximgdiff');
         await writeXimgdiffAssets({
           reportPath: input.report,

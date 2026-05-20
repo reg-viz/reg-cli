@@ -397,7 +397,7 @@ test('HTML report embeds a favicon data URL', async () => {
   );
 });
 
-test('-X client emits worker.js + detector.wasm next to report', async () => {
+test('-X client emits a self-contained worker.js next to report', async () => {
   const d = await scratch();
   const reportRel = `${d.rel}/report.html`;
   await runCli([
@@ -411,13 +411,13 @@ test('-X client emits worker.js + detector.wasm next to report', async () => {
     '-I',
   ]);
   const reportDir = dirname(join(REPO, reportRel));
-  // Classic reg-cli test asserts on the *existence* of these files
-  // (test/cli.test.mjs:250-275). Match that at minimum; also sanity-check
-  // sizes so we catch an empty-write regression.
+  // The worker bundle inlines its wasm payload as a data: URL so a
+  // separate detector.wasm is no longer emitted. Size threshold
+  // protects against an empty-write regression and ensures the inlined
+  // wasm is actually in there (img-block-match's wasm is ~417 KB; the
+  // base64 inflation lands worker.js well above ~600 KB).
   const workerStat = await stat(join(reportDir, 'worker.js'));
-  const wasmStat = await stat(join(reportDir, 'detector.wasm'));
-  assert.ok(workerStat.size > 10_000, 'worker.js should contain the concatenated bundle');
-  assert.ok(wasmStat.size > 100_000, 'detector.wasm should be the x-img-diff wasm');
+  assert.ok(workerStat.size > 500_000, 'worker.js should contain the inlined wasm bundle');
 });
 
 // ---------------------------------------------------------------------------

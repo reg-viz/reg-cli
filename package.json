@@ -45,8 +45,7 @@
   "author": "bokuweb",
   "license": "MIT",
   "dependencies": {
-    "@tybys/wasm-util": "^0.10.2",
-    "x-img-diff-js": "^0.3.5"
+    "@tybys/wasm-util": "^0.10.2"
   },
   "peerDependencies": {
     "@opentelemetry/api": "^1.9.1",

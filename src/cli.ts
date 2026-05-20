@@ -175,10 +175,10 @@ emitter.once('complete', async (data: CompareOutput) => {
   // files inside the WASI sandbox's preopened root and avoids a duplicate
   // serialize/write from JS.
 
-  // `-X client` emits worker.js + detector.wasm next to the HTML report so
-  // the browser's second-pass pixel detector can actually load. We do it in
-  // JS (not Rust) because the x-img-diff-js wasm binary lives in node_modules
-  // and shouldn't be linked into the Wasm bundle.
+  // `-X client` emits the report-ui's browser worker bundle next to the
+  // HTML report so the in-browser block-matching detector (img-block-match)
+  // can be loaded. The bundle is a self-contained ESM with the wasm
+  // inlined as a data URL, so no separate detector.wasm file is written.
   if (values.additionalDetection === 'client' && typeof values.report === 'string') {
     try {
       await writeXimgdiffAssets({

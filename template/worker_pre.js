@@ -1,1 +1,0 @@
-self.wasmUrl = '{{&ximgdiffWasmUrl}}';
