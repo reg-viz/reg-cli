@@ -5,14 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## @0.19.0-rc2 (5 September, 2026)
-
-- perf(core): avoid diff-image encoding for threshold-accepted changes and adaptively parallelize smaller batches of large screenshots
-- perf(wasm): reuse the compiled WebAssembly module across Rayon workers
-- perf(report): skip HTML rendering and collection cloning when no HTML report is requested
-- fix(core): ignore macOS AppleDouble image sidecars during image discovery
-- deps: update image-diff-rs to 0.1.2
-
 ## @0.19.0-rc1 (5 September, 2026)
 
 - fix(wasm): write diff images as each comparison completes instead of retaining the whole batch in memory, and raise the linear-memory limit from 1 GiB to 4 GiB ([#654](https://github.com/reg-viz/reg-cli/pull/654), [#668](https://github.com/reg-viz/reg-cli/issues/668))
