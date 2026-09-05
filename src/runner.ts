@@ -44,7 +44,10 @@ const wasi = new WASI({
   printErr,
 });
 
-const wasmFile = readWasm();
+// Only the entry worker reads and compiles the binary. The resulting
+// WebAssembly.Module is structured-cloneable, so Rayon workers can reuse it
+// instead of independently reading and compiling the same module.
+const wasmFile = mode === 'entry' ? readWasm() : null;
 
 const readWasmString = (
   exports: any,
@@ -83,11 +86,17 @@ const makeSpanRecorder = (workerLabel: string) => {
 };
 
 const makeThreadSpawnImport =
-  (memory: WebAssembly.Memory) => (startArg: number) => {
+  (memory: WebAssembly.Memory, wasmModule: WebAssembly.Module) => (startArg: number) => {
     const buf = new SharedArrayBuffer(4);
     const id = new Int32Array(buf);
     Atomics.store(id, 0, -1);
-    parentPort?.postMessage({ cmd: 'thread-spawn', startArg, threadId: id, memory });
+    parentPort?.postMessage({
+      cmd: 'thread-spawn',
+      startArg,
+      threadId: id,
+      memory,
+      wasmModule,
+    });
     Atomics.wait(id, 0, -1);
     return Atomics.load(id, 0);
   };
@@ -96,21 +105,24 @@ const compileAndInstantiate = async (
   memory: WebAssembly.Memory,
   tSpan: ReturnType<typeof makeSpanRecorder>['tSpan'],
   prefix: 'entry' | 'worker',
-): Promise<WebAssembly.Instance> => {
-  const wasm = await tSpan(`${prefix}.wasm_compile`, async () =>
-    WebAssembly.compile(await wasmFile),
-  );
+  compiledModule?: WebAssembly.Module,
+): Promise<{ instance: WebAssembly.Instance; module: WebAssembly.Module }> => {
+  const wasm = compiledModule ?? await tSpan(`${prefix}.wasm_compile`, async () => {
+    if (!wasmFile) throw new Error('Wasm bytes are unavailable in a thread worker');
+    return WebAssembly.compile(await wasmFile);
+  });
   const wasi_snapshot_preview1 = filterWasiImports(
     wasm,
     wasi.getImportObject().wasi_snapshot_preview1,
   );
-  return tSpan(`${prefix}.wasm_instantiate`, async () =>
+  const instance = await tSpan(`${prefix}.wasm_instantiate`, async () =>
     WebAssembly.instantiate(wasm, {
       wasi_snapshot_preview1,
-      wasi: { 'thread-spawn': makeThreadSpawnImport(memory) },
+      wasi: { 'thread-spawn': makeThreadSpawnImport(memory, wasm) },
       env: { memory },
     }),
   );
+  return { instance, module: wasm };
 };
 
 if (mode === 'entry') {
@@ -123,7 +135,7 @@ if (mode === 'entry') {
       maximum: 16384,
       shared: true,
     });
-    const instance = await compileAndInstantiate(memory, tSpan, 'entry');
+    const { instance } = await compileAndInstantiate(memory, tSpan, 'entry');
     const exports = instance.exports as any;
 
     await tSpan('entry.wasi_start', async () => {
@@ -181,16 +193,23 @@ if (mode === 'entry') {
       startArg,
       tid,
       memory,
+      wasmModule,
     }: {
       startArg: number;
       tid: number;
       memory: WebAssembly.Memory;
+      wasmModule: WebAssembly.Module;
     }) => {
       const workerLabel = `thread-${tid}`;
       const handler_start_ms = Date.now();
       const { workerSpans, tSpan } = makeSpanRecorder(workerLabel);
 
-      let instance = await compileAndInstantiate(memory, tSpan, 'worker');
+      let { instance } = await compileAndInstantiate(
+        memory,
+        tSpan,
+        'worker',
+        wasmModule,
+      );
       instance = createInstanceProxy(instance, memory);
 
       await tSpan('worker.wasi_start', async () => {

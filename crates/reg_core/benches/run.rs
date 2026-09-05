@@ -11,14 +11,11 @@ const TINY_PNG: &[u8] = &[
     0x42, 0x60, 0x82,
 ];
 
-// 1x1 PNG with a single black pixel — differs from TINY_PNG by 1 pixel
-const TINY_PNG_BLACK: &[u8] = &[
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
-    0x89, 0x00, 0x00, 0x00, 0x10, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x60, 0x60, 0x60, 0x60,
-    0x00, 0x00, 0x00, 0x05, 0x00, 0x01, 0x5e, 0xf3, 0x2a, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
-    0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
-];
+// Real 800x578 screenshots. The previous hand-written "black PNG" fixture
+// had an invalid deflate stream, so the benchmark measured decode failures
+// instead of pixel comparison and diff encoding.
+const SAMPLE_DIFF_ACTUAL: &[u8] = include_bytes!("../../../sample/actual/sample0.png");
+const SAMPLE_DIFF_EXPECTED: &[u8] = include_bytes!("../../../sample/expected/sample0.png");
 
 struct Fixture {
     _root: TempDir,
@@ -55,8 +52,8 @@ fn make_fixture(n_equal: usize, n_diff: usize, nest: bool) -> Fixture {
     }
     for i in 0..n_diff {
         let name = format!("diff{:04}.png", i);
-        std::fs::write(actual.join(&name), TINY_PNG_BLACK).unwrap();
-        std::fs::write(expected.join(&name), TINY_PNG).unwrap();
+        std::fs::write(actual.join(&name), SAMPLE_DIFF_ACTUAL).unwrap();
+        std::fs::write(expected.join(&name), SAMPLE_DIFF_EXPECTED).unwrap();
     }
     Fixture {
         _root: root,
@@ -128,5 +125,33 @@ fn bench_find_images_only(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_run_all_equal, bench_run_with_diffs, bench_find_images_only);
+fn bench_threshold_accepted_diffs(c: &mut Criterion) {
+    // All ten screenshots differ, but thresholdRate=1 accepts them. This
+    // specifically catches regressions where we encode diff images before
+    // learning that no output file is needed.
+    let fixture = make_fixture(0, 10, false);
+    let mut group = c.benchmark_group("threshold_accepted_diffs");
+    group.sample_size(15);
+    group.throughput(Throughput::Elements(10));
+    group.bench_function("10_accepted_diffs", |b| {
+        b.iter(|| {
+            let json = fixture.diff.join("reg.json");
+            let opts = Options {
+                json: Some(Path::new(&json) as &Path),
+                threshold_rate: Some(1.0),
+                ..Options::default()
+            };
+            let _ = run(&fixture.actual, &fixture.expected, &fixture.diff, opts).unwrap();
+        });
+    });
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_run_all_equal,
+    bench_run_with_diffs,
+    bench_find_images_only,
+    bench_threshold_accepted_diffs
+);
 criterion_main!(benches);
