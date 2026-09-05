@@ -1,6 +1,6 @@
 {
   "name": "reg-cli",
-  "version": "0.19.0-rc1",
+  "version": "0.19.0-rc2",
   "description": "Visual regression testing CLI, Wasm-backed. Drop-in compatible with classic reg-cli's CLI flags, reg.json/junit schema, and `compare()` EventEmitter API (verified against reg-suit's processor.ts).",
   "type": "module",
   "exports": {
