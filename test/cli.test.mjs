@@ -122,6 +122,40 @@ test('missing positional dirs prints error and exits non-zero', async () => {
   assert.match(stderr, /actual.*expected.*diff/i);
 });
 
+test('accepts relative paths starting with ./', async () => {
+  const d = await scratch();
+  const dot = (path) => `./${path}`;
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  const jsonRel = `${d.rel}/reg.json`;
+  const reportRel = `${d.rel}/report.html`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  await cp(
+    join(REPO, SAMPLE_REL, 'actual/sample1.png'),
+    join(REPO, actualRel, 'sample1.png'),
+  );
+  await cp(
+    join(REPO, SAMPLE_REL, 'expected/sample1.png'),
+    join(REPO, expectedRel, 'sample1.png'),
+  );
+  const { code, stderr } = await runCli([
+    dot(actualRel),
+    dot(expectedRel),
+    dot(`${d.rel}/diff`),
+    '-J',
+    dot(jsonRel),
+    '-R',
+    dot(reportRel),
+    '-I',
+  ]);
+
+  assert.equal(code, 0, stderr);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.ok(report.actualItems.includes('sample1.png'));
+  await stat(join(REPO, reportRel));
+});
+
 // ---------------------------------------------------------------------------
 // reg.json schema compat
 // ---------------------------------------------------------------------------
