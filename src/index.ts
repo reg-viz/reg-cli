@@ -73,7 +73,7 @@ const runInternal = async (argv: string[], emitter: EventEmitter): Promise<void>
           if (msg.event) emitter.emit('compare', msg.event);
           return;
         case 'thread-spawn':
-          spawn(msg.startArg, msg.threadId, msg.memory);
+          spawn(msg.startArg, msg.threadId, msg.memory, msg.wasmModule);
           return;
         case 'worker-spans':
           if (Array.isArray(msg.workerSpans)) {
@@ -92,7 +92,12 @@ const runInternal = async (argv: string[], emitter: EventEmitter): Promise<void>
     });
   };
 
-  const spawn = (startArg: number, threadId: Int32Array, memory: WebAssembly.Memory) => {
+  const spawn = (
+    startArg: number,
+    threadId: Int32Array,
+    memory: WebAssembly.Memory,
+    wasmModule: WebAssembly.Module,
+  ) => {
     const t_new_worker = Date.now();
     const w = new Worker(join(dir(), `./runner.${resolveExtention()}`), { workerData: { argv, mode: 'thread' } });
     const tid = nextTid++;
@@ -105,7 +110,7 @@ const runInternal = async (argv: string[], emitter: EventEmitter): Promise<void>
       Atomics.store(threadId, 0, tid);
       Atomics.notify(threadId, 0);
     }
-    w.postMessage({ startArg, tid, memory });
+    w.postMessage({ startArg, tid, memory, wasmModule });
     return tid;
   };
 

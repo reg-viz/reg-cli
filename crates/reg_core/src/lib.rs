@@ -52,7 +52,9 @@ static DEFAULT_REPORT_PATH: &'static str = "./report.html";
 ///
 /// Format (one event per line, TAB-delimited, newline-terminated):
 ///
+/// ```text
 ///     __REG_CLI_EVT__\t{"type":"pass|fail|new|delete","path":"..."}\n
+/// ```
 ///
 /// Everything else on stderr is forwarded through to `console.error` on the
 /// host, so actual errors still reach users.
@@ -227,6 +229,7 @@ pub fn run(
     let expected_dir = expected_dir.as_ref();
     let diff_dir = diff_dir.as_ref();
     let json_path = options.json.unwrap_or_else(|| Path::new(DEFAULT_JSON_PATH));
+    let render_html = options.report.is_some();
     let report = options
         .report
         .unwrap_or_else(|| Path::new(DEFAULT_REPORT_PATH));
@@ -251,169 +254,204 @@ pub fn run(
         emit_progress("delete", &p.display().to_string());
     }
 
-    let targets: Vec<PathBuf> = detected
+    // Keep borrowed paths here. Each path only needs to be cloned once, when
+    // it enters its final passed/failed result set.
+    let targets: Vec<&Path> = detected
         .actual
         .intersection(&detected.expected)
-        .cloned()
+        .map(PathBuf::as_path)
         .collect();
 
-    // Match classic reg-cli (src/index.js:77): for small image sets the
-    // rayon thread-pool spin-up + cross-thread span dance costs more than
-    // any parallelism buys. Force single-threaded until we cross the
-    // classic's 20-image threshold.
-    let concurrency = if targets.len() < 20 {
-        1
-    } else {
-        options.concurrency.unwrap_or(4)
-    };
-    info!(target_count = targets.len(), concurrency, "Starting parallel image diff");
+    // Tiny batches lose more to Rayon/Node worker startup than they gain from
+    // parallelism. Large screenshots are different: even ten 800x578 inputs
+    // have enough decode/compare work to amortize worker startup. Use encoded
+    // byte size as a cheap proxy while retaining classic reg-cli's 20-image
+    // cutoff for batches of small files.
+    const MIN_PARALLEL_IMAGES: usize = 4;
+    const PARALLEL_IMAGE_COUNT: usize = 20;
+    const PARALLEL_ENCODED_BYTES: u64 = 256 * 1024;
 
-    let pool = {
-        let _pool_span = info_span!("build_thread_pool", num_threads = concurrency).entered();
-        ThreadPoolBuilder::new()
-            .num_threads(concurrency)
-            .build()
-            .unwrap()
+    let requested_concurrency = options.concurrency.unwrap_or(4);
+    let encoded_bytes = if requested_concurrency > 1
+        && targets.len() >= MIN_PARALLEL_IMAGES
+        && targets.len() < PARALLEL_IMAGE_COUNT
+    {
+        targets
+            .iter()
+            .filter_map(|path| std::fs::metadata(actual_dir.join(path)).ok())
+            .map(|metadata| metadata.len())
+            .try_fold(0_u64, |total, len| {
+                let total = total.saturating_add(len);
+                (total < PARALLEL_ENCODED_BYTES).then_some(total)
+            })
+            .unwrap_or(PARALLEL_ENCODED_BYTES)
+    } else {
+        0
     };
+    let parallel_worthwhile = targets.len() >= PARALLEL_IMAGE_COUNT
+        || (targets.len() >= MIN_PARALLEL_IMAGES && encoded_bytes >= PARALLEL_ENCODED_BYTES);
+    let concurrency = if parallel_worthwhile {
+        requested_concurrency
+    } else {
+        1
+    };
+    info!(
+        target_count = targets.len(),
+        concurrency, "Starting parallel image diff"
+    );
 
     let result = {
         let diff_span = info_span!("parallel_image_diff", target_count = targets.len());
         let _diff_guard = diff_span.enter();
-        
+
         // Capture the parent span to propagate to rayon threads
         let parent_span = diff_span.clone();
-        
-        pool.install(|| {
-            // Note: There may be ~20-30ms delay here due to rayon thread scheduling overhead
-            // This is especially noticeable in WASI environments
-            targets
-                .par_iter()
-                .map(|path| -> Result<(PathBuf, ImageOutcome), CompareError> {
-                    // Explicitly set parent span for cross-thread context propagation
-                    let image_span = info_span!(parent: parent_span.clone(), "diff_single_image", image = %path.display());
-                    let _image_guard = image_span.enter();
 
-                    let actual_path = actual_dir.join(path);
-                    let expected_path = expected_dir.join(path);
+        let compare_target = |path: &&Path| -> Result<(PathBuf, ImageOutcome), CompareError> {
+            let path = *path;
+            // Explicitly set parent span for cross-thread context propagation
+            let image_span = info_span!(parent: parent_span.clone(), "diff_single_image", image = %path.display());
+            let _image_guard = image_span.enter();
 
-                    // Per-file failure policy: read OR decode errors are
-                    // logged to stderr, classified as "fail" via a live
-                    // compare-event, and counted into `failedItems`. We
-                    // never propagate them up — one corrupt PNG must not
-                    // abort a 1000-image batch (parity with classic
-                    // reg-cli, which forks-per-image and tolerates child
-                    // crashes individually).
-                    let img1 = match std::fs::read(&actual_path) {
-                        Ok(b) => b,
-                        Err(e) => {
-                            eprintln!(
-                                "[reg-cli] failed to read actual {}: {}",
-                                actual_path.display(),
-                                e
-                            );
-                            emit_progress("fail", &path.display().to_string());
-                            return Ok((path.clone(), ImageOutcome::Failed));
-                        }
-                    };
-                    let img2 = match std::fs::read(&expected_path) {
-                        Ok(b) => b,
-                        Err(e) => {
-                            eprintln!(
-                                "[reg-cli] failed to read expected {}: {}",
-                                expected_path.display(),
-                                e
-                            );
-                            emit_progress("fail", &path.display().to_string());
-                            return Ok((path.clone(), ImageOutcome::Failed));
-                        }
-                    };
+            let actual_path = actual_dir.join(path);
+            let expected_path = expected_dir.join(path);
 
-                    let res = match image_diff_rs::diff(
-                        img1,
-                        img2,
-                        &DiffOption {
-                            threshold: options.matching_threshold,
-                            include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
-                            encode_format: options
-                                .diff_image_format
-                                .map(EncodeFormat::from),
-                        },
-                    ) {
-                        Ok(r) => r,
+            // Per-file failure policy: read OR decode errors are
+            // logged to stderr, classified as "fail" via a live
+            // compare-event, and counted into `failedItems`. We
+            // never propagate them up — one corrupt PNG must not
+            // abort a 1000-image batch (parity with classic
+            // reg-cli, which forks-per-image and tolerates child
+            // crashes individually).
+            let img1 = match std::fs::read(&actual_path) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!(
+                        "[reg-cli] failed to read actual {}: {}",
+                        actual_path.display(),
+                        e
+                    );
+                    emit_progress("fail", &path.display().to_string());
+                    return Ok((path.to_path_buf(), ImageOutcome::Failed));
+                }
+            };
+            let img2 = match std::fs::read(&expected_path) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!(
+                        "[reg-cli] failed to read expected {}: {}",
+                        expected_path.display(),
+                        e
+                    );
+                    emit_progress("fail", &path.display().to_string());
+                    return Ok((path.to_path_buf(), ImageOutcome::Failed));
+                }
+            };
+
+            let outcome = if img1 == img2 {
+                // Preserve image-diff-rs's encoded-byte equality fast
+                // path without decoding either image.
+                ImageOutcome::Passed
+            } else {
+                let diff_option = DiffOption {
+                    threshold: options.matching_threshold,
+                    include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
+                    encode_format: options.diff_image_format.map(EncodeFormat::from),
+                };
+                let rgba = match image_diff_rs::diff_rgba(&img1, &img2, &diff_option) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        let path_str = path.display().to_string();
+                        eprintln!("[reg-cli] failed to diff {}: {}", path_str, e);
+                        emit_progress("fail", &path_str);
+                        return Ok((path.to_path_buf(), ImageOutcome::Failed));
+                    }
+                };
+
+                if is_passed(
+                    rgba.width,
+                    rgba.height,
+                    rgba.diff_count as u64,
+                    options.threshold_pixel,
+                    options.threshold_rate,
+                ) {
+                    // Accepted differences do not need a diff image.
+                    // Avoiding PNG/WebP encoding is the important fast
+                    // path enabled by image-diff-rs PR #35.
+                    ImageOutcome::Passed
+                } else {
+                    let format = options.diff_image_format.unwrap_or_default();
+                    let encoded = match image_diff_rs::encode_diff(&rgba, format.into()) {
+                        Ok(DiffOutput::NotEq { diff_image, .. }) => diff_image,
+                        Ok(DiffOutput::Eq) => unreachable!("encoding an RGBA diff cannot be equal"),
                         Err(e) => {
                             let path_str = path.display().to_string();
-                            eprintln!("[reg-cli] failed to diff {}: {}", path_str, e);
+                            eprintln!("[reg-cli] failed to encode diff {}: {}", path_str, e);
                             emit_progress("fail", &path_str);
-                            return Ok((path.clone(), ImageOutcome::Failed));
+                            return Ok((path.to_path_buf(), ImageOutcome::Failed));
                         }
                     };
 
-                    // Write each encoded diff before starting another image.
-                    // Keeping every DiffOutput in the collected result retains
-                    // all diff-image buffers until the whole parallel batch
-                    // finishes, which can exhaust wasm32's 4 GiB address space
-                    // on large, highly-different screenshot sets.
-                    let outcome = match res {
-                        DiffOutput::Eq => ImageOutcome::Passed,
-                        DiffOutput::NotEq {
-                            diff_count,
-                            diff_image,
-                            width,
-                            height,
-                        } => {
-                            if is_passed(
-                                width,
-                                height,
-                                diff_count as u64,
-                                options.threshold_pixel,
-                                options.threshold_rate,
-                            ) {
-                                ImageOutcome::Passed
-                            } else {
-                                let mut diff_image_name = path.clone();
-                                diff_image_name.set_extension(
-                                    options
-                                        .diff_image_format
-                                        .unwrap_or_default()
-                                        .extension(),
-                                );
-                                let diff_path = diff_dir.join(&diff_image_name);
-                                if let Some(parent) = diff_path.parent() {
-                                    std::fs::create_dir_all(parent).map_err(|e| {
-                                        eprintln!(
-                                            "Failed to create diff directory: {:?}, error: {:?}",
-                                            parent, e
-                                        );
-                                        e
-                                    })?;
-                                }
-                                std::fs::write(&diff_path, diff_image).map_err(|e| {
-                                    eprintln!(
-                                        "Failed to write diff file: {:?}, error: {:?}",
-                                        diff_path, e
-                                    );
-                                    e
-                                })?;
-                                ImageOutcome::Different(diff_image_name)
-                            }
-                        }
-                    };
+                    // Write each encoded diff before starting another
+                    // image so buffers are released promptly.
+                    let mut diff_image_name = path.to_path_buf();
+                    diff_image_name.set_extension(format.extension());
+                    let diff_path = diff_dir.join(&diff_image_name);
+                    if let Some(parent) = diff_path.parent() {
+                        std::fs::create_dir_all(parent).map_err(|e| {
+                            eprintln!(
+                                "Failed to create diff directory: {:?}, error: {:?}",
+                                parent, e
+                            );
+                            e
+                        })?;
+                    }
+                    std::fs::write(&diff_path, encoded).map_err(|e| {
+                        eprintln!("Failed to write diff file: {:?}, error: {:?}", diff_path, e);
+                        e
+                    })?;
+                    ImageOutcome::Different(diff_image_name)
+                }
+            };
 
-                    // Fire the live pass/fail event as soon as this image and
-                    // (when needed) its diff file are complete, while other
-                    // rayon workers continue processing the batch.
-                    let kind = match &outcome {
-                        ImageOutcome::Passed => "pass",
-                        ImageOutcome::Failed | ImageOutcome::Different(_) => "fail",
-                    };
-                    // Avoid the second `path.display().to_string()` allocation
-                    // by using `to_string_lossy()` which borrows on UTF-8 paths.
-                    emit_progress(kind, &path.to_string_lossy());
+            // Fire the live pass/fail event as soon as this image and
+            // (when needed) its diff file are complete, while other
+            // rayon workers continue processing the batch.
+            let kind = match &outcome {
+                ImageOutcome::Passed => "pass",
+                ImageOutcome::Failed | ImageOutcome::Different(_) => "fail",
+            };
+            // Avoid the second `path.display().to_string()` allocation
+            // by using `to_string_lossy()` which borrows on UTF-8 paths.
+            emit_progress(kind, &path.to_string_lossy());
 
-                    Ok((path.clone(), outcome))
-                })
+            Ok((path.to_path_buf(), outcome))
+        };
+
+        if concurrency == 1 {
+            // Small batches are faster in-place and, in WASI, this also
+            // avoids starting a Node worker just to run a single Rayon
+            // thread.
+            targets
+                .iter()
+                .map(&compare_target)
                 .collect::<Result<Vec<(PathBuf, ImageOutcome)>, CompareError>>()
-        })
+        } else {
+            let pool = {
+                let _pool_span =
+                    info_span!("build_thread_pool", num_threads = concurrency).entered();
+                ThreadPoolBuilder::new()
+                    .num_threads(concurrency)
+                    .build()
+                    .unwrap()
+            };
+            pool.install(|| {
+                targets
+                    .par_iter()
+                    .map(&compare_target)
+                    .collect::<Result<Vec<(PathBuf, ImageOutcome)>, CompareError>>()
+            })
+        }
     }?;
 
     let mut differences = BTreeSet::new();
@@ -454,6 +492,7 @@ pub fn run(
             actual: detected.actual,
             expected: detected.expected,
             report,
+            render_html,
             differences,
             json: json_path,
             actual_dir,
@@ -562,6 +601,7 @@ pub fn run_from_json(
             expected: json.expected_items.clone(),
             differences: json.diff_items.clone(),
             report: report_path,
+            render_html: true,
             json: out_json_path,
             actual_dir: Path::new(&json.actual_dir),
             expected_dir: Path::new(&json.expected_dir),
@@ -646,7 +686,14 @@ fn walk_images(root: &Path) -> BTreeSet<PathBuf> {
                         sub_prefix.push(&name);
                         stack.push((sub, sub_prefix));
                     }
-                } else if is_supported_extension(Path::new(&name)) {
+                // Ignore macOS AppleDouble resource-fork sidecars. On
+                // non-APFS volumes, writing `foo.png` can create a `._foo.png`
+                // metadata file beside it. It has an image extension but is
+                // not an image, so treating it as one doubles work and can
+                // produce false failures.
+                } else if !name.as_encoded_bytes().starts_with(b"._")
+                    && is_supported_extension(Path::new(&name))
+                {
                     let mut rel = prefix.clone();
                     rel.push(&name);
                     out.push(rel);
@@ -837,5 +884,23 @@ mod per_image_failure_tests {
                 names
             );
         }
+    }
+
+    #[test]
+    fn apple_double_image_sidecars_are_silently_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (actual, expected, diff) = mkdirs(tmp.path());
+
+        fs::write(actual.join("ok.png"), TINY_PNG).unwrap();
+        fs::write(expected.join("ok.png"), TINY_PNG).unwrap();
+        fs::write(actual.join("._ok.png"), b"AppleDouble metadata").unwrap();
+        fs::write(expected.join("._ok.png"), b"different metadata").unwrap();
+
+        let report = run(&actual, &expected, &diff, Options::default()).unwrap();
+
+        assert_eq!(report.passed_items, BTreeSet::from([PathBuf::from("ok.png")]));
+        assert!(report.failed_items.is_empty());
+        assert!(report.actual_items.iter().all(|p| !p.starts_with("._")));
+        assert!(report.expected_items.iter().all(|p| !p.starts_with("._")));
     }
 }

@@ -30,6 +30,10 @@ pub(crate) struct ReportInput<'a> {
     pub(crate) expected_dir: &'a Path,
     pub(crate) diff_dir: &'a Path,
     pub(crate) report: &'a Path,
+    /// Building the self-contained report parses the Mustache template and
+    /// copies the embedded JS/CSS payload. Skip that work unless the caller
+    /// actually requested an HTML report.
+    pub(crate) render_html: bool,
     // extendedErrors: boolean,
     pub(crate) url_prefix: Option<url::Url>,
     pub(crate) enable_client_additional_detection: bool,
@@ -142,6 +146,35 @@ pub fn create_dir_for_json_report<'a>(
 }
 
 pub fn create_reports(input: ReportInput) -> Reports {
+    // The JSON-only path is the common CLI/library case. Move the sets into
+    // the result instead of cloning every PathBuf merely to drop the originals
+    // at the end of this function.
+    if !input.render_html {
+        return Reports {
+            json: JsonReport {
+                failed_items: input.failed,
+                new_items: input.new,
+                deleted_items: input.deleted,
+                passed_items: input.passed,
+                expected_items: input.expected,
+                actual_items: input.actual,
+                diff_items: input.differences,
+                actual_dir: create_dir_for_json_report(
+                    input.json,
+                    input.actual_dir,
+                    input.url_prefix.clone(),
+                ),
+                expected_dir: create_dir_for_json_report(
+                    input.json,
+                    input.expected_dir,
+                    input.url_prefix.clone(),
+                ),
+                diff_dir: create_dir_for_json_report(input.json, input.diff_dir, input.url_prefix),
+            },
+            html: None,
+        };
+    }
+
     let json_report = JsonReport {
         failed_items: input.failed.clone(),
         new_items: input.new.clone(),
@@ -420,6 +453,7 @@ mod tests {
             expected_dir,
             diff_dir,
             report: report_path,
+            render_html: true,
             url_prefix: None,
             enable_client_additional_detection: false,
             from_json: false,
