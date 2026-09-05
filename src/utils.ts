@@ -92,6 +92,41 @@ export type WasiSandbox = {
   env: Record<string, string>;
 };
 
+const WASI_PATH_FLAGS = new Set([
+  '--report',
+  '-R',
+  '--json',
+  '-J',
+  '--junit',
+  '--from',
+  '-F',
+]);
+
+/**
+ * Normalize `./foo` to `foo` for paths passed into WASI. wasm-util does not
+ * match a guest path beginning with `./` to an otherwise equivalent relative
+ * preopen, so leaving the prefix intact makes valid paths unreachable.
+ */
+export const normalizeWasiArgv = (argv: string[]): string[] => {
+  const normalized = [...argv];
+  const stripDot = (value: string): string =>
+    value.startsWith('./') ? value.slice(2) || '.' : value;
+  const offset = normalized[0] === '--' ? 1 : 0;
+
+  for (let i = offset; i < normalized.length && i < offset + 3; i++) {
+    if (normalized[i].startsWith('-')) break;
+    normalized[i] = stripDot(normalized[i]);
+  }
+  for (let i = offset; i < normalized.length - 1; i++) {
+    if (WASI_PATH_FLAGS.has(normalized[i])) {
+      normalized[i + 1] = stripDot(normalized[i + 1]);
+      i++;
+    }
+  }
+
+  return normalized;
+};
+
 /**
  * Compute the minimum-capability WASI sandbox for a given reg-cli invocation:
  *

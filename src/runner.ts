@@ -11,7 +11,12 @@ import fs from 'node:fs';
 import { WASI, type IFs } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
-import { computeWasiSandbox, filterWasiImports, readWasm } from './utils';
+import {
+  computeWasiSandbox,
+  filterWasiImports,
+  normalizeWasiArgv,
+  readWasm,
+} from './utils';
 import { createInstanceProxy } from './proxy';
 import { createPrintErrHook } from './progress';
 import { type RustTraceData, type WorkerSpan } from './tracing';
@@ -22,7 +27,8 @@ const mode: Mode = workerData.mode;
 const isTracingEnabled = (): boolean =>
   env.OTEL_ENABLED === 'true' || env.JAEGER_ENABLED === 'true';
 
-const sandbox = computeWasiSandbox(workerData.argv);
+const argv = normalizeWasiArgv(workerData.argv);
+const sandbox = computeWasiSandbox(argv);
 
 const printErr = createPrintErrHook((ev) => {
   parentPort?.postMessage({ cmd: 'compare-event', event: ev });
@@ -30,7 +36,7 @@ const printErr = createPrintErrHook((ev) => {
 
 const wasi = new WASI({
   version: 'preview1',
-  args: workerData.argv,
+  args: argv,
   env: sandbox.env,
   returnOnExit: true,
   preopens: sandbox.preopens,
