@@ -189,12 +189,8 @@ pub fn create_reports(input: ReportInput) -> Reports {
             deleted_items: input.deleted.into_iter().map(ReportItem::from).collect(),
             has_passed: !input.passed.is_empty(),
             passed_items: input.passed.into_iter().map(ReportItem::from).collect(),
-            has_failed: !input.differences.is_empty(),
-            failed_items: input
-                .differences
-                .into_iter()
-                .map(ReportItem::from)
-                .collect(),
+            has_failed: !input.failed.is_empty(),
+            failed_items: input.failed.into_iter().map(ReportItem::from).collect(),
             actual_dir: if input.from_json {
                 input.actual_dir.into()
             } else {
@@ -399,6 +395,49 @@ mod tests {
             expected_dir: String::new(),
             diff_dir: String::new(),
         }
+    }
+
+    #[test]
+    fn html_report_uses_source_extension_for_failed_items() {
+        let failed = BTreeSet::from([PathBuf::from("foo.webp")]);
+        let differences = BTreeSet::from([PathBuf::from("foo.png")]);
+        let json_path = Path::new("report/out.json");
+        let report_path = Path::new("report/index.html");
+        let actual_dir = Path::new("actual");
+        let expected_dir = Path::new("expected");
+        let diff_dir = Path::new("diff");
+
+        let reports = create_reports(ReportInput {
+            passed: BTreeSet::new(),
+            failed,
+            new: BTreeSet::new(),
+            deleted: BTreeSet::new(),
+            expected: BTreeSet::new(),
+            actual: BTreeSet::new(),
+            differences,
+            json: json_path,
+            actual_dir,
+            expected_dir,
+            diff_dir,
+            report: report_path,
+            url_prefix: None,
+            enable_client_additional_detection: false,
+            from_json: false,
+            diff_image_extention: "png",
+        });
+
+        let html = String::from_utf8(reports.html.unwrap().to_vec()).unwrap();
+        let state = html
+            .split_once("window['__reg__'] = ")
+            .unwrap()
+            .1
+            .split_once(";</script>")
+            .unwrap()
+            .0;
+        let state: serde_json::Value = serde_json::from_str(state).unwrap();
+
+        assert_eq!(state["failedItems"][0]["raw"], "foo.webp");
+        assert_eq!(state["failedItems"][0]["encoded"], "foo.webp");
     }
 
     // Reference bytes come from classic reg-cli (src/report.js via
