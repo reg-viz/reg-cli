@@ -36,8 +36,9 @@ static SUPPORTED_EXTENTIONS: [&str; 7] = ["tiff", "jpeg", "jpg", "gif", "png", "
 /// reg-cli's tolerance (it forks per image, so a single corrupt PNG
 /// can't sink the whole batch).
 enum ImageOutcome {
-    Ok(DiffOutput),
+    Passed,
     Failed,
+    Different(PathBuf),
 }
 
 static DEFAULT_JSON_PATH: &'static str = "./reg.json";
@@ -287,7 +288,7 @@ pub fn run(
             // This is especially noticeable in WASI environments
             targets
                 .par_iter()
-                .map(|path| {
+                .map(|path| -> Result<(PathBuf, ImageOutcome), CompareError> {
                     // Explicitly set parent span for cross-thread context propagation
                     let image_span = info_span!(parent: parent_span.clone(), "diff_single_image", image = %path.display());
                     let _image_guard = image_span.enter();
@@ -311,7 +312,7 @@ pub fn run(
                                 e
                             );
                             emit_progress("fail", &path.display().to_string());
-                            return (path.clone(), ImageOutcome::Failed);
+                            return Ok((path.clone(), ImageOutcome::Failed));
                         }
                     };
                     let img2 = match std::fs::read(&expected_path) {
@@ -323,7 +324,7 @@ pub fn run(
                                 e
                             );
                             emit_progress("fail", &path.display().to_string());
-                            return (path.clone(), ImageOutcome::Failed);
+                            return Ok((path.clone(), ImageOutcome::Failed));
                         }
                     };
 
@@ -343,46 +344,77 @@ pub fn run(
                             let path_str = path.display().to_string();
                             eprintln!("[reg-cli] failed to diff {}: {}", path_str, e);
                             emit_progress("fail", &path_str);
-                            return (path.clone(), ImageOutcome::Failed);
+                            return Ok((path.clone(), ImageOutcome::Failed));
                         }
                     };
 
-                    // Fire the live pass/fail event as early as we can —
-                    // right after the pixel-diff completes, before the
-                    // caller-thread serialises through `collect`. Classify
-                    // here (not in the post-collect loop) so consumers see
-                    // progress while other rayon threads are still working
-                    // on remaining images.
-                    let kind = match &res {
-                        DiffOutput::Eq => "pass",
+                    // Write each encoded diff before starting another image.
+                    // Keeping every DiffOutput in the collected result retains
+                    // all diff-image buffers until the whole parallel batch
+                    // finishes, which can exhaust wasm32's 4 GiB address space
+                    // on large, highly-different screenshot sets.
+                    let outcome = match res {
+                        DiffOutput::Eq => ImageOutcome::Passed,
                         DiffOutput::NotEq {
                             diff_count,
+                            diff_image,
                             width,
                             height,
-                            ..
                         } => {
                             if is_passed(
-                                *width,
-                                *height,
-                                *diff_count as u64,
+                                width,
+                                height,
+                                diff_count as u64,
                                 options.threshold_pixel,
                                 options.threshold_rate,
                             ) {
-                                "pass"
+                                ImageOutcome::Passed
                             } else {
-                                "fail"
+                                let mut diff_image_name = path.clone();
+                                diff_image_name.set_extension(
+                                    options
+                                        .diff_image_format
+                                        .unwrap_or_default()
+                                        .extension(),
+                                );
+                                let diff_path = diff_dir.join(&diff_image_name);
+                                if let Some(parent) = diff_path.parent() {
+                                    std::fs::create_dir_all(parent).map_err(|e| {
+                                        eprintln!(
+                                            "Failed to create diff directory: {:?}, error: {:?}",
+                                            parent, e
+                                        );
+                                        e
+                                    })?;
+                                }
+                                std::fs::write(&diff_path, diff_image).map_err(|e| {
+                                    eprintln!(
+                                        "Failed to write diff file: {:?}, error: {:?}",
+                                        diff_path, e
+                                    );
+                                    e
+                                })?;
+                                ImageOutcome::Different(diff_image_name)
                             }
                         }
+                    };
+
+                    // Fire the live pass/fail event as soon as this image and
+                    // (when needed) its diff file are complete, while other
+                    // rayon workers continue processing the batch.
+                    let kind = match &outcome {
+                        ImageOutcome::Passed => "pass",
+                        ImageOutcome::Failed | ImageOutcome::Different(_) => "fail",
                     };
                     // Avoid the second `path.display().to_string()` allocation
                     // by using `to_string_lossy()` which borrows on UTF-8 paths.
                     emit_progress(kind, &path.to_string_lossy());
 
-                    (path.clone(), ImageOutcome::Ok(res))
+                    Ok((path.clone(), outcome))
                 })
-                .collect::<Vec<(PathBuf, ImageOutcome)>>()
+                .collect::<Result<Vec<(PathBuf, ImageOutcome)>, CompareError>>()
         })
-    };
+    }?;
 
     let mut differences = BTreeSet::new();
     let mut passed = BTreeSet::new();
@@ -395,45 +427,12 @@ pub fn run(
                 // don't try to write a diff image (we have no pixels).
                 failed.insert(image_name);
             }
-            ImageOutcome::Ok(DiffOutput::Eq) => {
+            ImageOutcome::Passed => {
                 passed.insert(image_name);
             }
-            ImageOutcome::Ok(DiffOutput::NotEq {
-                diff_count,
-                diff_image,
-                width,
-                height,
-            }) => {
-                if is_passed(
-                    width,
-                    height,
-                    diff_count as u64,
-                    options.threshold_pixel,
-                    options.threshold_rate,
-                ) {
-                    passed.insert(image_name);
-                } else {
-                    let mut diff_image_name = image_name.clone();
-                    diff_image_name.set_extension(
-                        options
-                            .diff_image_format
-                            .unwrap_or_default()
-                            .extension(),
-                    );
-                    let diff_path = diff_dir.join(&diff_image_name);
-                    if let Some(parent) = diff_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| {
-                            eprintln!("Failed to create diff directory: {:?}, error: {:?}", parent, e);
-                            e
-                        })?;
-                    }
-                    std::fs::write(&diff_path, diff_image).map_err(|e| {
-                        eprintln!("Failed to write diff file: {:?}, error: {:?}", diff_path, e);
-                        e
-                    })?;
-                    failed.insert(image_name);
-                    differences.insert(diff_image_name);
-                }
+            ImageOutcome::Different(diff_image_name) => {
+                failed.insert(image_name);
+                differences.insert(diff_image_name);
             }
         }
     }
