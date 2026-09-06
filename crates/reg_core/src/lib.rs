@@ -358,6 +358,33 @@ pub fn run(
                     include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
                     encode_format: options.diff_image_format.map(EncodeFormat::from),
                 };
+                // Count without allocating the RGBA visualization when the
+                // acceptance threshold can be evaluated from the count alone.
+                // Rejected comparisons fall through to the existing staged
+                // diff path so their output remains byte-compatible.
+                let count_only_limit = if let Some(threshold) = options.threshold_pixel {
+                    (threshold > 0).then_some(threshold)
+                } else if options.threshold_rate.is_some_and(|rate| rate >= 1.0) {
+                    Some(u64::MAX)
+                } else {
+                    None
+                };
+                if let Some(limit) = count_only_limit {
+                    let diff_count = match image_diff_rs::diff_count(&img1, &img2, &diff_option) {
+                        Ok(count) => count as u64,
+                        Err(e) => {
+                            let path_str = path.display().to_string();
+                            eprintln!("[reg-cli] failed to diff {}: {}", path_str, e);
+                            emit_progress("fail", &path_str);
+                            return Ok((path.to_path_buf(), ImageOutcome::Failed));
+                        }
+                    };
+                    if diff_count <= limit {
+                        emit_progress("pass", &path.to_string_lossy());
+                        return Ok((path.to_path_buf(), ImageOutcome::Passed));
+                    }
+                }
+
                 let rgba = match image_diff_rs::diff_rgba(&img1, &img2, &diff_option) {
                     Ok(r) => r,
                     Err(e) => {
