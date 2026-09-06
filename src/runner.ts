@@ -20,6 +20,10 @@ import {
 import { createInstanceProxy } from './proxy';
 import { createPrintErrHook } from './progress';
 import { type RustTraceData, type WorkerSpan } from './tracing';
+import {
+  createSharedWasmMemory,
+  toUnsignedWasmPointer,
+} from './wasm-memory';
 
 type Mode = 'entry' | 'thread';
 const mode: Mode = workerData.mode;
@@ -54,7 +58,7 @@ const readWasmString = (
   memory: WebAssembly.Memory,
   outputPtr: number,
 ): string => {
-  const view = new DataView(memory.buffer, outputPtr);
+  const view = new DataView(memory.buffer, toUnsignedWasmPointer(outputPtr));
   const len = view.getUint32(0, true);
   const bufPtr = view.getUint32(4, true);
   const bytes = new Uint8Array(memory.buffer, bufPtr, len);
@@ -130,11 +134,7 @@ if (mode === 'entry') {
     const entry_start_ms = Date.now();
     const { workerSpans, tSpan } = makeSpanRecorder('entry');
 
-    const memory = new WebAssembly.Memory({
-      initial: 256,
-      maximum: 16384,
-      shared: true,
-    });
+    const memory = createSharedWasmMemory();
     const { instance } = await compileAndInstantiate(memory, tSpan, 'entry');
     const exports = instance.exports as any;
 
