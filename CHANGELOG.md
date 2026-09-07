@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## @0.19.0-rc3 (7 September, 2026)
+
+- perf(core): use the image-diff-rs count-only path when diff images are not needed
+- fix(wasm): align the host memory limit with the module memory limit
+- fix: bundle wasm-util into the worker runner
+- deps: update image-diff-rs to 0.1.4
+
 ## @0.19.0-rc2 (5 September, 2026)
 
 - perf(core): avoid diff-image encoding for threshold-accepted changes and adaptively parallelize smaller batches of large screenshots
