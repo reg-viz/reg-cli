@@ -10,4 +10,7 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   dts: true,
   outDir: 'dist',
+  deps: {
+    alwaysBundle: ['@tybys/wasm-util'],
+  },
 });
