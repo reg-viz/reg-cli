@@ -28,7 +28,6 @@ import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -320,16 +319,8 @@ async function updateExpected(
 }
 
 async function openReport(reportPath: string): Promise<void> {
-  const command = process.platform === 'darwin' ? 'open' : 'xdg-open';
-  await new Promise<void>((done, reject) => {
-    const child = spawn(command, [pathToFileURL(resolve(reportPath)).href], {
-      stdio: ['ignore', 'ignore', 'inherit'],
-    });
-    child.once('error', reject);
-    child.once('close', (code) => code === 0
-      ? done()
-      : reject(new Error(`${command} exited with status ${code}`)));
-  });
+  const { default: open } = await import('open');
+  await open(pathToFileURL(resolve(reportPath)).href);
 }
 
 async function waitForEnter(): Promise<void> {

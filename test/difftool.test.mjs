@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, cp, rm, stat, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, cp, rm, stat, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,15 +14,16 @@ const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
 async function fixture(t) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'reg-cli-test-')));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const bin = join(root, 'bin');
   const temp = join(root, 'temporary output');
-  await mkdir(bin);
   await mkdir(temp);
-  // Intercept the OS launcher, not reg-cli, so the production launch path
-  // is exercised without opening browser windows during the test suite.
-  const opener = join(bin, process.platform === 'darwin' ? 'open' : 'xdg-open');
-  await writeFile(opener, '#!/bin/sh\nprintf "%s" "$1" > "$OPEN_LOG"\nexit "${OPEN_STATUS:-0}"\n', { mode: 0o755 });
-  const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, TMPDIR: temp, OPEN_LOG: join(root, 'opened') };
+  // Mock the package boundary so tests never open a browser on the host.
+  const register = new URL('./fixtures/register-open-mock.mjs', import.meta.url).href;
+  const env = {
+    ...process.env,
+    NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${register}`,
+    TMPDIR: temp, TEMP: temp, TMP: temp,
+    OPEN_LOG: join(root, 'opened'),
+  };
   return { root, temp, env };
 }
 
@@ -48,7 +49,11 @@ function launch(t, command, args, options) {
 const sampleArgs = [join(repo, 'sample/actual'), join(repo, 'sample/expected')];
 
 for (const finish of ['enter', 'SIGINT', 'SIGTERM', 'SIGHUP', 'eof']) {
-  test(`--open --wait keeps output alive and cleans up on ${finish}`, { timeout: 20000 }, async (t) => {
+  test(`--open --wait keeps output alive and cleans up on ${finish}`, {
+    timeout: 20000,
+    // Windows child.kill() terminates without running signal handlers.
+    skip: process.platform === 'win32' && finish.startsWith('SIG'),
+  }, async (t) => {
     const f = await fixture(t);
     const p = launch(t, process.execPath, [cli, ...sampleArgs, '--open', '--wait'], { cwd: f.root, env: f.env });
     await p.ready;
@@ -83,9 +88,9 @@ test('explicit output survives Enter and --ignoreChange preserves success', { ti
 
 test('browser launch failure removes temporary output', { timeout: 20000 }, async (t) => {
   const f = await fixture(t);
-  const p = launch(t, process.execPath, [cli, ...sampleArgs, '--open', '--wait', '-I'], { cwd: f.root, env: { ...f.env, OPEN_STATUS: '7' } });
+  const p = launch(t, process.execPath, [cli, ...sampleArgs, '--open', '--wait', '-I'], { cwd: f.root, env: { ...f.env, OPEN_ERROR: 'browser launch failed' } });
   assert.equal((await p.closed)[0], 1);
-  assert.match(p.output().stderr, /exited with status 7/);
+  assert.match(p.output().stderr, /browser launch failed/);
   assert.deepEqual(await readdir(f.temp), []);
 });
 

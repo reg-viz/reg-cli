@@ -41,7 +41,7 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 
   * `-U`, `--update` Update expected images. (Copy `actual` images to `expected` images.)
   * `-R`, `--report` Output HTML report to specified path.
-  * `--open` Open the HTML report in the default browser (macOS or Linux). Requires `--report` or `--wait`.
+  * `--open` Open the HTML report in the default browser. Requires `--report` or `--wait`.
   * `--wait` Wait for Enter before exiting. Unspecified output paths use a temporary directory, deleted on exit. Neither `--open` nor `--wait` supports `--update`.
   * `-J`, `--json` JSON report path. If omitted: `./reg.json`, or temporary output with `--wait`.
   * `--junit` JUnit XML report path.
