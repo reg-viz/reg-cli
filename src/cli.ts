@@ -26,17 +26,24 @@
 //
 import { parseArgs } from 'node:util';
 import { copyFile, mkdir } from 'node:fs/promises';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
+import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { run, dir as distDir, type CompareOutput } from './';
 import { writeXimgdiffAssets } from './ximgdiff';
 
 const HELP = `
   Usage
-    $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir
+    $ reg-cli /path/to/actual-dir /path/to/expected-dir [/path/to/diff-dir]
   Options
     -U, --update              Update expected images (copy actual → expected).
     -R, --report              Output html report to specified path.
+        --open                Open the HTML report in the default browser.
+        --wait                Wait for Enter; omitted output paths are temporary.
     -J, --json                Output json report to specified path (default ./reg.json).
     -I, --ignoreChange        Exit 0 even when image changes are detected.
     -E, --extendedErrors      Also treat added/deleted images as failures.
@@ -81,6 +88,8 @@ try {
       ignoreChange: { type: 'boolean', short: 'I' },
       extendedErrors: { type: 'boolean', short: 'E' },
       report: { type: 'string', short: 'R' },
+      open: { type: 'boolean' },
+      wait: { type: 'boolean' },
       urlPrefix: { type: 'string', short: 'P' },
       matchingThreshold: { type: 'string', short: 'M' },
       thresholdRate: { type: 'string', short: 'T' },
@@ -102,25 +111,47 @@ try {
 }
 
 const { values, positionals } = parsed;
-const [actualDir, expectedDir, diffDir] = positionals;
+const [actualDir, expectedDir, requestedDiffDir] = positionals;
 const fromPath = typeof values.from === 'string' ? values.from : undefined;
 
 // `-F/--from` re-renders HTML from an existing reg.json and does not need
 // the positional dirs; classic reg-cli accepts that mode without them.
-if (!fromPath && (!actualDir || !expectedDir || !diffDir)) {
+if (!fromPath && (!actualDir || !expectedDir || (!requestedDiffDir && !values.wait))) {
   process.stderr.write('reg-cli: please specify actual, expected and diff directories.\n');
   process.stderr.write(HELP);
   process.exit(1);
 }
+
+if ((values.open && !values.report && !values.wait) ||
+    (values.update && (values.open || values.wait))) {
+  process.stderr.write('reg-cli: --open requires --report or --wait; --open/--wait cannot be used with --update.\n');
+  process.exit(1);
+}
+
+// Only outputs with omitted paths belong to this invocation. Explicit paths
+// are never removed, including when opening the browser fails or we are interrupted.
+const temporaryDir = values.wait && (!requestedDiffDir || !values.report || !values.json)
+  ? mkdtempSync(join(tmpdir(), 'reg-cli-'))
+  : undefined;
+if (temporaryDir) {
+  process.once('exit', () => rmSync(temporaryDir, { recursive: true, force: true }));
+}
+if (values.open || values.wait) {
+  process.once('SIGINT', () => process.exit(130));
+  process.once('SIGTERM', () => process.exit(143));
+  process.once('SIGHUP', () => process.exit(129));
+}
+const diffDir = requestedDiffDir ?? (temporaryDir && join(temporaryDir, 'diff'));
+const reportPath = values.report ?? (temporaryDir && join(temporaryDir, 'report.html'));
 
 // CLI-only semantics (not forwarded to Wasm).
 const update = !!values.update;
 const ignoreChange = !!values.ignoreChange;
 const extendedErrors = !!values.extendedErrors;
 // Default to matching classic reg-cli: diff images are written as PNG,
-// `./reg.json` is always persisted to disk (in `run()` on the Rust side).
+// `./reg.json` is persisted unless --wait supplies a temporary default.
 const diffFormat = typeof values.diffFormat === 'string' ? values.diffFormat : 'png';
-const jsonPath = typeof values.json === 'string' ? values.json : './reg.json';
+const jsonPath = values.json ?? (temporaryDir ? join(temporaryDir, 'reg.json') : './reg.json');
 const customDiffMessage =
   typeof values.customDiffMessage === 'string'
     ? values.customDiffMessage
@@ -128,22 +159,25 @@ const customDiffMessage =
 
 // Forward to Wasm: only flags that Rust/clap understands.
 const wasmArgv: string[] = ['--'];
-if (actualDir) wasmArgv.push(actualDir);
-if (expectedDir) wasmArgv.push(expectedDir);
-if (diffDir) wasmArgv.push(diffDir);
+// Interactive output can live outside CWD; use one consistent path form
+// so WASI can find the common ancestor of inputs and outputs.
+const wasmPath = (path: string) => values.open || values.wait ? resolve(path) : path;
+if (actualDir) wasmArgv.push(wasmPath(actualDir));
+if (expectedDir) wasmArgv.push(wasmPath(expectedDir));
+if (diffDir) wasmArgv.push(wasmPath(diffDir));
 const pushFlag = (name: string, v: unknown): void => {
   if (v == null || v === false) return;
   if (v === true) wasmArgv.push(`--${name}`);
   else wasmArgv.push(`--${name}`, String(v));
 };
-pushFlag('report', values.report);
-pushFlag('json', jsonPath);
-pushFlag('junit', values.junit);
+pushFlag('report', reportPath && wasmPath(reportPath));
+pushFlag('json', wasmPath(jsonPath));
+pushFlag('junit', values.junit && wasmPath(values.junit));
 // `-E` is both a CLI exit-code knob (handled in JS below) AND input to the
 // junit XML generator on the Rust side — forward it so the XML matches
 // classic reg-cli's extendedErrors behaviour.
 pushFlag('extendedErrors', values.extendedErrors);
-pushFlag('from', fromPath);
+pushFlag('from', fromPath && wasmPath(fromPath));
 pushFlag('additionalDetection', values.additionalDetection);
 pushFlag('matchingThreshold', values.matchingThreshold);
 pushFlag('thresholdRate', values.thresholdRate);
@@ -179,10 +213,10 @@ emitter.once('complete', async (data: CompareOutput) => {
   // the browser's second-pass pixel detector can actually load. We do it in
   // JS (not Rust) because the x-img-diff-js wasm binary lives in node_modules
   // and shouldn't be linked into the Wasm bundle.
-  if (values.additionalDetection === 'client' && typeof values.report === 'string') {
+  if (values.additionalDetection === 'client' && typeof reportPath === 'string') {
     try {
       await writeXimgdiffAssets({
-        reportPath: values.report,
+        reportPath,
         urlPrefix: typeof values.urlPrefix === 'string' ? values.urlPrefix : '',
         distDir: distDir(),
       });
@@ -232,6 +266,17 @@ emitter.once('complete', async (data: CompareOutput) => {
     process.stdout.write(`${customDiffMessage}\n`);
     if (!ignoreChange) process.exitCode = 1;
   }
+
+  try {
+    if ((values.open || values.wait) && reportPath) {
+      process.stdout.write(`Report: ${pathToFileURL(resolve(reportPath)).href}\n`);
+    }
+    if (values.open && reportPath) await openReport(reportPath);
+    if (values.wait) await waitForEnter();
+  } catch (err) {
+    process.stderr.write(`reg-cli: ${(err as Error).message}\n`);
+    process.exitCode = 1;
+  }
 });
 
 emitter.once('error', (err: Error) => {
@@ -271,5 +316,32 @@ async function updateExpected(
     const dst = join(expectedDir, img);
     await mkdir(dirname(dst), { recursive: true });
     await copyFile(src, dst);
+  }
+}
+
+async function openReport(reportPath: string): Promise<void> {
+  const command = process.platform === 'darwin' ? 'open' : 'xdg-open';
+  await new Promise<void>((done, reject) => {
+    const child = spawn(command, [pathToFileURL(resolve(reportPath)).href], {
+      stdio: ['ignore', 'ignore', 'inherit'],
+    });
+    child.once('error', reject);
+    child.once('close', (code) => code === 0
+      ? done()
+      : reject(new Error(`${command} exited with status ${code}`)));
+  });
+}
+
+async function waitForEnter(): Promise<void> {
+  process.stdout.write('Press Enter to finish and remove any temporary output.\n');
+  const input = createInterface({ input: process.stdin });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      input.once('line', () => resolve());
+      input.once('close', () => reject(new Error('--wait requires input; stdin closed before Enter')));
+    });
+  } finally {
+    input.close();
+    process.stdin.pause();
   }
 }

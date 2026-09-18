@@ -41,7 +41,9 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
 
   * `-U`, `--update` Update expected images. (Copy `actual` images to `expected` images.)
   * `-R`, `--report` Output HTML report to specified path.
-  * `-J`, `--json` JSON report path. If omitted: `./reg.json`.
+  * `--open` Open the HTML report in the default browser (macOS or Linux). Requires `--report` or `--wait`.
+  * `--wait` Wait for Enter before exiting. Unspecified output paths use a temporary directory, deleted on exit. Neither `--open` nor `--wait` supports `--update`.
+  * `-J`, `--json` JSON report path. If omitted: `./reg.json`, or temporary output with `--wait`.
   * `--junit` JUnit XML report path.
   * `-I`, `--ignoreChange` If true, error will not be thrown when image change detected.
   * `-E`, `--extendedErrors` If true, also added/deleted images will throw an error.
@@ -55,6 +57,26 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-X`, `--additionalDetection` Enable additional difference detection (highly experimental). Select `none` (default) or `client` for the in-browser second-pass detector.
   * `-F`, `--from` Generate report from an existing `reg.json` instead of running the comparison.
   * `-D`, `--diffMessage` Custom diff message printed when a comparison fails.
+
+### Git difftool
+
+With `reg-cli` on `PATH`:
+
+```sh
+git config --global difftool.reg.cmd 'reg-cli --open --wait --ignoreChange "$REMOTE" "$LOCAL"'
+git difftool --tool=reg --dir-diff --no-prompt HEAD~1 HEAD
+```
+
+Git supplies actual images in `$REMOTE` and expected images in `$LOCAL`.
+Press Enter when finished reviewing. Until then, `--wait` keeps Git's images
+and the temporary report available. Explicit output paths are not deleted.
+
+For Git LFS images, run these commands in the repository before using difftool:
+
+```sh
+git lfs install
+git lfs pull
+```
 
 ### HTML report
 
