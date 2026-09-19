@@ -1,5 +1,8 @@
 use clap::{Parser, ValueEnum};
-use reg_core::{run, run_from_json, DiffImageFormat, JsonReport, Options, Url};
+use reg_core::{
+    run, run_from_json, BlockMatchSettings, DiffAlgorithm, DiffImageFormat, JsonReport, Options,
+    Url,
+};
 use std::path::{Path, PathBuf};
 use tracing::info_span;
 
@@ -22,6 +25,21 @@ impl From<DiffFormatArg> for DiffImageFormat {
 enum AdditionalDetection {
     None,
     Client,
+}
+
+#[derive(ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+enum DiffAlgorithmArg {
+    Pixelmatch,
+    BlockMatch,
+}
+
+impl From<DiffAlgorithmArg> for DiffAlgorithm {
+    fn from(a: DiffAlgorithmArg) -> Self {
+        match a {
+            DiffAlgorithmArg::Pixelmatch => DiffAlgorithm::Pixelmatch,
+            DiffAlgorithmArg::BlockMatch => DiffAlgorithm::BlockMatch,
+        }
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -84,6 +102,40 @@ struct Args {
     /// Mirrors classic reg-cli's `-X, --additionalDetection`.
     #[arg(short = 'X', long = "additionalDetection", value_enum)]
     additional_detection: Option<AdditionalDetection>,
+
+    /// Comparison algorithm. `pixelmatch` (default) is the classic
+    /// pixel-wise diff. `block-match` uses img-block-match-rs, which
+    /// tolerates content shifted in X/Y and only flags genuinely changed
+    /// blocks; its diff image is a side-by-side expected|actual composite.
+    #[arg(long = "diffAlgorithm", value_enum)]
+    diff_algorithm: Option<DiffAlgorithmArg>,
+
+    /// [block-match] Block side length in pixels. Default 8.
+    #[arg(long = "blockSize")]
+    block_size: Option<u32>,
+
+    /// [block-match] Horizontal search radius in pixels. Default 16.
+    #[arg(long = "searchX")]
+    search_x: Option<u32>,
+
+    /// [block-match] Vertical search radius in pixels. Default 64.
+    #[arg(long = "searchY")]
+    search_y: Option<u32>,
+
+    /// [block-match] Per-channel SAD tolerance (0-255) for a block to count
+    /// as matched. Default 8.
+    #[arg(long = "blockThreshold")]
+    block_threshold: Option<u32>,
+
+    /// [block-match] Merge unmatched clusters separated by up to N matched
+    /// blocks. Default 2.
+    #[arg(long = "mergeGap")]
+    merge_gap: Option<u32>,
+
+    /// [block-match] Discard unmatched clusters smaller than N blocks.
+    /// Default 2.
+    #[arg(long = "minBlocks")]
+    min_blocks: Option<u32>,
 }
 
 #[cfg(not(all(target_os = "wasi", target_env = "p1")))]
@@ -103,6 +155,21 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
 
     let args = Args::parse();
 
+    // Only materialise block-match settings when at least one knob was
+    // passed; otherwise `None` lets reg_core fall back to its defaults.
+    let block_match = {
+        let d = BlockMatchSettings::default();
+        let bm = BlockMatchSettings {
+            block_size: args.block_size.unwrap_or(d.block_size),
+            search_x: args.search_x.unwrap_or(d.search_x),
+            search_y: args.search_y.unwrap_or(d.search_y),
+            threshold: args.block_threshold.unwrap_or(d.threshold),
+            merge_gap: args.merge_gap.unwrap_or(d.merge_gap),
+            min_blocks: args.min_blocks.unwrap_or(d.min_blocks),
+        };
+        (bm != d).then_some(bm)
+    };
+
     let options = Options {
         report: args.report.as_deref().map(Path::new),
         junit_report: args.junit.as_deref().map(Path::new),
@@ -118,6 +185,8 @@ fn inner() -> Result<JsonReport, reg_core::CompareError> {
         enable_client_additional_detection: args
             .additional_detection
             .map(|v| matches!(v, AdditionalDetection::Client)),
+        diff_algorithm: args.diff_algorithm.map(DiffAlgorithm::from),
+        block_match,
     };
 
     // `-F / --from` short-circuits the diff pipeline and re-renders HTML from
