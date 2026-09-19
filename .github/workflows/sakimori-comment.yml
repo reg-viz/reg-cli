@@ -1,0 +1,51 @@
+# Posts the sakimori audit summary from ci.yml as a PR comment.
+#
+# Split out of ci.yml because `pull_request` runs from forks get a
+# read-only GITHUB_TOKEN, so the test job itself cannot comment.
+# `workflow_run` executes in the base repo with a write token; it only
+# downloads the JSON log the test job uploaded and never runs anything
+# from the untrusted checkout.
+name: sakimori comment
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: read
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # workflow_run.pull_requests is empty for fork PRs, so resolve the
+      # PR from the head SHA instead.
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          n=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[0].number')
+          if [[ ! "${n}" =~ ^[0-9]+$ ]]; then
+            echo "::notice::no open PR for ${SHA}; skipping"
+            exit 0
+          fi
+          echo "number=${n}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: steps.pr.outputs.number != ''
+        with:
+          name: sakimori-report-ubuntu-latest
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - uses: bokuweb/sakimori/comment@v0
+        if: steps.pr.outputs.number != ''
+        with:
+          log: sakimori.log.json
+          artifact-name: sakimori-report-ubuntu-latest
+          html-filename: sakimori-report.html
+          pr-number: ${{ steps.pr.outputs.number }}
+          run-id: ${{ github.event.workflow_run.id }}
