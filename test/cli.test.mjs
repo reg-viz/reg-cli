@@ -1113,3 +1113,144 @@ test('both actual and expected dirs empty → all-empty report, exit 0', async (
   assert.deepEqual(report.newItems, []);
   assert.deepEqual(report.deletedItems, []);
 });
+
+// ---------------------------------------------------------------------------
+// --diffAlgorithm block-match (img-block-match-rs)
+//
+// Fixtures are synthesised in-process with a minimal PNG encoder (zlib is
+// built into node) so the test stays hermetic and can express "same content,
+// shifted down" precisely — the one case block matching exists to handle.
+// ---------------------------------------------------------------------------
+
+const crc32 = (buf) => {
+  let c = ~0;
+  for (const b of buf) {
+    c ^= b;
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+  }
+  return ~c >>> 0;
+};
+
+/** Encode an RGBA PNG; `pixel(x, y)` returns `[r, g, b, a]`. */
+const encodePng = async (width, height, pixel) => {
+  const { deflateSync } = await import('node:zlib');
+  const raw = Buffer.alloc((width * 4 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    const row = y * (width * 4 + 1);
+    raw[row] = 0; // filter: none
+    for (let x = 0; x < width; x++) {
+      const [r, g, b, a] = pixel(x, y);
+      raw.set([r, g, b, a], row + 1 + x * 4);
+    }
+  }
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.set([8, 6, 0, 0, 0], 8); // 8-bit RGBA
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+};
+
+/** 64×128 white "page" with a dark 16px bar at `barY` and a red 16×16
+ *  square at `squareY`. Shifting both by the same delta models "a header
+ *  got inserted above, everything below moved". */
+const pagePng = (barY, squareY) =>
+  encodePng(64, 128, (x, y) => {
+    if (y >= barY && y < barY + 16) return [40, 40, 40, 255];
+    if (y >= squareY && y < squareY + 16 && x >= 8 && x < 24) return [220, 30, 30, 255];
+    return [255, 255, 255, 255];
+  });
+
+const blockMatchScratch = async (actualPng, expectedPng) => {
+  const d = await scratch();
+  const actualRel = `${d.rel}/actual`;
+  const expectedRel = `${d.rel}/expected`;
+  await mkdir(join(REPO, actualRel), { recursive: true });
+  await mkdir(join(REPO, expectedRel), { recursive: true });
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(join(REPO, actualRel, 'page.png'), actualPng);
+  await writeFile(join(REPO, expectedRel, 'page.png'), expectedPng);
+  return { d, actualRel, expectedRel, jsonRel: `${d.rel}/reg.json` };
+};
+
+test('--diffAlgorithm block-match passes on content that merely shifted; pixelmatch fails', async () => {
+  const expected = await pagePng(16, 64);
+  const actual = await pagePng(40, 88); // everything moved down 24px
+  const { d, actualRel, expectedRel } = await blockMatchScratch(actual, expected);
+  // Separate -J targets per run: the WASI shim does not truncate an
+  // existing file, so a shorter second report would leave trailing junk.
+  const pmJson = `${d.rel}/pm.json`;
+  const bmJson = `${d.rel}/bm.json`;
+  const base = [actualRel, expectedRel, `${d.rel}/diff`];
+
+  const pm = await runCli([...base, '-J', pmJson]);
+  assert.equal(pm.code, 1, 'pixelmatch should flag the shifted page');
+  let report = JSON.parse(await readFile(join(REPO, pmJson), 'utf8'));
+  assert.deepEqual(report.failedItems, ['page.png']);
+
+  const bm = await runCli([
+    ...base, '-J', bmJson,
+    '--diffAlgorithm', 'block-match', '--searchX', '0', '--searchY', '32',
+  ]);
+  assert.equal(bm.code, 0, `block-match should accept the shift: ${bm.stderr}`);
+  report = JSON.parse(await readFile(join(REPO, bmJson), 'utf8'));
+  assert.deepEqual(report.passedItems, ['page.png']);
+  assert.deepEqual(report.failedItems, []);
+});
+
+test('--diffAlgorithm block-match still fails on a real change and writes a side-by-side diff', async () => {
+  const expected = await pagePng(16, 64);
+  const actual = await pagePng(16, 112); // square jumped 48px — beyond searchY
+  const { d, actualRel, expectedRel, jsonRel } = await blockMatchScratch(actual, expected);
+  const diffRel = `${d.rel}/diff`;
+
+  const { code, stderr } = await runCli([
+    actualRel, expectedRel, diffRel, '-J', jsonRel,
+    '--diffAlgorithm', 'block-match', '--searchX', '0', '--searchY', '32',
+  ]);
+  assert.equal(code, 1, `block-match should flag the moved square: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.failedItems, ['page.png']);
+  assert.deepEqual(report.diffItems, ['page.png']);
+
+  // Diff image is expected|actual side by side: 64 + 4 gutter + 64 wide.
+  const png = await readFile(join(REPO, diffRel, 'page.png'));
+  assert.equal(png.readUInt32BE(16), 64 * 2 + 4, 'diff width');
+  assert.equal(png.readUInt32BE(20), 128, 'diff height');
+});
+
+test('--diffAlgorithm block-match honours -S on the unmatched block area', async () => {
+  const expected = await pagePng(16, 64);
+  const actual = await pagePng(16, 112);
+  const { d, actualRel, expectedRel, jsonRel } = await blockMatchScratch(actual, expected);
+
+  const { code, stderr } = await runCli([
+    actualRel, expectedRel, `${d.rel}/diff`, '-J', jsonRel,
+    '--diffAlgorithm', 'block-match', '--searchY', '32',
+    '-S', String(64 * 128),
+  ]);
+  assert.equal(code, 0, `lax -S should accept the change: ${stderr}`);
+  const report = JSON.parse(await readFile(join(REPO, jsonRel), 'utf8'));
+  assert.deepEqual(report.passedItems, ['page.png']);
+});
+
+test('--diffAlgorithm rejects unknown values', async () => {
+  const d = await scratch();
+  const { code } = await runCli([
+    `${SAMPLE_REL}/actual`, `${SAMPLE_REL}/expected`, `${d.rel}/diff`,
+    '--diffAlgorithm', 'bogus',
+  ]);
+  assert.notEqual(code, 0, 'unknown algorithm should not exit 0');
+});

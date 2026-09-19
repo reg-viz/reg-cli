@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- feat: `--diffAlgorithm block-match` (library: `diffAlgorithm: 'block-match'`) runs [img-block-match-rs](https://github.com/bokuweb/img-block-match-rs) instead of the pixel-wise diff, tolerating content that shifted in X/Y; tunable via `--blockSize`, `--searchX`, `--searchY`, `--blockThreshold`, `--mergeGap`, `--minBlocks`
+
 ## @0.19.0-rc3 (7 September, 2026)
 
 - perf(core): use the image-diff-rs count-only path when diff images are not needed

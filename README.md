@@ -52,9 +52,26 @@ $ reg-cli /path/to/actual-dir /path/to/expected-dir /path/to/diff-dir -R ./repor
   * `-C`, `--concurrency` How many threads run the per-image diff in parallel. Default: 4. The Wasm version uses Rayon inside the WASI thread pool; below 20 images we fall back to single-threaded to avoid spin-up cost (matches classic reg-cli).
   * `-A`, `--enableAntialias` Enable antialias-tolerant comparison. Off by default.
   * `--diffFormat` Output diff image format: `webp` (default) or `png`. Use `png` for byte-for-byte parity with classic reg-cli's diff images.
+  * `--diffAlgorithm` Comparison algorithm: `pixelmatch` (default) or `block-match`. See [Block-matching diff](#block-matching-diff).
+  * `--blockSize`, `--searchX`, `--searchY`, `--blockThreshold`, `--mergeGap`, `--minBlocks` Tuning knobs for `--diffAlgorithm block-match` (defaults: 8 / 16 / 64 / 8 / 2 / 2). Ignored by `pixelmatch`.
   * `-X`, `--additionalDetection` Enable additional difference detection (highly experimental). Select `none` (default) or `client` for the in-browser second-pass detector.
   * `-F`, `--from` Generate report from an existing `reg.json` instead of running the comparison.
   * `-D`, `--diffMessage` Custom diff message printed when a comparison fails.
+
+### Block-matching diff
+
+`--diffAlgorithm block-match` swaps the pixel-wise diff for [img-block-match-rs](https://github.com/bokuweb/img-block-match-rs). Instead of comparing pixel `(x, y)` against pixel `(x, y)`, it splits the expected image into `--blockSize` squares and searches a `±searchX / ±searchY` window in the actual image for each one. Content that merely moved (an inserted header pushes everything below it down; a widened sidebar shifts the main column right) is recognised as "same content, different position" and is **not** reported — only blocks with no good match anywhere in the window count as changes.
+
+```sh
+reg-cli ./actual ./expected ./diff --diffAlgorithm block-match --searchY 120
+```
+
+Differences from `pixelmatch`:
+
+  * The diff image is a side-by-side `expected | actual` composite (twice the width plus a 4px gutter). Removed regions are outlined red on the left panel, added regions green on the right.
+  * `-T` / `-S` thresholds still apply, but the "diff pixel" count is the area covered by unmatched blocks (after `--mergeGap` / `--minBlocks` clustering) plus any area that exists in only one image when dimensions differ.
+  * `-M / --matchingThreshold` and `-A / --enableAntialias` are pixelmatch-only and ignored. Use `--blockThreshold` (per-channel SAD tolerance, 0–255) and `--minBlocks` to absorb anti-aliasing noise instead.
+  * A trailing strip narrower than `--blockSize` at the right/bottom edge is not scanned.
 
 ### HTML report
 
