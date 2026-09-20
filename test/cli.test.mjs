@@ -193,6 +193,68 @@ test('reg.json schema matches classic shape (failed case)', async () => {
   assert.deepEqual(report.deletedItems, []);
 });
 
+test('re-running into the same -J / --junit / -R paths truncates the old output', async () => {
+  // Regression: wasm-util's path_open encodes O_TRUNC with the Linux bit
+  // value, which on macOS means O_CREAT, so a second run that produces a
+  // shorter file left the tail of the first run behind (invalid JSON/XML).
+  const d = await scratch();
+  const jsonRel = `${d.rel}/reg.json`;
+  const junitRel = `${d.rel}/junit.xml`;
+  const reportRel = `${d.rel}/report.html`;
+  const outputs = ['-J', jsonRel, '--junit', junitRel, '-R', reportRel, '-I'];
+
+  // First run: the sample pair plus an extra long-named image, with a long
+  // --urlPrefix baked into reg.json. sample0 fails, so junit.xml carries a
+  // <failure> body and report.html / reg.json list the extra item, making
+  // every artefact strictly longer than what the second run produces.
+  const extra = 'extra-' + 'x'.repeat(64) + '.png';
+  for (const side of ['actual', 'expected']) {
+    await cp(join(REPO, SAMPLE_REL, side), join(d.abs, side), { recursive: true });
+    await cp(join(REPO, SAMPLE_REL, side, 'sample1.png'), join(d.abs, side, extra));
+  }
+  const prefix = 'https://example.invalid/' + 'padding/'.repeat(32);
+  const first = await runCli([
+    `${d.rel}/actual`,
+    `${d.rel}/expected`,
+    `${d.rel}/diff`,
+    ...outputs,
+    '-P',
+    prefix,
+  ]);
+  assert.equal(first.code, 0, first.stderr);
+  const jsonBefore = await readFile(join(REPO, jsonRel), 'utf8');
+  const junitBefore = await readFile(join(REPO, junitRel), 'utf8');
+  const reportBefore = await readFile(join(REPO, reportRel), 'utf8');
+  assert.deepEqual(JSON.parse(jsonBefore).failedItems, ['sample0.png']);
+
+  // Second run: plain sample dirs, no prefix, lax pixel threshold so
+  // everything passes.
+  const second = await runCli([
+    `${SAMPLE_REL}/actual`,
+    `${SAMPLE_REL}/expected`,
+    `${d.rel}/diff`,
+    ...outputs,
+    '-S',
+    '100000000',
+  ]);
+  assert.equal(second.code, 0, second.stderr);
+  const jsonAfter = await readFile(join(REPO, jsonRel), 'utf8');
+  const junitAfter = await readFile(join(REPO, junitRel), 'utf8');
+  const reportAfter = await readFile(join(REPO, reportRel), 'utf8');
+  assert.ok(jsonAfter.length < jsonBefore.length, 'second reg.json should be shorter');
+  assert.ok(junitAfter.length < junitBefore.length, 'second junit.xml should be shorter');
+  assert.ok(reportAfter.length < reportBefore.length, 'second report.html should be shorter');
+
+  const report = JSON.parse(jsonAfter); // throws on leftover trailing bytes
+  assert.deepEqual(report.failedItems, []);
+  assert.deepEqual(report.passedItems, ['sample0.png', 'sample1.png']);
+  assert.ok(!jsonAfter.includes(prefix), 'stale --urlPrefix bytes left in reg.json');
+  assert.ok(junitAfter.trimEnd().endsWith('</testsuites>'), junitAfter.slice(-200));
+  assert.ok(!junitAfter.includes(extra), 'stale testcase bytes left in junit.xml');
+  assert.ok(reportAfter.trimEnd().endsWith('</html>'), reportAfter.slice(-200));
+  assert.ok(!reportAfter.includes(extra), 'stale item bytes left in report.html');
+});
+
 // ---------------------------------------------------------------------------
 // JUnit XML byte-for-byte compat with classic reg-cli
 // ---------------------------------------------------------------------------
