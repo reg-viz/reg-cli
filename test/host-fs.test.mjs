@@ -75,7 +75,11 @@ test('createHostFs().openSync honours O_TRUNC on this host', async () => {
     const file = join(dir, 'f.txt');
     fs.writeFileSync(file, 'long long long content');
     const hostFs = createHostFs();
-    const fd = hostFs.openSync(file, L.O_WRONLY | L.O_CREAT | L.O_TRUNC, 0o666);
+    // On win32 the wrapper is a pass-through (wasm-util already emits host
+    // flags there), so feed it the host's own constants; elsewhere feed the
+    // Linux-encoded flags wasm-util actually produces.
+    const F = process.platform === 'win32' ? fs.constants : L;
+    const fd = hostFs.openSync(file, F.O_WRONLY | F.O_CREAT | F.O_TRUNC, 0o666);
     hostFs.writeSync(fd, 'short');
     hostFs.closeSync(fd);
     assert.equal(await readFile(file, 'utf8'), 'short');
