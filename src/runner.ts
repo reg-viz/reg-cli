@@ -7,8 +7,7 @@
 // Entry mode owns the shared `WebAssembly.Memory`, calls `wasm_main`, and
 // posts the report back as `cmd: 'complete'`. Thread mode receives memory
 // from the parent and runs `wasi_thread_start(tid, startArg)`.
-import fs from 'node:fs';
-import { WASI, type IFs } from '@tybys/wasm-util';
+import { WASI } from '@tybys/wasm-util';
 import { env } from 'node:process';
 import { parentPort, workerData } from 'node:worker_threads';
 import {
@@ -18,6 +17,7 @@ import {
   readWasm,
 } from './utils';
 import { createInstanceProxy } from './proxy';
+import { createHostFs } from './host-fs';
 import { createPrintErrHook } from './progress';
 import { type RustTraceData, type WorkerSpan } from './tracing';
 import {
@@ -44,7 +44,7 @@ const wasi = new WASI({
   env: sandbox.env,
   returnOnExit: true,
   preopens: sandbox.preopens,
-  fs: fs as IFs,
+  fs: createHostFs(),
   printErr,
 });
 

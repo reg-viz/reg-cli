@@ -6,6 +6,7 @@ export default defineConfig({
     './src/cli.ts',
     './src/runner.ts',
     './src/wasm-memory.ts',
+    './src/host-fs.ts',
   ],
   format: ['esm', 'cjs'],
   dts: true,
