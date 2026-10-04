@@ -54,6 +54,10 @@ jobs:
         if: runner.os != 'Windows'
         with:
           toolchain: stable
+          # Rust builds are cached by mr boxington (mbx) below.
+          cache: false
+      - uses: jdx/mr-boxington-action@d0825fbaf3cc36ca2609aa38e71046265a1f1e37 # v1
+        if: runner.os != 'Windows'
 
       # macOS unsupervised + Linux supervised by the job-scoped
       # daemon above. Same script body; the supervision is
@@ -72,7 +76,7 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           corepack enable
           sh ./scripts/build-ui.sh v0.5.0
-          cargo test -p reg_core --lib
+          mbx test -p reg_core --lib
           pnpm install --frozen-lockfile
           pnpm build
           pnpm test
