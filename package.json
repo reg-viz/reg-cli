@@ -86,7 +86,7 @@
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "tsdown": "^0.22.0"
   },
-  "packageManager": "pnpm@10.33.3+sha512.a19744364a7e248b92657a4ca5973f9354d21caf982579674b1c539f32c7420c47138ad8b1254df07aba9bc782d9b3029e3db34d5dbff974326eb74dac8ff489",
+  "packageManager": "pnpm@10.34.7+sha512.ba98abc585539933375b5971f4bc6d6c73a1b4b7edc4a879e7d102fe5423d1e02309d67c60a11f04955093a96e521ad9c3b138cdd654ca5be563f378b3ae48bd",
   "pnpm": {
     "overrides": {
       "protobufjs": "^8.6.5"
