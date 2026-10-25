@@ -474,6 +474,14 @@ mod tests {
         assert_eq!(state["failedItems"][0]["encoded"], "foo.webp");
     }
 
+    #[test]
+    fn html_report_template_loads_no_remote_resources() {
+        let template = include_str!("../../../template/template.html");
+
+        assert!(!template.contains("href=\"http"));
+        assert!(!template.contains("src=\"http"));
+    }
+
     // Reference bytes come from classic reg-cli (src/report.js via
     // xmlbuilder2, { version: '1.0' }, prettyPrint: true). The
     // `test/cli.test.mjs` snapshot tests pin these exact bytes, so the
