@@ -2,7 +2,10 @@ mod dir;
 mod report;
 pub mod tracing_layer;
 
-use image_diff_rs::{DiffOption, DiffOutput, EncodeFormat, ImageDiffError};
+use image_diff_rs::{DiffOption, DiffOutput, EncodeFormat, ImageDiffError, RgbaDiff};
+use img_block_match::{
+    diff_bidirectional, render_bidirectional, BlockMatchOptions, RenderOptions, SearchMode,
+};
 use rayon::{prelude::*, ThreadPoolBuilder};
 use report::create_reports;
 use std::{
@@ -162,6 +165,62 @@ pub struct Options<'a> {
     /// the HTML report's `ximgdiffConfig.enabled` is `true` and the report UI
     /// runs a second-pass pixel detector in the browser.
     pub enable_client_additional_detection: Option<bool>,
+    /// Which comparison algorithm to run on images whose bytes differ.
+    /// `None` keeps the default pixel-wise (pixelmatch) diff.
+    pub diff_algorithm: Option<DiffAlgorithm>,
+    /// Tuning knobs for [`DiffAlgorithm::BlockMatch`]. Ignored for
+    /// pixelmatch. `None` uses [`BlockMatchSettings::default`].
+    pub block_match: Option<BlockMatchSettings>,
+}
+
+/// Comparison algorithm used for images whose encoded bytes differ.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+pub enum DiffAlgorithm {
+    /// Pixel-wise YIQ diff via image-diff-rs (pixelmatch port). Honours
+    /// `matching_threshold` / `enable_antialias`; diff image is the classic
+    /// red-highlight overlay.
+    #[default]
+    Pixelmatch,
+    /// 2D block-matching diff via img-block-match-rs. Tolerates content that
+    /// merely shifted in X/Y (inserted header, widened sidebar, …) and only
+    /// flags blocks that have no match within the search window. The diff
+    /// image is a side-by-side composite: expected on the left with removed
+    /// regions outlined in red, actual on the right with added regions in
+    /// green. `matching_threshold` / `enable_antialias` are not used.
+    BlockMatch,
+}
+
+/// Knobs for [`DiffAlgorithm::BlockMatch`]. Defaults follow the values
+/// img-block-match-rs's own JS/Wasm API ships with, which are tuned for
+/// real UI screenshots (small blocks, generous vertical search).
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BlockMatchSettings {
+    /// Side length of each square block in pixels.
+    pub block_size: u32,
+    /// Horizontal search radius in pixels (candidate dx ∈ ±search_x).
+    pub search_x: u32,
+    /// Vertical search radius in pixels (candidate dy ∈ ±search_y).
+    pub search_y: u32,
+    /// Per-channel, per-pixel SAD tolerance (0..=255) for a block to count
+    /// as matched after motion compensation.
+    pub threshold: u32,
+    /// Bridge unmatched clusters separated by up to this many matched blocks.
+    pub merge_gap: u32,
+    /// Discard clusters smaller than this many blocks (drops AA noise).
+    pub min_blocks: u32,
+}
+
+impl Default for BlockMatchSettings {
+    fn default() -> Self {
+        Self {
+            block_size: 8,
+            search_x: 16,
+            search_y: 64,
+            threshold: 8,
+            merge_gap: 2,
+            min_blocks: 2,
+        }
+    }
 }
 
 /// User-facing mirror of `image_diff_rs::EncodeFormat` so that `reg_core`
@@ -206,6 +265,8 @@ impl<'a> Default for Options<'a> {
             enable_antialias: None,
             diff_image_format: None,
             enable_client_additional_detection: None,
+            diff_algorithm: None,
+            block_match: None,
         }
     }
 }
@@ -353,6 +414,7 @@ pub fn run(
                 // path without decoding either image.
                 ImageOutcome::Passed
             } else {
+                let algorithm = options.diff_algorithm.unwrap_or_default();
                 let diff_option = DiffOption {
                     threshold: options.matching_threshold,
                     include_anti_alias: Some(!options.enable_antialias.unwrap_or_default()),
@@ -362,7 +424,12 @@ pub fn run(
                 // acceptance threshold can be evaluated from the count alone.
                 // Rejected comparisons fall through to the existing staged
                 // diff path so their output remains byte-compatible.
-                let count_only_limit = if let Some(threshold) = options.threshold_pixel {
+                // Block matching has no cheaper count-only path (the
+                // visualization is a trivial overlay on the decoded inputs),
+                // so it always takes the staged route.
+                let count_only_limit = if algorithm != DiffAlgorithm::Pixelmatch {
+                    None
+                } else if let Some(threshold) = options.threshold_pixel {
                     (threshold > 0).then_some(threshold)
                 } else if options.threshold_rate.is_some_and(|rate| rate >= 1.0) {
                     Some(u64::MAX)
@@ -385,7 +452,15 @@ pub fn run(
                     }
                 }
 
-                let rgba = match image_diff_rs::diff_rgba(&img1, &img2, &diff_option) {
+                let rgba = match algorithm {
+                    DiffAlgorithm::Pixelmatch => {
+                        image_diff_rs::diff_rgba(&img1, &img2, &diff_option)
+                    }
+                    DiffAlgorithm::BlockMatch => {
+                        block_match_diff(&img1, &img2, &options.block_match.unwrap_or_default())
+                    }
+                };
+                let rgba = match rgba {
                     Ok(r) => r,
                     Err(e) => {
                         let path_str = path.display().to_string();
@@ -768,6 +843,81 @@ pub(crate) fn find_images(
     }
 }
 
+/// Runs img-block-match-rs over two encoded images and folds the result into
+/// the same [`RgbaDiff`] shape the pixelmatch path produces, so thresholding
+/// and encoding downstream stay shared.
+///
+/// `diff_count` is the pixel area covered by unmatched blocks (removed +
+/// added, after `merge_gap` / `min_blocks` clustering) plus any area that
+/// exists in only one image when dimensions differ — block matching itself
+/// only scans the overlapping `min(w) × min(h)` region.
+fn block_match_diff(
+    actual: &[u8],
+    expected: &[u8],
+    settings: &BlockMatchSettings,
+) -> Result<RgbaDiff, ImageDiffError> {
+    let _span = tracing::info_span!(
+        "block_match_diff",
+        block_size = settings.block_size,
+        search_x = settings.search_x,
+        search_y = settings.search_y
+    )
+    .entered();
+
+    let to_image = |bytes: &[u8]| -> Result<image::RgbaImage, ImageDiffError> {
+        let decoded = image_diff_rs::decode_buf(bytes)?;
+        let (w, h) = decoded.dimensions;
+        image::RgbaImage::from_raw(w, h, decoded.buf).ok_or_else(|| {
+            ImageDiffError::Decode(format!("decoded buffer does not match {w}x{h} RGBA"))
+        })
+    };
+    // Reference (left panel, "removed") is the expected baseline; target
+    // (right panel, "added") is the freshly captured actual image.
+    let reference = to_image(expected)?;
+    let target = to_image(actual)?;
+
+    let opts = BlockMatchOptions {
+        block_size: settings.block_size.max(1),
+        search_x: settings.search_x.min(i32::MAX as u32) as i32,
+        search_y: settings.search_y.min(i32::MAX as u32) as i32,
+        step: 1,
+        threshold: settings.threshold,
+        // Hierarchical is the README's recommendation for anything beyond a
+        // trivial radius and is what the library's own Wasm API defaults to.
+        mode: SearchMode::Hierarchical,
+        compute_confidence: false,
+    };
+    let bd = diff_bidirectional(&reference, &target, &opts);
+
+    let render = RenderOptions {
+        merge_gap: settings.merge_gap,
+        min_blocks: settings.min_blocks,
+        ..RenderOptions::default()
+    };
+    let block_area = (opts.block_size as u64) * (opts.block_size as u64);
+    let unmatched_blocks: u64 = bd
+        .forward
+        .unmatched_regions(render.merge_gap, render.min_blocks)
+        .iter()
+        .chain(bd.reverse.unmatched_regions(render.merge_gap, render.min_blocks).iter())
+        .map(|r| r.block_count as u64)
+        .sum();
+    let (rw, rh) = (reference.width() as u64, reference.height() as u64);
+    let (tw, th) = (target.width() as u64, target.height() as u64);
+    let overlap = rw.min(tw) * rh.min(th);
+    let non_overlap = rw.max(tw) * rh.max(th) - overlap;
+    let diff_count = unmatched_blocks * block_area + non_overlap;
+
+    let out = render_bidirectional(&reference, &target, &bd, &render);
+    let (width, height) = (out.width(), out.height());
+    Ok(RgbaDiff {
+        diff_count: diff_count.min(usize::MAX as u64) as usize,
+        rgba: out.into_raw(),
+        width,
+        height,
+    })
+}
+
 fn is_passed(
     width: u32,
     height: u32,
@@ -929,5 +1079,122 @@ mod per_image_failure_tests {
         assert!(report.failed_items.is_empty());
         assert!(report.actual_items.iter().all(|p| !p.starts_with("._")));
         assert!(report.expected_items.iter().all(|p| !p.starts_with("._")));
+    }
+}
+
+#[cfg(test)]
+mod block_match_tests {
+    use super::*;
+    use std::fs;
+
+    /// Encodes a synthetic 64×128 "page": a dark 16px-tall bar at
+    /// `bar_y`, a small red square at `square_y`, white elsewhere.
+    fn page_png(bar_y: u32, square_y: u32) -> Vec<u8> {
+        let mut img = image::RgbaImage::from_pixel(64, 128, image::Rgba([255, 255, 255, 255]));
+        for y in bar_y..bar_y + 16 {
+            for x in 0..64 {
+                img.put_pixel(x, y, image::Rgba([40, 40, 40, 255]));
+            }
+        }
+        for y in square_y..square_y + 16 {
+            for x in 8..24 {
+                img.put_pixel(x, y, image::Rgba([220, 30, 30, 255]));
+            }
+        }
+        let mut buf = std::io::Cursor::new(Vec::new());
+        img.write_to(&mut buf, image::ImageFormat::Png).unwrap();
+        buf.into_inner()
+    }
+
+    fn setup(actual_png: &[u8], expected_png: &[u8]) -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf) {
+        let tmp = tempfile::tempdir().unwrap();
+        let actual = tmp.path().join("actual");
+        let expected = tmp.path().join("expected");
+        let diff = tmp.path().join("diff");
+        fs::create_dir_all(&actual).unwrap();
+        fs::create_dir_all(&expected).unwrap();
+        fs::write(actual.join("page.png"), actual_png).unwrap();
+        fs::write(expected.join("page.png"), expected_png).unwrap();
+        (tmp, actual, expected, diff)
+    }
+
+    fn opts<'a>(json: &'a Path, algorithm: DiffAlgorithm) -> Options<'a> {
+        Options {
+            json: Some(json),
+            diff_image_format: Some(DiffImageFormat::Png),
+            diff_algorithm: Some(algorithm),
+            block_match: Some(BlockMatchSettings {
+                search_x: 0,
+                search_y: 32,
+                ..BlockMatchSettings::default()
+            }),
+            ..Options::default()
+        }
+    }
+
+    /// Same content shifted down by 24px: pixelmatch sees every moved
+    /// pixel as a change, block matching recognises the shift and passes.
+    #[test]
+    fn vertical_shift_passes_with_block_match_but_fails_with_pixelmatch() {
+        let expected = page_png(16, 64);
+        let actual = page_png(40, 88);
+        let (tmp, a, e, d) = setup(&actual, &expected);
+        let json = tmp.path().join("reg.json");
+
+        let pm = run(&a, &e, &d, opts(&json, DiffAlgorithm::Pixelmatch)).unwrap();
+        assert_eq!(pm.failed_items, BTreeSet::from([PathBuf::from("page.png")]));
+
+        let bm = run(&a, &e, &d, opts(&json, DiffAlgorithm::BlockMatch)).unwrap();
+        assert_eq!(bm.passed_items, BTreeSet::from([PathBuf::from("page.png")]));
+        assert!(bm.failed_items.is_empty());
+    }
+
+    /// A genuine change (the red square disappears) is still caught, and
+    /// the diff image is the side-by-side composite (2×width + 4px gap).
+    #[test]
+    fn real_change_fails_with_block_match_and_writes_side_by_side_diff() {
+        let expected = page_png(16, 64);
+        let mut actual_img = image::load_from_memory(&page_png(16, 64)).unwrap().to_rgba8();
+        for y in 64..80 {
+            for x in 8..24 {
+                actual_img.put_pixel(x, y, image::Rgba([255, 255, 255, 255]));
+            }
+        }
+        let mut actual = std::io::Cursor::new(Vec::new());
+        actual_img.write_to(&mut actual, image::ImageFormat::Png).unwrap();
+        let (tmp, a, e, d) = setup(&actual.into_inner(), &expected);
+        let json = tmp.path().join("reg.json");
+
+        let bm = run(&a, &e, &d, opts(&json, DiffAlgorithm::BlockMatch)).unwrap();
+        assert_eq!(bm.failed_items, BTreeSet::from([PathBuf::from("page.png")]));
+
+        let diff_png = fs::read(d.join("page.png")).unwrap();
+        let diff_img = image::load_from_memory(&diff_png).unwrap();
+        assert_eq!((diff_img.width(), diff_img.height()), (64 * 2 + 4, 128));
+    }
+
+    /// `threshold_pixel` is applied to the unmatched block area, so a lax
+    /// limit accepts a small real change.
+    #[test]
+    fn threshold_pixel_applies_to_unmatched_block_area() {
+        let expected = page_png(16, 64);
+        let actual = page_png(16, 112); // square moved 48px, beyond search_y
+        let (tmp, a, e, d) = setup(&actual, &expected);
+        let json = tmp.path().join("reg.json");
+
+        let strict = run(&a, &e, &d, opts(&json, DiffAlgorithm::BlockMatch)).unwrap();
+        assert_eq!(strict.failed_items.len(), 1);
+
+        let lax = run(
+            &a,
+            &e,
+            &d,
+            Options {
+                threshold_pixel: Some(64 * 128),
+                ..opts(&json, DiffAlgorithm::BlockMatch)
+            },
+        )
+        .unwrap();
+        assert_eq!(lax.passed_items.len(), 1);
     }
 }

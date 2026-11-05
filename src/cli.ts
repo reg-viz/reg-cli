@@ -18,7 +18,9 @@
 //
 //   -R/--report, -J/--json, -M/--matchingThreshold, -T/--thresholdRate,
 //   -S/--thresholdPixel, -P/--urlPrefix, -C/--concurrency, -A/--enableAntialias,
-//   --diffFormat, --junit, -F/--from, -X/--additionalDetection
+//   --diffFormat, --junit, -F/--from, -X/--additionalDetection,
+//   --diffAlgorithm (+ --blockSize/--searchX/--searchY/--blockThreshold/
+//   --mergeGap/--minBlocks)
 //
 // reg.json and junit.xml are now written on the Rust/Wasm side so that they
 // land inside the WASI sandbox's preopened directory and so the non-wasm
@@ -51,6 +53,16 @@ const HELP = `
     -D, --customDiffMessage   Trailing message printed on diff.
         --junit               Path to write a JUnit XML test report.
         --diffFormat          webp (default) | png
+        --diffAlgorithm       pixelmatch (default) | block-match
+                              block-match tolerates content shifted in X/Y
+                              (img-block-match-rs); diff image is a
+                              side-by-side expected|actual composite.
+        --blockSize           [block-match] block side in px. Default 8.
+        --searchX             [block-match] horizontal search radius. Default 16.
+        --searchY             [block-match] vertical search radius. Default 64.
+        --blockThreshold      [block-match] per-channel SAD tolerance. Default 8.
+        --mergeGap            [block-match] bridge clusters N blocks apart. Default 2.
+        --minBlocks           [block-match] drop clusters under N blocks. Default 2.
 `;
 
 if (process.argv.includes('-h') || process.argv.includes('--help')) {
@@ -92,6 +104,13 @@ try {
       junit: { type: 'string' },
       from: { type: 'string', short: 'F' },
       additionalDetection: { type: 'string', short: 'X' },
+      diffAlgorithm: { type: 'string' },
+      blockSize: { type: 'string' },
+      searchX: { type: 'string' },
+      searchY: { type: 'string' },
+      blockThreshold: { type: 'string' },
+      mergeGap: { type: 'string' },
+      minBlocks: { type: 'string' },
     },
     allowPositionals: true,
   });
@@ -152,6 +171,13 @@ pushFlag('urlPrefix', values.urlPrefix);
 pushFlag('concurrency', values.concurrency);
 pushFlag('enableAntialias', values.enableAntialias);
 pushFlag('diffFormat', diffFormat);
+pushFlag('diffAlgorithm', values.diffAlgorithm);
+pushFlag('blockSize', values.blockSize);
+pushFlag('searchX', values.searchX);
+pushFlag('searchY', values.searchY);
+pushFlag('blockThreshold', values.blockThreshold);
+pushFlag('mergeGap', values.mergeGap);
+pushFlag('minBlocks', values.minBlocks);
 
 const CHECK = '\u2714'; // ✔
 const CROSS = '\u2718'; // ✘
