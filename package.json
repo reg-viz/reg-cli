@@ -46,6 +46,7 @@
   "license": "MIT",
   "dependencies": {
     "@tybys/wasm-util": "^0.10.2",
+    "open": "^11.0.4",
     "x-img-diff-js": "^0.3.5"
   },
   "peerDependencies": {
