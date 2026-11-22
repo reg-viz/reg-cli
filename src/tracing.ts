@@ -29,22 +29,20 @@ const PKG_VERSION: string = (() => {
 
 type OtelApi = typeof import('@opentelemetry/api');
 type OtelResources = typeof import('@opentelemetry/resources');
-type OtelSdkBase = typeof import('@opentelemetry/sdk-trace-base');
-type OtelSdkNode = typeof import('@opentelemetry/sdk-trace-node');
+type OtelSdk = typeof import('@opentelemetry/sdk-trace');
 type OtelExporter = typeof import('@opentelemetry/exporter-trace-otlp-http');
 type OtelSemconv = typeof import('@opentelemetry/semantic-conventions');
 
 interface OtelModules {
   api: OtelApi;
   resources: OtelResources;
-  sdkBase: OtelSdkBase;
-  sdkNode: OtelSdkNode;
+  sdk: OtelSdk;
   exporter: OtelExporter;
   semconv: OtelSemconv;
 }
 
 let otel: OtelModules | null = null;
-let provider: InstanceType<OtelSdkNode['NodeTracerProvider']> | null = null;
+let provider: InstanceType<OtelSdk['TracerProvider']> | null = null;
 let isInitialized = false;
 
 // Store current root span context for propagation to Rust
@@ -101,23 +99,21 @@ export const isTracingEnabled = (): boolean => {
 const loadOtel = async (): Promise<OtelModules | null> => {
   if (otel) return otel;
   try {
-    const [api, resources, sdkBase, sdkNode, exporter, semconv] = await Promise.all([
+    const [api, resources, sdk, exporter, semconv] = await Promise.all([
       import('@opentelemetry/api'),
       import('@opentelemetry/resources'),
-      import('@opentelemetry/sdk-trace-base'),
-      import('@opentelemetry/sdk-trace-node'),
+      import('@opentelemetry/sdk-trace'),
       import('@opentelemetry/exporter-trace-otlp-http'),
       import('@opentelemetry/semantic-conventions'),
     ]);
-    otel = { api, resources, sdkBase, sdkNode, exporter, semconv };
+    otel = { api, resources, sdk, exporter, semconv };
     return otel;
   } catch (err) {
     const pkgs = [
       '@opentelemetry/api',
       '@opentelemetry/exporter-trace-otlp-http',
       '@opentelemetry/resources',
-      '@opentelemetry/sdk-trace-base',
-      '@opentelemetry/sdk-trace-node',
+      '@opentelemetry/sdk-trace',
       '@opentelemetry/semantic-conventions',
     ].join(' ');
     console.warn(
@@ -150,15 +146,15 @@ export const initTracing = async (): Promise<void> => {
     url: otlpEndpoint,
   });
 
-  provider = new mods.sdkNode.NodeTracerProvider({
+  provider = new mods.sdk.TracerProvider({
     resource: mods.resources.resourceFromAttributes({
       [mods.semconv.ATTR_SERVICE_NAME]: 'reg-cli',
       [mods.semconv.ATTR_SERVICE_VERSION]: '0.18.10',
     }),
-    spanProcessors: [new mods.sdkBase.BatchSpanProcessor(otlpExporter)],
+    spanProcessors: [new mods.sdk.BatchSpanProcessor({ exporter: otlpExporter })],
   });
 
-  provider.register();
+  mods.api.trace.setGlobalTracerProvider(provider);
   isInitialized = true;
 
   if (process.env.OTEL_DEBUG === 'true') {
