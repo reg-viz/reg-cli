@@ -175,6 +175,27 @@ export type CompareInput = {
   thresholdPixel?: number,
   concurrency?: number,
   enableAntialias?: boolean,
+  /** `webp` (default from the CLI is `png`) | `png`. */
+  diffFormat?: 'webp' | 'png',
+  /** Comparison algorithm. `pixelmatch` (default) is the classic
+   *  pixel-wise diff. `block-match` runs img-block-match-rs, which
+   *  tolerates content that merely shifted in X/Y and only flags blocks
+   *  with no match inside the search window. Its diff image is a
+   *  side-by-side `expected | actual` composite (removed regions outlined
+   *  red on the left, added regions green on the right). */
+  diffAlgorithm?: 'pixelmatch' | 'block-match',
+  /** [block-match] Block side length in px. Default 8. */
+  blockSize?: number,
+  /** [block-match] Horizontal search radius in px. Default 16. */
+  searchX?: number,
+  /** [block-match] Vertical search radius in px. Default 64. */
+  searchY?: number,
+  /** [block-match] Per-channel SAD tolerance (0-255). Default 8. */
+  blockThreshold?: number,
+  /** [block-match] Bridge unmatched clusters ≤ N matched blocks apart. Default 2. */
+  mergeGap?: number,
+  /** [block-match] Drop unmatched clusters smaller than N blocks. Default 2. */
+  minBlocks?: number,
   enableClientAdditionalDetection?: boolean,
   /** Classic reg-cli's CLI-side x-img-diff extra detection pass. The
    *  Wasm pipeline's diff already includes the equivalent classification,
